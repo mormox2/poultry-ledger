@@ -315,8 +315,8 @@ export default function InvoicePrint({ state, clientId, onClose }) {
             fontWeight: 'bold',
             textAlign: 'center'
           }} className="print-stamp">
-            <span>EL WADERNI</span>
-            <span style={{ fontSize: '8px', borderTop: '1px solid #b45309', marginTop: '2px', paddingTop: '2px' }}>VOLAILLE</span>
+            <span>{"EL WADERNI"}</span>
+            <span style={{ fontSize: '8px', borderTop: '1px solid #b45309', marginTop: '2px', paddingTop: '2px' }}>{"VOLAILLE"}</span>
           </div>
 
           <div style={{ textAlign: 'center', width: '180px' }}>

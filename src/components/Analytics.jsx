@@ -141,15 +141,15 @@ export default function Analytics({ state }) {
     let areaPath = "";
 
     if (points.length > 0) {
-      dPath = `M ${points[0].x} ${points[0].y}`;
-      areaPath = `M ${points[0].x} ${height - paddingY} L ${points[0].x} ${points[0].y}`;
+      dPath = `M ${points.at(0).x} ${points.at(0).y}`;
+      areaPath = `M ${points.at(0).x} ${height - paddingY} L ${points.at(0).x} ${points.at(0).y}`;
 
       for (let i = 1; i < points.length; i++) {
-        dPath += ` L ${points[i].x} ${points[i].y}`;
-        areaPath += ` L ${points[i].x} ${points[i].y}`;
+        dPath += ` L ${points.at(i).x} ${points.at(i).y}`;
+        areaPath += ` L ${points.at(i).x} ${points.at(i).y}`;
       }
 
-      areaPath += ` L ${points[points.length - 1].x} ${height - paddingY} Z`;
+      areaPath += ` L ${points.at(-1).x} ${height - paddingY} Z`;
     }
 
     const gridLines = [];
@@ -204,7 +204,7 @@ export default function Analytics({ state }) {
         {/* Circle Hotspots */}
         {points.map((pt, idx) => {
           if (pt.val <= 0) return null;
-          const row = rows[pt.d - 1];
+          const row = rows.at(pt.d - 1);
           const nw = parseFloat(row.nw) || 0;
           const price = parseFloat(row.price) || state.pricePerKg || 0;
           const dateStr = `${y}/${String(m).padStart(2, '0')}/${String(pt.d).padStart(2, '0')}`;
