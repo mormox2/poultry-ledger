@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MONTHS, COLORS, getRows, getTotals, fmt } from '../js/utils';
+import { MONTHS, COLORS, getRows, getTotals, fmt, getClientColor } from '../js/utils';
 
 export default function Analytics({ state }) {
   const y = state.year;
@@ -263,7 +263,7 @@ export default function Analytics({ state }) {
       const pct = (share.amount / total) * 100;
       const strokeLength = (pct / 100) * C;
       const strokeOffset = C - strokeLength + currentOffset;
-      const color = COLORS[share.color % COLORS.length];
+      const color = getClientColor(share.color);
       
       currentOffset -= strokeLength;
 
@@ -325,7 +325,7 @@ export default function Analytics({ state }) {
   return (
     <div className="fade-in">
       <div className="sec-header">
-        <div className="sec-title">التحليلات والمؤشرات البيانية — {MONTHS[m - 1]} {y}</div>
+        <div className="sec-title">التحليلات والمؤشرات البيانية — {MONTHS.at(m - 1)} {y}</div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>

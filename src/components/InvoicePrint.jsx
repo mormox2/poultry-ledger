@@ -145,7 +145,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
                 تاريخ الإصدار: {issueDate}
               </p>
               <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                الفترة الحسابية: {MONTHS[m - 1]} {y}
+                الفترة الحسابية: {MONTHS.at(m - 1)} {y}
               </p>
             </div>
           </div>

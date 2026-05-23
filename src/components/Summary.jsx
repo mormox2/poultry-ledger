@@ -1,5 +1,5 @@
 import React from 'react';
-import { MONTHS, COLORS, getTotals, fmt } from '../js/utils';
+import { MONTHS, COLORS, getTotals, fmt, getClientColor } from '../js/utils';
 
 export default function Summary({ state, onSelectClient }) {
   const y = state.year;
@@ -20,7 +20,7 @@ export default function Summary({ state, onSelectClient }) {
   return (
     <div className="fade-in">
       <div className="sec-header">
-        <div className="sec-title">الملخص المالي الشامل — {MONTHS[m - 1]} {y}</div>
+        <div className="sec-title">الملخص المالي الشامل — {MONTHS.at(m - 1)} {y}</div>
       </div>
       <div className="table-wrap">
         <table>
@@ -51,7 +51,7 @@ export default function Summary({ state, onSelectClient }) {
                         width: '30px',
                         height: '30px',
                         borderRadius: '50%',
-                        background: COLORS[r.color % COLORS.length],
+                        background: getClientColor(r.color),
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',

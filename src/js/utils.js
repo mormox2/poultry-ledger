@@ -58,7 +58,7 @@ export function exportToCSV(state) {
   let csvContent = "\uFEFF"; // UTF-8 BOM for Excel
   csvContent += "سجل المبيعات اليومي - الودرني للدواجن\n";
   csvContent += `العميل: ${cl.name}, العنوان: ${cl.address}, الهاتف: ${cl.phone}\n`;
-  csvContent += `الشهر: ${MONTHS[m-1]} ${y}\n\n`;
+  csvContent += `الشهر: ${MONTHS.at(m - 1)} ${y}\n\n`;
   
   csvContent += "التاريخ,الوزن الكامل (كغ),الوزن الصافي (كغ),السعر (د.ت),المبلغ الجملي,المدفوع,الباقي,ملاحظات\n";
   

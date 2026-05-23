@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MONTHS, COLORS, getTotals, fmt } from '../js/utils';
+import { MONTHS, COLORS, getTotals, fmt, getClientColor } from '../js/utils';
 
 export default function Dashboard({ 
   state, 
@@ -41,7 +41,7 @@ export default function Dashboard({
   return (
     <div className="fade-in">
       <div className="sec-header">
-        <div className="sec-title">لوحة القيادة الرئيسية — {MONTHS[m - 1]} {y}</div>
+        <div className="sec-title">لوحة القيادة الرئيسية — {MONTHS.at(m - 1)} {y}</div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{state.clients.length} عميل نشط</span>
           <button 
@@ -103,7 +103,7 @@ export default function Dashboard({
                         width: '24px',
                         height: '24px',
                         borderRadius: '50%',
-                        background: COLORS[cl.color % COLORS.length],
+                        background: getClientColor(cl.color),
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -116,7 +116,7 @@ export default function Dashboard({
                     <span style={{ fontSize: '12px', color: 'var(--gold)', fontWeight: '700' }}>{fmt(cl.amt) || "—"}</span>
                   </div>
                   <div className="progress-wrap">
-                    <div className="progress-bar" style={{ width: `${pct}%`, background: COLORS[cl.color % COLORS.length] }}></div>
+                    <div className="progress-bar" style={{ width: `${pct}%`, background: getClientColor(cl.color) }}></div>
                   </div>
                 </div>
               );
