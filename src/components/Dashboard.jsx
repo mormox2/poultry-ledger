@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MONTHS, COLORS, getTotals, fmt } from '../js/utils';
 
 export default function Dashboard({ 
@@ -10,6 +10,7 @@ export default function Dashboard({
   onChangePassword,
   onUpdateCompanyInfo
 }) {
+  const [showSettings, setShowSettings] = useState(false);
   const y = state.year;
   const m = state.month;
   
@@ -41,7 +42,16 @@ export default function Dashboard({
     <div className="fade-in">
       <div className="sec-header">
         <div className="sec-title">لوحة القيادة الرئيسية — {MONTHS[m - 1]} {y}</div>
-        <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{state.clients.length} عميل نشط</div>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{state.clients.length} عميل نشط</span>
+          <button 
+            className={`btn ${showSettings ? 'btn-gold' : 'btn-outline'} btn-sm`} 
+            onClick={() => setShowSettings(!showSettings)}
+            style={{ fontWeight: '700' }}
+          >
+            {showSettings ? "⚙️ إخفاء الإعدادات" : "⚙️ إعدادات النظام"}
+          </button>
+        </div>
       </div>
 
       <div className="stat-grid" style={{ marginBottom: '20px' }}>
@@ -135,147 +145,149 @@ export default function Dashboard({
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)' }}>⚙️ إعدادات السعر الافتراضي</div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <div>
-              <div className="input-label">سعر الكيلوغرام الافتراضي (د.ت)</div>
-              <input 
-                type="number" 
-                step="0.001"
-                className="input" 
-                style={{ width: '140px' }} 
-                value={state.pricePerKg} 
-                onChange={(e) => onPriceChange(parseFloat(e.target.value) || 0)} 
-                placeholder="5.800"
-              />
-              <div className="price-hint">يُعتمد للتسعير التلقائي الفوري</div>
+      {showSettings && (
+        <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px', marginTop: '16px' }}>
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)' }}>⚙️ إعدادات السعر الافتراضي</div>
             </div>
-            <div style={{ padding: '12px 16px', background: 'var(--bg3)', borderRadius: '8px', fontSize: '13px', flex: 1, minWidth: '180px' }}>
-              <span style={{ color: 'var(--muted)' }}>مثال: 100كغ × </span>
-              <span style={{ color: 'var(--gold)', fontWeight: '700' }}>{fmt(state.pricePerKg)}</span>
-              <span style={{ color: 'var(--muted)' }}> = </span>
-              <span style={{ color: 'var(--green)', fontWeight: '700' }}>{fmt(100 * state.pricePerKg)} د.ت</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <div>
+                <div className="input-label">سعر الكيلوغرام الافتراضي (د.ت)</div>
+                <input 
+                  type="number" 
+                  step="0.001"
+                  className="input" 
+                  style={{ width: '140px' }} 
+                  value={state.pricePerKg} 
+                  onChange={(e) => onPriceChange(parseFloat(e.target.value) || 0)} 
+                  placeholder="5.800"
+                />
+                <div className="price-hint">يُعتمد للتسعير التلقائي الفوري</div>
+              </div>
+              <div style={{ padding: '12px 16px', background: 'var(--bg3)', borderRadius: '8px', fontSize: '13px', flex: 1, minWidth: '180px' }}>
+                <span style={{ color: 'var(--muted)' }}>مثال: 100كغ × </span>
+                <span style={{ color: 'var(--gold)', fontWeight: '700' }}>{fmt(state.pricePerKg)}</span>
+                <span style={{ color: 'var(--muted)' }}> = </span>
+                <span style={{ color: 'var(--green)', fontWeight: '700' }}>{fmt(100 * state.pricePerKg)} د.ت</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="card">
-          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '14px' }}>🔒 تغيير كلمة مرور الإدارة</div>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: '150px' }}>
-              <div className="input-label">كلمة المرور الجديدة</div>
-              <input 
-                type="password"
-                className="input"
-                id="new-dashboard-password"
-                placeholder="أدخل كلمة المرور الجديدة"
-              />
+          <div className="card">
+            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '14px' }}>🔒 تغيير كلمة مرور الإدارة</div>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: '150px' }}>
+                <div className="input-label">كلمة المرور الجديدة</div>
+                <input 
+                  type="password"
+                  className="input"
+                  id="new-dashboard-password"
+                  placeholder="أدخل كلمة المرور الجديدة"
+                />
+              </div>
+              <button 
+                className="btn btn-gold btn-sm" 
+                style={{ height: '38px' }}
+                onClick={() => {
+                  const el = document.getElementById("new-dashboard-password");
+                  const newPass = el?.value?.trim();
+                  if (!newPass) {
+                    alert("الرجاء إدخال كلمة مرور صالحة");
+                    return;
+                  }
+                  onChangePassword(newPass);
+                  if (el) el.value = "";
+                }}
+              >
+                تحديث
+              </button>
             </div>
-            <button 
-              className="btn btn-gold btn-sm" 
-              style={{ height: '38px' }}
-              onClick={() => {
-                const el = document.getElementById("new-dashboard-password");
-                const newPass = el?.value?.trim();
-                if (!newPass) {
-                  alert("الرجاء إدخال كلمة مرور صالحة");
-                  return;
-                }
-                onChangePassword(newPass);
-                if (el) el.value = "";
-              }}
-            >
-              تحديث
-            </button>
+          </div>
+
+          <div className="card">
+            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '14px' }}>📁 إدارة البيانات والنسخ الاحتياطي</div>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '12px' }}>
+              <button className="btn btn-outline btn-sm" onClick={onBackupExport}>
+                📤 تصدير ملف النسخة الاحتياطية (JSON)
+              </button>
+              <label className="btn btn-outline btn-sm" style={{ margin: 0, cursor: 'pointer' }}>
+                📥 استيراد نسخة احتياطية (JSON)
+                <input type="file" accept=".json" onChange={handleFileImport} style={{ display: 'none' }} />
+              </label>
+            </div>
+          </div>
+
+          <div className="card" style={{ gridColumn: 'span 2' }}>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '14px' }}>⚙️ إعدادات هوية المؤسسة ورأس الفاتورة (الودرني للدواجن)</div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const newName = e.target.elements.compName.value.trim();
+              const newAddr = e.target.elements.compAddr.value.trim();
+              const newPhone = e.target.elements.compPhone.value.trim();
+              const newTaxId = e.target.elements.compTaxId.value.trim();
+              if (!newName) {
+                alert("الرجاء إدخال اسم الشركة");
+                return;
+              }
+              onUpdateCompanyInfo({
+                name: newName,
+                address: newAddr || "—",
+                phone: newPhone || "—",
+                taxId: newTaxId || "—"
+              });
+            }} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', alignItems: 'end' }} className="company-info-form">
+              <div>
+                <div className="input-label">اسم الشركة الموزعة *</div>
+                <input 
+                  type="text"
+                  name="compName"
+                  className="input"
+                  defaultValue={state.companyInfo?.name || "الودرني للدواجن"}
+                  required
+                />
+              </div>
+              <div>
+                <div className="input-label">العنوان الجغرافي للشركة</div>
+                <input 
+                  type="text"
+                  name="compAddr"
+                  className="input"
+                  defaultValue={state.companyInfo?.address || ""}
+                  placeholder="الحامة — قابس"
+                />
+              </div>
+              <div>
+                <div className="input-label">رقم الهاتف للشركة</div>
+                <input 
+                  type="text"
+                  name="compPhone"
+                  className="input"
+                  defaultValue={state.companyInfo?.phone || ""}
+                  placeholder="55 xxx xxx"
+                />
+              </div>
+              <div>
+                <div className="input-label">المعرف الجبائي للمؤسسة (Matricule Fiscal)</div>
+                <input 
+                  type="text"
+                  name="compTaxId"
+                  className="input"
+                  defaultValue={state.companyInfo?.taxId || ""}
+                  placeholder="1234567/A/P/M/000"
+                />
+              </div>
+              <button 
+                type="submit" 
+                className="btn btn-gold btn-sm" 
+                style={{ height: '38px', gridColumn: 'span 2', marginTop: '6px' }}
+              >
+                💾 حفظ وتحديث هوية المؤسسة
+              </button>
+            </form>
           </div>
         </div>
-
-        <div className="card">
-          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '14px' }}>📁 إدارة البيانات والنسخ الاحتياطي</div>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '12px' }}>
-            <button className="btn btn-outline btn-sm" onClick={onBackupExport}>
-              📤 تصدير ملف النسخة الاحتياطية (JSON)
-            </button>
-            <label className="btn btn-outline btn-sm" style={{ margin: 0, cursor: 'pointer' }}>
-              📥 استيراد نسخة احتياطية (JSON)
-              <input type="file" accept=".json" onChange={handleFileImport} style={{ display: 'none' }} />
-            </label>
-          </div>
-        </div>
-
-        <div className="card" style={{ gridColumn: 'span 2' }}>
-          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '14px' }}>⚙️ إعدادات هوية المؤسسة ورأس الفاتورة (الودرني للدواجن)</div>
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            const newName = e.target.elements.compName.value.trim();
-            const newAddr = e.target.elements.compAddr.value.trim();
-            const newPhone = e.target.elements.compPhone.value.trim();
-            const newTaxId = e.target.elements.compTaxId.value.trim();
-            if (!newName) {
-              alert("الرجاء إدخال اسم الشركة");
-              return;
-            }
-            onUpdateCompanyInfo({
-              name: newName,
-              address: newAddr || "—",
-              phone: newPhone || "—",
-              taxId: newTaxId || "—"
-            });
-          }} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', alignItems: 'end' }} className="company-info-form">
-            <div>
-              <div className="input-label">اسم الشركة الموزعة *</div>
-              <input 
-                type="text"
-                name="compName"
-                className="input"
-                defaultValue={state.companyInfo?.name || "الودرني للدواجن"}
-                required
-              />
-            </div>
-            <div>
-              <div className="input-label">العنوان الجغرافي للشركة</div>
-              <input 
-                type="text"
-                name="compAddr"
-                className="input"
-                defaultValue={state.companyInfo?.address || ""}
-                placeholder="الحامة — قابس"
-              />
-            </div>
-            <div>
-              <div className="input-label">رقم الهاتف للشركة</div>
-              <input 
-                type="text"
-                name="compPhone"
-                className="input"
-                defaultValue={state.companyInfo?.phone || ""}
-                placeholder="55 xxx xxx"
-              />
-            </div>
-            <div>
-              <div className="input-label">المعرف الجبائي للمؤسسة (Matricule Fiscal)</div>
-              <input 
-                type="text"
-                name="compTaxId"
-                className="input"
-                defaultValue={state.companyInfo?.taxId || ""}
-                placeholder="1234567/A/P/M/000"
-              />
-            </div>
-            <button 
-              type="submit" 
-              className="btn btn-gold btn-sm" 
-              style={{ height: '38px', gridColumn: 'span 2', marginTop: '6px' }}
-            >
-              💾 حفظ وتحديث هوية المؤسسة
-            </button>
-          </form>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
