@@ -276,7 +276,7 @@ export default function Dashboard({
                   name="compTaxId"
                   className="input"
                   defaultValue={state.companyInfo?.taxId || ""}
-                  placeholder="1915813/D/N/048"
+                  placeholder="1895235/E"
                 />
               </div>
               <button 
