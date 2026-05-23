@@ -199,14 +199,18 @@ export default function App() {
                 if (k.startsWith(`${oldId}-`)) {
                   const parts = k.split('-');
                   const newKey = ledgerKey(newId, parseInt(parts.at(1)), parseInt(parts.at(2)));
-                  currentLedger[newKey] = currentLedger[k];
-                  delete currentLedger[k];
+                  
+                  Reflect.set(currentLedger, newKey, Reflect.get(currentLedger, k));
+                  Reflect.deleteProperty(currentLedger, k);
 
-                  currentLedger[newKey].forEach((row, idx) => {
-                    if (row.nw || row.paid || row.holiday) {
-                      syncLedgerEntryToCloud(newId, parseInt(parts.at(1)), parseInt(parts.at(2)), idx, row);
-                    }
-                  });
+                  const activeRows = Reflect.get(currentLedger, newKey);
+                  if (activeRows) {
+                    activeRows.forEach((row, idx) => {
+                      if (row.nw || row.paid || row.holiday) {
+                        syncLedgerEntryToCloud(newId, parseInt(parts.at(1)), parseInt(parts.at(2)), idx, row);
+                      }
+                    });
+                  }
                 }
               });
             }
@@ -237,17 +241,18 @@ export default function App() {
       const formattedLedger = {};
       finalLedger.forEach(e => {
         const k = ledgerKey(e.client_id, e.year, e.month);
-        if (!formattedLedger[k]) {
+        if (!Reflect.has(formattedLedger, k)) {
           const days = daysInMonth(e.year, e.month);
-          formattedLedger[k] = Array.from({ length: days }, (_, i) => ({
+          Reflect.set(formattedLedger, k, Array.from({ length: days }, (_, i) => ({
             d: i + 1,
             tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
-          }));
+          })));
         }
         
         const idx = e.day - 1;
-        if (formattedLedger[k][idx]) {
-          formattedLedger[k][idx] = {
+        const targetDays = Reflect.get(formattedLedger, k);
+        if (targetDays && targetDays.at(idx)) {
+          targetDays.splice(idx, 1, {
             d: e.day,
             tw: e.total_weight !== null ? String(e.total_weight) : "",
             nw: e.net_weight !== null ? String(e.net_weight) : "",
@@ -256,7 +261,7 @@ export default function App() {
             paid: e.paid !== null ? String(e.paid) : "",
             holiday: e.holiday,
             notes: e.notes || ""
-          };
+          });
         }
       });
 
