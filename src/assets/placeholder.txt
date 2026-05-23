@@ -1,0 +1,1 @@
+Déposez dans ce dossier vos images sources à importer directement dans vos composants React (ex: import logo from './assets/logo.png').

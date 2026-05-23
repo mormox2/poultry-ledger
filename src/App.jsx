@@ -442,7 +442,22 @@ export default function App() {
       <header>
         <div className="header-inner">
           <div className="logo">
-            <div className="logo-icon">🐔</div>
+            <img 
+              src="/poultry-ledger/assets/logo.png" 
+              alt="الودرني للدواجن" 
+              style={{ 
+                width: '44px', 
+                height: '44px', 
+                borderRadius: '10px', 
+                objectFit: 'cover', 
+                border: '1.5px solid rgba(212, 168, 67, 0.35)', 
+                background: 'rgba(17, 24, 39, 0.8)',
+                padding: '2px'
+              }}
+              onError={(e) => {
+                e.target.outerHTML = '<div class="logo-icon">🐔</div>';
+              }}
+            />
             <div>
               <div className="logo-text">الودرني للدواجن</div>
               <div className="logo-sub">الحامة — قابس</div>
