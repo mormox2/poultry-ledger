@@ -446,16 +446,16 @@ export default function App() {
               src="/poultry-ledger/assets/logo.png" 
               alt="الودرني للدواجن" 
               style={{ 
-                width: '44px', 
-                height: '44px', 
-                borderRadius: '10px', 
+                width: '54px', 
+                height: '54px', 
+                borderRadius: '12px', 
                 objectFit: 'contain', 
-                border: '1.5px solid rgba(212, 168, 67, 0.4)', 
+                border: '1.5px solid rgba(212, 168, 67, 0.45)', 
                 background: '#ffffff',
                 padding: '3px'
               }}
               onError={(e) => {
-                e.target.outerHTML = '<div class="logo-icon">🐔</div>';
+                e.target.outerHTML = '<div class="logo-icon" style="width: 54px; height: 54px; font-size: 24px; border-radius: 12px;">🐔</div>';
               }}
             />
             <div>

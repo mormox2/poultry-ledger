@@ -556,14 +556,14 @@ body.printing-invoice #print-invoice-area {
 }
 
 .login-logo-img {
-  width: 88px;
-  height: 88px;
-  border-radius: 20px;
+  width: 130px;
+  height: 130px;
+  border-radius: 24px;
   object-fit: contain;
-  border: 2px solid rgba(212, 168, 67, 0.45);
-  padding: 6px;
+  border: 2.5px solid rgba(212, 168, 67, 0.5);
+  padding: 8px;
   background: #ffffff;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 15px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 255, 255, 0.15);
   animation: logoPulse 3s infinite alternate;
   transition: transform 0.3s ease, border-color 0.3s ease;
 }

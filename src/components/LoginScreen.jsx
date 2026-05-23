@@ -55,7 +55,7 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword }) {
               className="login-logo-img"
               onError={(e) => {
                 // Fallback inside container if image somehow fails to load
-                e.target.outerHTML = '<div style="font-size: 54px; width: 88px; height: 88px; background: linear-gradient(135deg, var(--gold), var(--gold2)); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 10px 25px rgba(212, 168, 67, 0.3);">🐔</div>';
+                e.target.outerHTML = '<div style="font-size: 72px; width: 130px; height: 130px; background: linear-gradient(135deg, var(--gold), var(--gold2)); border-radius: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 10px 25px rgba(212, 168, 67, 0.3);">🐔</div>';
               }}
             />
           </div>
