@@ -326,9 +326,9 @@ tr.total-row td { background: var(--bg3); font-weight: 800; border-top: 2px soli
   backdrop-filter: blur(6px);
   z-index: 2100; /* ensure above header */
   display: flex;
-  align-items: flex-start; /* start from top */
+  align-items: center; /* vertically center the modal */
   justify-content: center;
-  padding-top: 80px; /* header height (70px) + spacing */
+  padding: 20px; /* safe breathing space around modal */
   opacity: 0;
   pointer-events: none;
   transition: opacity .3s ease;
@@ -340,12 +340,18 @@ tr.total-row td { background: var(--bg3); font-weight: 800; border-top: 2px soli
   border-radius: 16px;
   padding: 24px;
   width: 100%;
-  max-height: calc(100vh - 120px);
+  max-width: 480px; /* prevent stretched layout on large screens */
+  max-height: calc(100vh - 40px); /* fit comfortably in viewport */
   overflow-y: auto;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   transform: scale(.92); // start slightly shrunk
   transition: transform .3s cubic-bezier(.175,.885,.32,1.2);
- 
+}
+
+/* Fix stacking context bug: lift active view above header when a modal is open */
+body:has(.modal-overlay.open) .fade-in {
+  position: relative;
+  z-index: 2000;
 }
 .modal-overlay.open .modal { transform: scale(1) translateY(0); }
 .modal-title { font-size: 20px; font-weight: 800; color: var(--gold); margin-bottom: 22px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
