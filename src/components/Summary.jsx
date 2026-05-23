@@ -76,7 +76,17 @@ export default function Summary({ state, onSelectClient }) {
                   </td>
                   <td>
                     <span className={`badge ${rem <= 0 ? 'badge-green' : rem > 0 ? 'badge-red' : 'badge-orange'}`}>
-                      {rem <= 0 ? '✓ مسوّى' : '⚠️ متبقي بذمته'}
+                      {rem <= 0 ? (
+                        <>
+                          <span className="pulse-dot-green"></span>
+                          <span>✓ مسوّى</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="pulse-dot-red"></span>
+                          <span>⚠️ متبقي بذمته</span>
+                        </>
+                      )}
                     </span>
                   </td>
                 </tr>

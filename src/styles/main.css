@@ -647,4 +647,93 @@ body.printing-invoice #print-invoice-area {
   }
 }
 
+/* PREMIUM INTERACTIVE GLASS & SHADOW ENHANCEMENTS */
+.theme-toggle {
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.2s ease, background 0.2s ease !important;
+}
+.theme-toggle:active {
+  transform: rotate(360deg) scale(0.85);
+}
+
+/* Drop-in bounce effect for all Modals */
+.modal-overlay {
+  backdrop-filter: blur(12px) saturate(180%) !important;
+}
+.modal-overlay.open .modal {
+  animation: modalDropIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes modalDropIn {
+  from { transform: scale(0.9) translateY(20px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* Ledger Active Saisie UX */
+tr {
+  transition: background-color 0.2s ease;
+}
+tr:hover td {
+  background: rgba(var(--gold-rgb), 0.015) !important;
+}
+tr:focus-within td {
+  background: rgba(var(--gold-rgb), 0.035) !important;
+  border-bottom-color: rgba(var(--gold-rgb), 0.4) !important;
+}
+.table-input {
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.table-input:focus {
+  border-color: rgba(var(--gold-rgb), 0.5) !important;
+  background: rgba(var(--gold-rgb), 0.08) !important;
+  box-shadow: 0 0 8px rgba(var(--gold-rgb), 0.2);
+}
+
+/* Soft Amber/Gold texturized layout for Holiday rows */
+tr.holiday td {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.05) 0%, rgba(212, 168, 67, 0.05) 100%) !important;
+  border-bottom: 1px solid rgba(249, 115, 22, 0.15) !important;
+}
+
+/* Glowing Pulsating Status Dots */
+.pulse-dot-green {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background-color: var(--green);
+  border-radius: 50%;
+  margin-left: 8px;
+  box-shadow: 0 0 0 rgba(16, 185, 129, 0.5);
+  animation: pulseGreen 2.2s infinite;
+  vertical-align: middle;
+}
+.pulse-dot-red {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background-color: var(--red);
+  border-radius: 50%;
+  margin-left: 8px;
+  box-shadow: 0 0 0 rgba(239, 68, 68, 0.5);
+  animation: pulseRed 2.2s infinite;
+  vertical-align: middle;
+}
+@keyframes pulseGreen {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
+  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+@keyframes pulseRed {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.8); }
+  70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* Frosted HUD Tooltip for Analytics Graph */
+#chart-tooltip {
+  background: rgba(10, 15, 29, 0.94) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(212, 168, 67, 0.25) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(212, 168, 67, 0.1) !important;
+}
+
+
 

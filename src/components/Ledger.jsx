@@ -132,7 +132,10 @@ export default function Ledger({
         </div>
         <div className="stat ledger-debt red">
           <div className="stat-label">الباقي بذمته</div>
-          <div className="stat-value" style={{ color: remaining > 0 ? 'var(--red)' : 'var(--green)' }}>{fmt(remaining) || "—"}</div>
+          <div className="stat-value" style={{ color: remaining > 0 ? 'var(--red)' : 'var(--green)' }}>
+            {remaining > 0 ? <span className="pulse-dot-red"></span> : <span className="pulse-dot-green"></span>}
+            {fmt(remaining) || "—"}
+          </div>
           <div className="stat-sub">{remaining > 0 ? 'دين معلق مستحق' : 'خالص بالكامل'}</div>
         </div>
       </div>
