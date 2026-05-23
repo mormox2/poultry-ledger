@@ -328,7 +328,17 @@ export default function App() {
     else if (type === "info") icon = "ℹ️";
     
     el.className = `no-print show ${type}`;
-    el.innerHTML = `<span style="font-size:16px">${icon}</span> <span>${msg}</span>`;
+    el.textContent = "";
+    
+    const iconSpan = document.createElement("span");
+    iconSpan.style.fontSize = "16px";
+    iconSpan.textContent = icon;
+    
+    const msgSpan = document.createElement("span");
+    msgSpan.textContent = msg;
+    
+    el.appendChild(iconSpan);
+    el.appendChild(msgSpan);
     
     if (window.toastTimeout) clearTimeout(window.toastTimeout);
     window.toastTimeout = setTimeout(() => {
@@ -351,7 +361,14 @@ export default function App() {
       }
 
       const rows = [...updatedLedger[k]];
-      const row = { ...rows[idx], [field]: val };
+      const row = { ...rows.at(idx) };
+      if (field === 'tw') row.tw = val;
+      else if (field === 'nw') row.nw = val;
+      else if (field === 'price') row.price = val;
+      else if (field === 'amt') row.amt = val;
+      else if (field === 'paid') row.paid = val;
+      else if (field === 'holiday') row.holiday = val;
+      else if (field === 'notes') row.notes = val;
 
       // Autocalculate values
       if (field === 'nw') {
@@ -375,7 +392,7 @@ export default function App() {
         }
       }
 
-      rows[idx] = row;
+      rows.splice(idx, 1, row);
       updatedLedger[k] = rows;
 
       // Trigger Cloud sync in background
@@ -402,19 +419,20 @@ export default function App() {
       }
 
       const rows = [...updatedLedger[k]];
-      const currentHoliday = rows[idx].holiday;
+      const targetRow = rows.at(idx);
+      const currentHoliday = targetRow.holiday;
       
       const updatedRow = {
-        ...rows[idx],
+        ...targetRow,
         holiday: !currentHoliday,
-        tw: !currentHoliday ? "" : rows[idx].tw,
-        nw: !currentHoliday ? "" : rows[idx].nw,
-        price: !currentHoliday ? "" : rows[idx].price,
-        amt: !currentHoliday ? "" : rows[idx].amt,
-        paid: !currentHoliday ? "" : rows[idx].paid
+        tw: !currentHoliday ? "" : targetRow.tw,
+        nw: !currentHoliday ? "" : targetRow.nw,
+        price: !currentHoliday ? "" : targetRow.price,
+        amt: !currentHoliday ? "" : targetRow.amt,
+        paid: !currentHoliday ? "" : targetRow.paid
       };
 
-      rows[idx] = updatedRow;
+      rows.splice(idx, 1, updatedRow);
       updatedLedger[k] = rows;
 
       // Trigger Cloud sync in background
@@ -475,7 +493,7 @@ export default function App() {
       let remaining = amount;
 
       for (let i = 0; i < rows.length; i++) {
-        const r = rows[i];
+        const r = rows.at(i);
         if (r.holiday || !r.amt) continue;
         const amt = parseFloat(r.amt) || 0;
         const paid = parseFloat(r.paid) || 0;
@@ -744,7 +762,7 @@ export default function App() {
           />
         );
       default:
-        return <div>View not found</div>;
+        return <div>{"View not found"}</div>;
     }
   };
 
