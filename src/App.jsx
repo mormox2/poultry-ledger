@@ -866,13 +866,7 @@ export default function App() {
             >
               {state.theme === 'light' ? '☀️' : '🌙'}
             </button>
-            <button 
-              className="btn btn-outline btn-sm no-print" 
-              onClick={() => window.print()} 
-              title="طباعة"
-            >
-              🖨️
-            </button>
+
             <button 
               className="btn btn-outline btn-sm no-print" 
               onClick={handleLogout} 
