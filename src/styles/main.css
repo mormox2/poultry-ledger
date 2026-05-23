@@ -112,7 +112,7 @@ header {
   z-index: 100; 
   box-shadow: 0 4px 20px rgba(0,0,0,0.05);
 }
-.header-inner { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 100px; gap: 16px; }
+.header-inner { max-width: 100%; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 100px; gap: 16px; }
 .logo { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
 .logo-icon { 
   width: 64px; 
@@ -174,7 +174,7 @@ nav button:not(.active):hover { border-color: var(--gold); color: var(--gold); b
 }
 
 /* MAIN */
-main { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+main { max-width: 100%; padding: 24px 40px; }
 
 /* CARDS */
 .card { 
@@ -619,6 +619,10 @@ body.printing-invoice #print-invoice-area {
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 8px;
+  }
+  
+  main {
+    padding: 20px 16px;
   }
 }
 
