@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { COLORS, getRows, getTotals, calcBalance, fmt } from '../js/utils';
+import { COLORS, getRows, getTotals, calcBalance, fmt, getClientColor } from '../js/utils';
 
 export default function Ledger({ 
   state, 
@@ -115,7 +115,7 @@ export default function Ledger({
           width: '46px',
           height: '46px',
           borderRadius: '50%',
-          background: COLORS[cl.color % COLORS.length],
+          background: getClientColor(cl.color),
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

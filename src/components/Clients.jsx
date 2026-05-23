@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { COLORS, getTotals, fmt } from '../js/utils';
+import { COLORS, getTotals, fmt, getClientColor } from '../js/utils';
 
 export default function Clients({ 
   state, 
@@ -157,7 +157,7 @@ export default function Clients({
                   width: '44px',
                   height: '44px',
                   borderRadius: '50%',
-                  background: COLORS[cl.color % COLORS.length],
+                  background: getClientColor(cl.color),
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -187,7 +187,7 @@ export default function Clients({
               <div style={{
                 fontSize: '15px',
                 fontWeight: '800',
-                color: COLORS[cl.color % COLORS.length],
+                color: getClientColor(cl.color),
                 marginBottom: '4px',
                 display: 'flex',
                 alignItems: 'center',

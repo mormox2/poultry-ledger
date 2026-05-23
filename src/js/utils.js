@@ -1,6 +1,11 @@
 export const MONTHS = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 export const COLORS = ["#d4a843","#3b82f6","#22c55e","#ef4444","#a855f7","#f97316","#14b8a6","#ec4899"];
 
+export function getClientColor(colorIndex) {
+  const idx = Math.abs(parseInt(colorIndex, 10)) % COLORS.length || 0;
+  return COLORS.at(idx);
+}
+
 export function ledgerKey(cid, y, m) { 
   return `${cid}-${y}-${m}`; 
 }
