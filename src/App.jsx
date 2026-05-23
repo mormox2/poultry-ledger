@@ -150,7 +150,7 @@ export default function App() {
         
       if (profError && profError.code !== 'PGRST116') throw profError;
 
-      // 2. Fetch Clients
+      // 2. Fetch Clients from Supabase
       const { data: dbClients, error: clError } = await supabase
         .from('clients')
         .select('*')
@@ -158,15 +158,74 @@ export default function App() {
         
       if (clError) throw clError;
 
-      // 3. Fetch Ledger Entries
+      // 3. Fetch Ledger Entries from Supabase
       const { data: dbLedger, error: ledError } = await supabase
         .from('ledger_entries')
         .select('*');
         
       if (ledError) throw ledError;
 
-      // Now reconstruct state!
-      const formattedClients = dbClients.map(c => ({
+      // --- OFFLINE-TO-ONLINE SYNC BRIDGE ---
+      // Migrate any clients and daily rows created offline to the cloud database
+      let currentClients = [...state.clients];
+      let currentLedger = { ...state.ledger };
+      let hasSyncChanges = false;
+
+      if (currentClients.length > 0) {
+        for (const localCl of currentClients) {
+          const isInCloud = dbClients && dbClients.some(dc => dc.id === localCl.id || dc.name === localCl.name);
+          if (typeof localCl.id === 'number' || !isInCloud) {
+            const { data: newCl, error: insError } = await supabase
+              .from('clients')
+              .insert({
+                profile_id: userUuid,
+                name: localCl.name,
+                address: localCl.address || "—",
+                phone: localCl.phone || "—",
+                tax_id: localCl.taxId || "—",
+                color: localCl.color || 0
+              })
+              .select()
+              .single();
+
+            if (!insError && newCl) {
+              hasSyncChanges = true;
+              const oldId = localCl.id;
+              const newId = newCl.id;
+
+              localCl.id = newId;
+
+              Object.keys(currentLedger).forEach(k => {
+                if (k.startsWith(`${oldId}-`)) {
+                  const parts = k.split('-');
+                  const newKey = ledgerKey(newId, parseInt(parts.at(1)), parseInt(parts.at(2)));
+                  currentLedger[newKey] = currentLedger[k];
+                  delete currentLedger[k];
+
+                  currentLedger[newKey].forEach((row, idx) => {
+                    if (row.nw || row.paid || row.holiday) {
+                      syncLedgerEntryToCloud(newId, parseInt(parts.at(1)), parseInt(parts.at(2)), idx, row);
+                    }
+                  });
+                }
+              });
+            }
+          }
+        }
+      }
+
+      let finalClients = dbClients || [];
+      let finalLedger = dbLedger || [];
+
+      if (hasSyncChanges) {
+        const { data: refClients } = await supabase.from('clients').select('*').order('name');
+        const { data: refLedger } = await supabase.from('ledger_entries').select('*');
+        if (refClients) finalClients = refClients;
+        if (refLedger) finalLedger = refLedger;
+      }
+
+      // Reconstruct state using final synced values
+      const formattedClients = finalClients.map(c => ({
         id: c.id,
         name: c.name,
         address: c.address,
@@ -175,10 +234,9 @@ export default function App() {
         taxId: c.tax_id
       }));
 
-      // Reconstruct ledger entries map
       const formattedLedger = {};
-      dbLedger.forEach(e => {
-        const k = `${e.client_id}:${e.year}:${e.month}`;
+      finalLedger.forEach(e => {
+        const k = ledgerKey(e.client_id, e.year, e.month);
         if (!formattedLedger[k]) {
           const days = daysInMonth(e.year, e.month);
           formattedLedger[k] = Array.from({ length: days }, (_, i) => ({
@@ -206,7 +264,7 @@ export default function App() {
         ...prev,
         clients: formattedClients,
         ledger: formattedLedger,
-        selectedClient: formattedClients.length ? formattedClients[0].id : null,
+        selectedClient: formattedClients.length ? formattedClients.at(0).id : null,
         pricePerKg: profile ? parseFloat(profile.price_per_kg) : prev.pricePerKg,
         companyInfo: profile ? {
           name: profile.company_name,
