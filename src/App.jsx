@@ -8,6 +8,7 @@ import Clients from './components/Clients';
 import Analytics from './components/Analytics';
 import Summary from './components/Summary';
 import InvoicePrint from './components/InvoicePrint';
+import LoginScreen from './components/LoginScreen';
 
 // Utilities Import
 import { 
@@ -21,6 +22,10 @@ import {
 } from './js/utils';
 
 export default function App() {
+  // Authentication State
+  const [password, setPassword] = useState(() => localStorage.getItem("dawajin_password") || "");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   // Initialize state from localStorage
   const getInitialState = () => {
     const defaultState = {
@@ -43,7 +48,6 @@ export default function App() {
         return {
           ...defaultState,
           ...parsed,
-          // Retain selectors from saved or defaults
           month: parsed.month || 5,
           year: parsed.year || 2026,
           view: parsed.view || "dashboard"
@@ -131,6 +135,13 @@ export default function App() {
     toastMessage("✓ تم تحديث السعر الافتراضي وتحديث الحسابات");
   };
 
+  // Password Modification Handler
+  const handleChangePassword = (newPass) => {
+    localStorage.setItem("dawajin_password", newPass);
+    setPassword(newPass);
+    toastMessage("✓ تم تحديث كلمة المرور بنجاح");
+  };
+
   // Toast Helpers
   const toastMessage = (msg, type = "success") => {
     const el = document.getElementById("toast");
@@ -186,8 +197,6 @@ export default function App() {
           const activePrice = customPrice || prev.pricePerKg || 0;
           row.amt = parseFloat((nwFloat * activePrice).toFixed(3));
         }
-      } else if (field === 'amt') {
-        // Standard user override
       }
 
       rows[idx] = row;
@@ -328,7 +337,7 @@ export default function App() {
     dlAnchorElem.setAttribute("href", dataStr);
     dlAnchorElem.setAttribute("download", `dawajin_pro_backup_${Date.now()}.json`);
     dlAnchorElem.click();
-    toastMessage("✓ تم تحميل ملف النسخة الاحتiaطية");
+    toastMessage("✓ تم تحميل ملف النسخة الاحتياطية");
   };
 
   const handleBackupImport = (file) => {
@@ -340,7 +349,6 @@ export default function App() {
           setState(prev => ({
             ...prev,
             ...importedState,
-            // Fallback options
             month: importedState.month || prev.month,
             year: importedState.year || prev.year,
             view: "dashboard"
@@ -357,11 +365,23 @@ export default function App() {
   };
 
   const handleCSVExport = () => {
-    exportToCSV({
-      ...state,
-      // Wrap methods to be safe
-    });
+    exportToCSV(state);
   };
+
+  // If user is not authenticated, render the login shield!
+  if (!isLoggedIn) {
+    return (
+      <LoginScreen 
+        savedPassword={password}
+        onLogin={() => setIsLoggedIn(true)}
+        onSetPassword={(newPass) => {
+          localStorage.setItem("dawajin_password", newPass);
+          setPassword(newPass);
+          setIsLoggedIn(true);
+        }}
+      />
+    );
+  }
 
   // Render correct Active view
   const renderActiveView = () => {
@@ -374,6 +394,7 @@ export default function App() {
             onPriceChange={handleDefaultPriceChange}
             onBackupExport={handleBackupExport}
             onBackupImport={handleBackupImport}
+            onChangePassword={handleChangePassword}
           />
         );
       case "ledger":
@@ -473,6 +494,14 @@ export default function App() {
               title="طباعة"
             >
               🖨️
+            </button>
+            <button 
+              className="btn btn-outline btn-sm no-print" 
+              onClick={() => setIsLoggedIn(false)} 
+              title="تسجيل الخروج"
+              style={{ color: 'var(--red)', borderColor: 'rgba(239, 68, 68, 0.25)', background: 'rgba(239, 68, 68, 0.05)', fontWeight: '700' }}
+            >
+              🔒 خروج
             </button>
             <select 
               id="month-sel" 

@@ -467,3 +467,97 @@ body.printing-invoice #print-invoice-area {
   .stat-grid { grid-template-columns: 1fr; }
   .sec-header { flex-direction: column; align-items: flex-start; }
 }
+
+/* LOGIN SCREEN STYLES */
+.login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100vw;
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, #111827 0%, #070b13 100%);
+  z-index: 99999;
+  padding: 20px;
+}
+.login-card {
+  background: rgba(17, 24, 39, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(212, 168, 67, 0.2);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 400px;
+  padding: 40px 30px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(212, 168, 67, 0.05);
+  text-align: center;
+  position: relative;
+  transition: border-color 0.3s ease;
+}
+.login-card:hover {
+  border-color: rgba(212, 168, 67, 0.4);
+}
+.login-logo {
+  font-size: 54px;
+  width: 90px;
+  height: 90px;
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  box-shadow: 0 10px 25px rgba(212, 168, 67, 0.3);
+  animation: logoGlow 3s infinite alternate;
+}
+.login-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+.login-subtitle {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 30px;
+}
+.password-input-wrapper {
+  position: relative;
+  margin-bottom: 20px;
+}
+.password-toggle-btn {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 16px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+.password-toggle-btn:hover {
+  color: var(--gold);
+}
+
+/* Shake Animation on Error */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+  20%, 40%, 60%, 80% { transform: translateX(8px); }
+}
+.login-card.shake {
+  animation: shake 0.5s ease-in-out;
+  border-color: var(--red) !important;
+}
+
+@keyframes logoGlow {
+  0% { transform: scale(1); box-shadow: 0 10px 25px rgba(212, 168, 67, 0.3); }
+  100% { transform: scale(1.05); box-shadow: 0 10px 35px rgba(212, 168, 67, 0.5); }
+}
+

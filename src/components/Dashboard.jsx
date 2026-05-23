@@ -6,7 +6,8 @@ export default function Dashboard({
   onSelectClient, 
   onPriceChange, 
   onBackupExport, 
-  onBackupImport 
+  onBackupImport,
+  onChangePassword
 }) {
   const y = state.year;
   const m = state.month;
@@ -133,7 +134,7 @@ export default function Dashboard({
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)' }}>⚙️ إعدادات السعر الافتراضي</div>
@@ -158,6 +159,37 @@ export default function Dashboard({
               <span style={{ color: 'var(--muted)' }}> = </span>
               <span style={{ color: 'var(--green)', fontWeight: '700' }}>{fmt(100 * state.pricePerKg)} د.ت</span>
             </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '14px' }}>🔒 تغيير كلمة مرور الإدارة</div>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '150px' }}>
+              <div className="input-label">كلمة المرور الجديدة</div>
+              <input 
+                type="password"
+                className="input"
+                id="new-dashboard-password"
+                placeholder="أدخل كلمة المرور الجديدة"
+              />
+            </div>
+            <button 
+              className="btn btn-gold btn-sm" 
+              style={{ height: '38px' }}
+              onClick={() => {
+                const el = document.getElementById("new-dashboard-password");
+                const newPass = el?.value?.trim();
+                if (!newPass) {
+                  alert("الرجاء إدخال كلمة مرور صالحة");
+                  return;
+                }
+                onChangePassword(newPass);
+                if (el) el.value = "";
+              }}
+            >
+              تحديث
+            </button>
           </div>
         </div>
 
