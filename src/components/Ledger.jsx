@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { COLORS, getRows, getTotals, calcBalance, fmt } from '../js/utils';
 
 export default function Ledger({ 
@@ -334,7 +335,7 @@ export default function Ledger({
       </div>
 
       {/* QUICK SETTLE MODAL */}
-      {quickSettleOpen && (
+      {quickSettleOpen && createPortal(
         <div className="modal-overlay open" onClick={() => setQuickSettleOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">تسديد الديون السريع</div>
@@ -360,7 +361,8 @@ export default function Ledger({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

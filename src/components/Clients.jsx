@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { COLORS, getTotals, fmt } from '../js/utils';
 
 export default function Clients({ 
@@ -228,7 +229,7 @@ export default function Clients({
       </div>
 
       {/* ADD MODAL */}
-      {modalMode === 'add' && (
+      {modalMode === 'add' && createPortal(
         <div className="modal-overlay open" onClick={() => setModalMode(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">إضافة عميل جديد</div>
@@ -305,11 +306,12 @@ export default function Clients({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* EDIT MODAL */}
-      {modalMode === 'edit' && (
+      {modalMode === 'edit' && createPortal(
         <div className="modal-overlay open" onClick={() => setModalMode(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">تعديل بيانات العميل</div>
@@ -386,11 +388,12 @@ export default function Clients({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* DELETE MODAL */}
-      {modalMode === 'delete' && (
+      {modalMode === 'delete' && createPortal(
         <div className="modal-overlay open" onClick={() => setModalMode(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title" style={{ color: 'var(--red)' }}>تأكيد حذف العميل</div>
@@ -403,7 +406,8 @@ export default function Clients({
               <button className="btn btn-outline" onClick={() => setModalMode(null)}>إلغاء</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
