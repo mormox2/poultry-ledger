@@ -220,23 +220,25 @@ export default function Dashboard({
 
           <div className="card" style={{ gridColumn: 'span 2' }}>
             <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '14px' }}>⚙️ إعدادات هوية المؤسسة ورأس الفاتورة (الودرني للدواجن)</div>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const newName = e.target.elements.compName.value.trim();
-              const newAddr = e.target.elements.compAddr.value.trim();
-              const newPhone = e.target.elements.compPhone.value.trim();
-              const newTaxId = e.target.elements.compTaxId.value.trim();
-              if (!newName) {
-                alert("الرجاء إدخال اسم الشركة");
-                return;
-              }
-              onUpdateCompanyInfo({
-                name: newName,
-                address: newAddr || "—",
-                phone: newPhone || "—",
-                taxId: newTaxId || "—"
-              });
-            }} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', alignItems: 'end' }} className="company-info-form">
+            <form 
+              key={`${state.companyInfo?.name || ""}-${state.companyInfo?.address || ""}-${state.companyInfo?.phone || ""}-${state.companyInfo?.taxId || ""}`}
+              onSubmit={(e) => {
+                e.preventDefault();
+                const newName = e.target.elements.compName.value.trim();
+                const newAddr = e.target.elements.compAddr.value.trim();
+                const newPhone = e.target.elements.compPhone.value.trim();
+                const newTaxId = e.target.elements.compTaxId.value.trim();
+                if (!newName) {
+                  alert("الرجاء إدخال اسم الشركة");
+                  return;
+                }
+                onUpdateCompanyInfo({
+                  name: newName,
+                  address: newAddr || "—",
+                  phone: newPhone || "—",
+                  taxId: newTaxId || "—"
+                });
+              }} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', alignItems: 'end' }} className="company-info-form">
               <div>
                 <div className="input-label">اسم الشركة الموزعة *</div>
                 <input 
