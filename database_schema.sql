@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS public.clients (
     name TEXT NOT NULL,
     address TEXT DEFAULT '—',
     phone TEXT DEFAULT '—',
-    tax_id TEXT DEFAULT '—',
+    tax_id TEXT DEFAULT '-',
+    notes TEXT DEFAULT NULL,
     color INTEGER DEFAULT 0 NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
