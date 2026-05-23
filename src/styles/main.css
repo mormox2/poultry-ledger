@@ -112,21 +112,21 @@ header {
   z-index: 100; 
   box-shadow: 0 4px 20px rgba(0,0,0,0.05);
 }
-.header-inner { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 70px; gap: 12px; }
+.header-inner { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 85px; gap: 12px; }
 .logo { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .logo-icon { 
-  width: 44px; 
-  height: 44px; 
+  width: 56px; 
+  height: 56px; 
   background: linear-gradient(135deg, var(--gold), var(--gold2)); 
-  border-radius: 10px; 
+  border-radius: 12px; 
   display: flex; 
   align-items: center; 
   justify-content: center; 
-  font-size: 22px; 
+  font-size: 26px; 
   box-shadow: 0 0 15px rgba(var(--gold-rgb),.3); 
 }
-.logo-text { font-weight: 800; font-size: 16px; color: var(--gold); line-height: 1.2; }
-.logo-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
+.logo-text { font-weight: 800; font-size: 18px; color: var(--gold); line-height: 1.2; }
+.logo-sub { font-size: 12px; color: var(--muted); font-weight: 400; }
 
 nav { display: flex; gap: 6px; }
 nav button { 
