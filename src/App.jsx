@@ -449,10 +449,10 @@ export default function App() {
                 width: '44px', 
                 height: '44px', 
                 borderRadius: '10px', 
-                objectFit: 'cover', 
-                border: '1.5px solid rgba(212, 168, 67, 0.35)', 
-                background: 'rgba(17, 24, 39, 0.8)',
-                padding: '2px'
+                objectFit: 'contain', 
+                border: '1.5px solid rgba(212, 168, 67, 0.4)', 
+                background: '#ffffff',
+                padding: '3px'
               }}
               onError={(e) => {
                 e.target.outerHTML = '<div class="logo-icon">🐔</div>';
