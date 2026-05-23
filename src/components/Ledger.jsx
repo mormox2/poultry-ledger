@@ -6,6 +6,7 @@ export default function Ledger({
   state, 
   onSelectClient, 
   onUpdateRow, 
+  onSyncRow,
   onToggleHoliday, 
   onQuickSettle, 
   onExportCSV, 
@@ -230,6 +231,7 @@ export default function Ledger({
                           placeholder="0"
                           onChange={(e) => onUpdateRow(idx, 'tw', e.target.value)} 
                           onKeyDown={(e) => handleKeyDown(e, idx, 0)}
+                          onBlur={() => onSyncRow && onSyncRow(idx)}
                           data-row={idx}
                           data-col={0}
                           style={{ width: '70px' }}
@@ -244,6 +246,7 @@ export default function Ledger({
                           placeholder="0"
                           onChange={(e) => onUpdateRow(idx, 'nw', e.target.value)} 
                           onKeyDown={(e) => handleKeyDown(e, idx, 1)}
+                          onBlur={() => onSyncRow && onSyncRow(idx)}
                           data-row={idx}
                           data-col={1}
                           style={{ width: '70px' }}
@@ -258,6 +261,7 @@ export default function Ledger({
                           placeholder={state.pricePerKg}
                           onChange={(e) => onUpdateRow(idx, 'price', e.target.value)} 
                           onKeyDown={(e) => handleKeyDown(e, idx, 2)}
+                          onBlur={() => onSyncRow && onSyncRow(idx)}
                           data-row={idx}
                           data-col={2}
                           style={{ width: '70px', color: 'var(--gold)' }}
@@ -272,6 +276,7 @@ export default function Ledger({
                           placeholder="—"
                           onChange={(e) => onUpdateRow(idx, 'amt', e.target.value)} 
                           onKeyDown={(e) => handleKeyDown(e, idx, 3)}
+                          onBlur={() => onSyncRow && onSyncRow(idx)}
                           data-row={idx}
                           data-col={3}
                           style={{ width: '90px' }}
@@ -285,6 +290,7 @@ export default function Ledger({
                           placeholder="—"
                           onChange={(e) => onUpdateRow(idx, 'paid', e.target.value)} 
                           onKeyDown={(e) => handleKeyDown(e, idx, 4)}
+                          onBlur={() => onSyncRow && onSyncRow(idx)}
                           data-row={idx}
                           data-col={4}
                           style={{ width: '90px', color: r.paid ? 'var(--green)' : '' }} 
@@ -302,6 +308,7 @@ export default function Ledger({
                       placeholder="..."
                       onChange={(e) => onUpdateRow(idx, 'notes', e.target.value)} 
                       onKeyDown={(e) => handleKeyDown(e, idx, 5)}
+                      onBlur={() => onSyncRow && onSyncRow(idx)}
                       data-row={idx}
                       data-col={5}
                       style={{ width: '90px', color: 'var(--muted)' }}

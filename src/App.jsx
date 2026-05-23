@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './styles/main.css';
 import { supabase } from './js/supabaseClient';
 
@@ -81,6 +81,11 @@ export default function App() {
   const [state, setState] = useState(getInitialState);
   const [activeInvoiceClientId, setActiveInvoiceClientId] = useState(null);
 
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
   // --- Supabase Session Hook & Listeners ---
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -141,6 +146,8 @@ export default function App() {
   const fetchCloudData = async (userUuid) => {
     setIsCloudLoading(true);
     try {
+      const currentState = stateRef.current;
+
       // 1. Fetch Profile (Company settings)
       const { data: profile, error: profError } = await supabase
         .from('profiles')
@@ -167,10 +174,12 @@ export default function App() {
 
       // --- OFFLINE-TO-ONLINE SYNC BRIDGE ---
       // Migrate any clients and daily rows created offline to the cloud database
-      let currentClients = [...state.clients];
-      let currentLedger = { ...state.ledger };
+      let currentClients = [...currentState.clients];
+      let currentLedger = { ...currentState.ledger };
       let hasSyncChanges = false;
+      const syncPromises = [];
 
+      // Phase 1: Migrate new offline clients to Supabase and update their IDs/keys
       if (currentClients.length > 0) {
         for (const localCl of currentClients) {
           const isInCloud = dbClients && dbClients.some(dc => dc.id === localCl.id || dc.name === localCl.name);
@@ -193,29 +202,95 @@ export default function App() {
               const oldId = localCl.id;
               const newId = newCl.id;
 
+              // Update the ID in currentClients
               localCl.id = newId;
 
+              // Migrate all ledger keys from oldId to newId
               Object.keys(currentLedger).forEach(k => {
                 if (k.startsWith(`${oldId}-`)) {
                   const parts = k.split('-');
                   const newKey = ledgerKey(newId, parseInt(parts.at(1)), parseInt(parts.at(2)));
-                  
                   Reflect.set(currentLedger, newKey, Reflect.get(currentLedger, k));
                   Reflect.deleteProperty(currentLedger, k);
-
-                  const activeRows = Reflect.get(currentLedger, newKey);
-                  if (activeRows) {
-                    activeRows.forEach((row, idx) => {
-                      if (row.nw || row.paid || row.holiday) {
-                        syncLedgerEntryToCloud(newId, parseInt(parts.at(1)), parseInt(parts.at(2)), idx, row);
-                      }
-                    });
-                  }
                 }
               });
             }
           }
         }
+      }
+
+      // Phase 2: Sync only modified or missing ledger entries to Supabase
+      Object.keys(currentLedger).forEach(k => {
+        const parts = k.split('-');
+        if (parts.length === 3) {
+          const clientUuid = parts.at(0);
+          const year = parseInt(parts.at(1));
+          const month = parseInt(parts.at(2));
+          
+          if (clientUuid && isNaN(Number(clientUuid))) {
+            const activeRows = Reflect.get(currentLedger, k);
+            if (activeRows) {
+              activeRows.forEach((row, idx) => {
+                const day = idx + 1;
+                
+                // Find matching entry in the cloud database
+                const dbEntry = dbLedger && dbLedger.find(e => 
+                  e.client_id === clientUuid && 
+                  e.year === year && 
+                  e.month === month && 
+                  e.day === day
+                );
+
+                const hasLocalData = row.nw || row.paid || row.holiday || row.tw || row.notes;
+
+                if (dbEntry) {
+                  // Compare fields
+                  const localTw = row.tw !== "" && row.tw !== null ? parseFloat(row.tw) : null;
+                  const localNw = row.nw !== "" && row.nw !== null ? parseFloat(row.nw) : null;
+                  const localPrice = row.price !== "" && row.price !== null ? parseFloat(row.price) : null;
+                  const localAmt = row.amt !== "" && row.amt !== null ? parseFloat(row.amt) : null;
+                  const localPaid = row.paid !== "" && row.paid !== null ? parseFloat(row.paid) : null;
+                  const localHoliday = !!row.holiday;
+                  const localNotes = row.notes ? String(row.notes).trim() : null;
+
+                  const dbTw = dbEntry.total_weight !== null ? parseFloat(dbEntry.total_weight) : null;
+                  const dbNw = dbEntry.net_weight !== null ? parseFloat(dbEntry.net_weight) : null;
+                  const dbPrice = dbEntry.price !== null ? parseFloat(dbEntry.price) : null;
+                  const dbAmt = dbEntry.amount !== null ? parseFloat(dbEntry.amount) : null;
+                  const dbPaid = dbEntry.paid !== null ? parseFloat(dbEntry.paid) : null;
+                  const dbHoliday = !!dbEntry.holiday;
+                  const dbNotes = dbEntry.notes ? String(dbEntry.notes).trim() : null;
+
+                  const isMatch = 
+                    localTw === dbTw &&
+                    localNw === dbNw &&
+                    localPrice === dbPrice &&
+                    localAmt === dbAmt &&
+                    localPaid === dbPaid &&
+                    localHoliday === dbHoliday &&
+                    localNotes === dbNotes;
+
+                  if (!isMatch) {
+                    hasSyncChanges = true;
+                    syncPromises.push(
+                      syncLedgerEntryToCloud(clientUuid, year, month, idx, row)
+                    );
+                  }
+                } else if (hasLocalData) {
+                  hasSyncChanges = true;
+                  syncPromises.push(
+                    syncLedgerEntryToCloud(clientUuid, year, month, idx, row)
+                  );
+                }
+              });
+            }
+          }
+        }
+      });
+
+      // Phase 3: Wait for all ledger entries to finish syncing before refetching
+      if (syncPromises.length > 0) {
+        await Promise.all(syncPromises);
       }
 
       let finalClients = dbClients || [];
@@ -269,7 +344,7 @@ export default function App() {
         ...prev,
         clients: formattedClients,
         ledger: formattedLedger,
-        selectedClient: formattedClients.length ? formattedClients.at(0).id : null,
+        selectedClient: formattedClients.length ? (formattedClients.some(c => c.id === prev.selectedClient) ? prev.selectedClient : formattedClients.at(0).id) : null,
         pricePerKg: profile ? parseFloat(profile.price_per_kg) : prev.pricePerKg,
         companyInfo: profile ? {
           name: profile.company_name,
@@ -312,17 +387,27 @@ export default function App() {
   };
 
   const handleDefaultPriceChange = async (newPrice) => {
-    // Optimistic UI state update
+    // 1. Update state locally
+    let updatedRows = [];
+    let targetClient = null;
+    let targetYear = null;
+    let targetMonth = null;
+
     setState(prev => {
       const updatedLedger = { ...prev.ledger };
-      const k = ledgerKey(prev.selectedClient, prev.year, prev.month);
+      targetClient = prev.selectedClient;
+      targetYear = prev.year;
+      targetMonth = prev.month;
+      const k = ledgerKey(targetClient, targetYear, targetMonth);
       if (updatedLedger[k]) {
-        updatedLedger[k] = updatedLedger[k].map(r => {
+        updatedLedger[k] = updatedLedger[k].map((r, idx) => {
           if (!r.holiday && !r.price && r.nw) {
-            return {
+            const updatedRow = {
               ...r,
               amt: parseFloat((parseFloat(r.nw) * newPrice).toFixed(3))
             };
+            updatedRows.push({ idx, row: updatedRow });
+            return updatedRow;
           }
           return r;
         });
@@ -334,6 +419,7 @@ export default function App() {
       };
     });
 
+    // 2. Sync profile to cloud and then sync updated ledger rows to cloud
     if (isSupabaseConfigured && user) {
       try {
         const { error } = await supabase
@@ -343,6 +429,13 @@ export default function App() {
             price_per_kg: newPrice
           });
         if (error) throw error;
+
+        if (updatedRows.length > 0 && targetClient) {
+          const syncPromises = updatedRows.map(({ idx, row }) => 
+            syncLedgerEntryToCloud(targetClient, targetYear, targetMonth, idx, row)
+          );
+          await Promise.all(syncPromises);
+        }
       } catch (err) {
         console.error("Cloud update default price error:", err);
       }
@@ -459,9 +552,6 @@ export default function App() {
       rows.splice(idx, 1, row);
       updatedLedger[k] = rows;
 
-      // Trigger Cloud sync in background
-      syncLedgerEntryToCloud(prev.selectedClient, prev.year, prev.month, idx, row);
-
       return {
         ...prev,
         ledger: updatedLedger
@@ -469,13 +559,35 @@ export default function App() {
     });
   };
 
-  const handleToggleHoliday = (idx) => {
+  const handleSyncRow = (idx) => {
+    if (!isSupabaseConfigured || !user) return;
+    // Delay slightly to ensure React state updates are flushed and rendered
+    setTimeout(() => {
+      const currentState = stateRef.current;
+      const k = ledgerKey(currentState.selectedClient, currentState.year, currentState.month);
+      const rows = Reflect.get(currentState.ledger, k);
+      if (rows && rows.at(idx)) {
+        const row = rows.at(idx);
+        syncLedgerEntryToCloud(currentState.selectedClient, currentState.year, currentState.month, idx, row);
+      }
+    }, 100);
+  };
+
+  const handleToggleHoliday = async (idx) => {
+    let updatedRow = null;
+    let targetClient = null;
+    let targetYear = null;
+    let targetMonth = null;
+
     setState(prev => {
       const updatedLedger = { ...prev.ledger };
-      const k = ledgerKey(prev.selectedClient, prev.year, prev.month);
+      targetClient = prev.selectedClient;
+      targetYear = prev.year;
+      targetMonth = prev.month;
+      const k = ledgerKey(targetClient, targetYear, targetMonth);
       
       if (!updatedLedger[k]) {
-        const days = daysInMonth(prev.year, prev.month);
+        const days = daysInMonth(targetYear, targetMonth);
         updatedLedger[k] = Array.from({ length: days }, (_, i) => ({
           d: i + 1,
           tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
@@ -486,7 +598,7 @@ export default function App() {
       const targetRow = rows.at(idx);
       const currentHoliday = targetRow.holiday;
       
-      const updatedRow = {
+      updatedRow = {
         ...targetRow,
         holiday: !currentHoliday,
         tw: !currentHoliday ? "" : targetRow.tw,
@@ -499,14 +611,16 @@ export default function App() {
       rows.splice(idx, 1, updatedRow);
       updatedLedger[k] = rows;
 
-      // Trigger Cloud sync in background
-      syncLedgerEntryToCloud(prev.selectedClient, prev.year, prev.month, idx, updatedRow);
-
       return {
         ...prev,
         ledger: updatedLedger
       };
     });
+
+    // Trigger Cloud sync outside setState
+    if (isSupabaseConfigured && user && updatedRow && targetClient) {
+      await syncLedgerEntryToCloud(targetClient, targetYear, targetMonth, idx, updatedRow);
+    }
   };
 
   // Sync a single daily ledger entry to Supabase
@@ -540,13 +654,19 @@ export default function App() {
     }
   };
 
-  const handleQuickSettle = (cid, amount) => {
+  const handleQuickSettle = async (cid, amount) => {
+    let updatedRows = [];
+    let targetYear = null;
+    let targetMonth = null;
+
     setState(prev => {
       const updatedLedger = { ...prev.ledger };
-      const k = ledgerKey(cid, prev.year, prev.month);
+      targetYear = prev.year;
+      targetMonth = prev.month;
+      const k = ledgerKey(cid, targetYear, targetMonth);
       
       if (!updatedLedger[k]) {
-        const days = daysInMonth(prev.year, prev.month);
+        const days = daysInMonth(targetYear, targetMonth);
         updatedLedger[k] = Array.from({ length: days }, (_, i) => ({
           d: i + 1,
           tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
@@ -564,28 +684,40 @@ export default function App() {
         const due = amt - paid;
         if (due <= 0) continue;
 
+        const oldPaid = r.paid;
         if (remaining >= due) {
           r.paid = amt;
           remaining -= due;
         } else {
           r.paid = parseFloat((paid + remaining).toFixed(3));
           remaining = 0;
-          break;
         }
+
+        if (r.paid !== oldPaid) {
+          updatedRows.push({ idx: i, row: r });
+        }
+        if (remaining <= 0) break;
       }
 
       updatedLedger[k] = rows;
-
-      // Trigger Cloud sync in background for each updated row
-      rows.forEach((row, idx) => {
-        syncLedgerEntryToCloud(cid, prev.year, prev.month, idx, row);
-      });
 
       return {
         ...prev,
         ledger: updatedLedger
       };
     });
+
+    // Trigger Cloud sync outside setState!
+    if (isSupabaseConfigured && user && updatedRows.length > 0) {
+      try {
+        const syncPromises = updatedRows.map(({ idx, row }) => 
+          syncLedgerEntryToCloud(cid, targetYear, targetMonth, idx, row)
+        );
+        await Promise.all(syncPromises);
+      } catch (err) {
+        console.error("Cloud quick settle sync error:", err);
+      }
+    }
     
     toastMessage("✓ تم تسوية وتوزيع الدفعات بنجاح");
   };
@@ -756,6 +888,30 @@ export default function App() {
     if (isSupabaseConfigured) {
       await supabase.auth.signOut();
     }
+    
+    // Clear localStorage offline cache completely to prevent data leak
+    localStorage.removeItem("dawajin_state");
+    
+    // Reset React state to a clean, default blank slate
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+    setState({
+      clients: [],
+      ledger: {},
+      selectedClient: null,
+      view: "dashboard",
+      pricePerKg: 6.0,
+      theme: state.theme,
+      month: currentMonth,
+      year: currentYear,
+      companyInfo: {
+        name: "شركة دواجن",
+        address: "",
+        phone: "",
+        taxId: ""
+      }
+    });
+
     setIsLoggedIn(false);
     setSession(null);
     setUser(null);
@@ -798,6 +954,7 @@ export default function App() {
             state={state}
             onSelectClient={handleSelectClient}
             onUpdateRow={handleUpdateRow}
+            onSyncRow={handleSyncRow}
             onToggleHoliday={handleToggleHoliday}
             onQuickSettle={handleQuickSettle}
             onExportCSV={handleCSVExport}
