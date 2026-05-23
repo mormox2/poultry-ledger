@@ -40,22 +40,23 @@ export default function App() {
 
   // Initialize state from localStorage (standalone fallback)
   const getInitialState = () => {
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+
     const defaultState = {
-      clients: [
-        { id: 1, name: "محمد بن علي", address: "الحامة 1", phone: "55 549 457", color: 0, taxId: "" },
-      ],
+      clients: [],
       ledger: {},
-      selectedClient: 1,
+      selectedClient: null,
       view: "dashboard",
-      pricePerKg: 5.8,
+      pricePerKg: 6.0,
       theme: "dark",
-      month: 5,
-      year: 2026,
+      month: currentMonth,
+      year: currentYear,
       companyInfo: {
-        name: "الودرني للدواجن",
-        address: "الحامة — قابس",
-        phone: "55 549 457",
-        taxId: "1234567/A/P/M/000"
+        name: "شركة دواجن",
+        address: "",
+        phone: "",
+        taxId: ""
       }
     };
     try {
@@ -66,8 +67,8 @@ export default function App() {
           ...defaultState,
           ...parsed,
           companyInfo: parsed.companyInfo || defaultState.companyInfo,
-          month: parsed.month || 5,
-          year: parsed.year || 2026,
+          month: parsed.month || currentMonth,
+          year: parsed.year || currentYear,
           view: parsed.view || "dashboard"
         };
       }
