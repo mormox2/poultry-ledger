@@ -7,7 +7,8 @@ export default function Dashboard({
   onPriceChange, 
   onBackupExport, 
   onBackupImport,
-  onChangePassword
+  onChangePassword,
+  onUpdateCompanyInfo
 }) {
   const y = state.year;
   const m = state.month;
@@ -204,6 +205,75 @@ export default function Dashboard({
               <input type="file" accept=".json" onChange={handleFileImport} style={{ display: 'none' }} />
             </label>
           </div>
+        </div>
+
+        <div className="card" style={{ gridColumn: 'span 2' }}>
+          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '14px' }}>⚙️ إعدادات هوية المؤسسة ورأس الفاتورة (الودرني للدواجن)</div>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const newName = e.target.elements.compName.value.trim();
+            const newAddr = e.target.elements.compAddr.value.trim();
+            const newPhone = e.target.elements.compPhone.value.trim();
+            const newTaxId = e.target.elements.compTaxId.value.trim();
+            if (!newName) {
+              alert("الرجاء إدخال اسم الشركة");
+              return;
+            }
+            onUpdateCompanyInfo({
+              name: newName,
+              address: newAddr || "—",
+              phone: newPhone || "—",
+              taxId: newTaxId || "—"
+            });
+          }} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', alignItems: 'end' }} className="company-info-form">
+            <div>
+              <div className="input-label">اسم الشركة الموزعة *</div>
+              <input 
+                type="text"
+                name="compName"
+                className="input"
+                defaultValue={state.companyInfo?.name || "الودرني للدواجن"}
+                required
+              />
+            </div>
+            <div>
+              <div className="input-label">العنوان الجغرافي للشركة</div>
+              <input 
+                type="text"
+                name="compAddr"
+                className="input"
+                defaultValue={state.companyInfo?.address || ""}
+                placeholder="الحامة — قابس"
+              />
+            </div>
+            <div>
+              <div className="input-label">رقم الهاتف للشركة</div>
+              <input 
+                type="text"
+                name="compPhone"
+                className="input"
+                defaultValue={state.companyInfo?.phone || ""}
+                placeholder="55 xxx xxx"
+              />
+            </div>
+            <div>
+              <div className="input-label">المعرف الجبائي للمؤسسة (Matricule Fiscal)</div>
+              <input 
+                type="text"
+                name="compTaxId"
+                className="input"
+                defaultValue={state.companyInfo?.taxId || ""}
+                placeholder="1234567/A/P/M/000"
+              />
+            </div>
+            <button 
+              type="submit" 
+              className="btn btn-gold btn-sm" 
+              style={{ height: '38px', gridColumn: 'span 2', marginTop: '6px' }}
+            >
+              💾 حفظ وتحديث هوية المؤسسة
+            </button>
+          </form>
         </div>
       </div>
     </div>

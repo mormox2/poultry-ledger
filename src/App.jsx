@@ -30,7 +30,7 @@ export default function App() {
   const getInitialState = () => {
     const defaultState = {
       clients: [
-        { id: 1, name: "محمد بن علي", address: "الحامة 1", phone: "55 549 457", color: 0 },
+        { id: 1, name: "محمد بن علي", address: "الحامة 1", phone: "55 549 457", color: 0, taxId: "" },
       ],
       ledger: {},
       selectedClient: 1,
@@ -38,7 +38,13 @@ export default function App() {
       pricePerKg: 5.8,
       theme: "dark",
       month: 5,
-      year: 2026
+      year: 2026,
+      companyInfo: {
+        name: "الودرني للدواجن",
+        address: "الحامة — قابس",
+        phone: "55 549 457",
+        taxId: "1234567/A/P/M/000"
+      }
     };
     try {
       const saved = localStorage.getItem("dawajin_state");
@@ -48,6 +54,7 @@ export default function App() {
         return {
           ...defaultState,
           ...parsed,
+          companyInfo: parsed.companyInfo || defaultState.companyInfo,
           month: parsed.month || 5,
           year: parsed.year || 2026,
           view: parsed.view || "dashboard"
@@ -73,7 +80,8 @@ export default function App() {
         pricePerKg: state.pricePerKg,
         theme: state.theme,
         month: state.month,
-        year: state.year
+        year: state.year,
+        companyInfo: state.companyInfo
       }));
     } catch (e) {
       console.error("Failed to save state to localStorage", e);
@@ -140,6 +148,15 @@ export default function App() {
     localStorage.setItem("dawajin_password", newPass);
     setPassword(newPass);
     toastMessage("✓ تم تحديث كلمة المرور بنجاح");
+  };
+
+  // Company Information Modification Handler
+  const handleUpdateCompanyInfo = (newInfo) => {
+    setState(prev => ({
+      ...prev,
+      companyInfo: newInfo
+    }));
+    toastMessage("✓ تم تحديث بيانات الشركة بنجاح");
   };
 
   // Toast Helpers
@@ -395,6 +412,7 @@ export default function App() {
             onBackupExport={handleBackupExport}
             onBackupImport={handleBackupImport}
             onChangePassword={handleChangePassword}
+            onUpdateCompanyInfo={handleUpdateCompanyInfo}
           />
         );
       case "ledger":
@@ -444,7 +462,7 @@ export default function App() {
           <div className="logo">
             <img 
               src="/poultry-ledger/assets/logo.png" 
-              alt="الودرني للدواجن" 
+              alt={state.companyInfo.name} 
               style={{ 
                 width: '54px', 
                 height: '54px', 
@@ -459,8 +477,8 @@ export default function App() {
               }}
             />
             <div>
-              <div className="logo-text">الودرني للدواجن</div>
-              <div className="logo-sub">الحامة — قابس</div>
+              <div className="logo-text">{state.companyInfo.name}</div>
+              <div className="logo-sub">{state.companyInfo.address}</div>
             </div>
           </div>
           <nav id="nav">

@@ -24,7 +24,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <img 
               src="/poultry-ledger/assets/logo.png" 
-              alt="الودرني للدواجن" 
+              alt={state.companyInfo?.name || "الودرني للدواجن"} 
               style={{ 
                 width: '64px', 
                 height: '64px', 
@@ -39,9 +39,12 @@ export default function InvoicePrint({ state, clientId, onClose }) {
               }}
             />
             <div>
-              <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#b3851b', margin: 0 }}>الودرني للدواجن</h1>
-              <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>بيع الدواجن بالجملة والتفصيل — الحامة، قابس</p>
-              <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>الهاتف: 55 549 457</p>
+              <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#b3851b', margin: 0 }}>{state.companyInfo?.name || "الودرني للدواجن"}</h1>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>بيع الدواجن بالجملة والتفصيل — {state.companyInfo?.address || "الحامة — قابس"}</p>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>الهاتف: {state.companyInfo?.phone || "55 549 457"}</p>
+              {state.companyInfo?.taxId && state.companyInfo.taxId !== '—' && (
+                <p style={{ fontSize: '11px', color: '#b3851b', margin: '2px 0 0 0', fontWeight: '700' }}>المعرف الجبائي: {state.companyInfo.taxId}</p>
+              )}
             </div>
           </div>
           <div style={{ textAlign: 'left' }}>
@@ -68,6 +71,12 @@ export default function InvoicePrint({ state, clientId, onClose }) {
                 <td style={{ textAlign: 'right', padding: '4px 0', fontWeight: '600', color: '#64748b' }}>السعر الافتراضي:</td>
                 <td style={{ textAlign: 'right', padding: '4px 0', color: '#1e293b', fontWeight: '700' }}>{fmt(state.pricePerKg)} د.ت</td>
               </tr>
+              {cl.taxId && cl.taxId !== '—' && (
+                <tr>
+                  <td style={{ textAlign: 'right', padding: '4px 0', fontWeight: '600', color: '#64748b' }}>المعرف الجبائي:</td>
+                  <td colSpan="3" style={{ textAlign: 'right', padding: '4px 0', color: '#1e293b', fontWeight: '700' }}>{cl.taxId}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

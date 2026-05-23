@@ -20,6 +20,7 @@ export default function Clients({
   const [formAddress, setFormAddress] = useState('');
   const [formPhone, setFormPhone] = useState('');
   const [formColor, setFormColor] = useState(0);
+  const [formTaxId, setFormTaxId] = useState('');
 
   const filtered = state.clients.filter(x => 
     !search || 
@@ -36,6 +37,7 @@ export default function Clients({
     setFormAddress('');
     setFormPhone('');
     setFormColor(0);
+    setFormTaxId('');
     setModalMode('add');
   };
 
@@ -45,6 +47,7 @@ export default function Clients({
     setFormAddress(cl.address === '—' ? '' : cl.address);
     setFormPhone(cl.phone === '—' ? '' : cl.phone);
     setFormColor(cl.color);
+    setFormTaxId(cl.taxId === '—' ? '' : cl.taxId || '');
     setModalMode('edit');
   };
 
@@ -63,7 +66,8 @@ export default function Clients({
       name: formName.trim(),
       address: formAddress.trim() || "—",
       phone: formPhone.trim() || "—",
-      color: formColor
+      color: formColor,
+      taxId: formTaxId.trim() || "—"
     });
     setModalMode(null);
   };
@@ -79,7 +83,8 @@ export default function Clients({
       name: formName.trim(),
       address: formAddress.trim() || "—",
       phone: formPhone.trim() || "—",
-      color: formColor
+      color: formColor,
+      taxId: formTaxId.trim() || "—"
     });
     setModalMode(null);
   };
@@ -188,7 +193,11 @@ export default function Clients({
                 <div style={{ display: 'flex', gap: '4px' }}>{badges}</div>
               </div>
               <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '2px' }}>📍 {cl.address}</div>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '12px' }}>📞 {cl.phone}</div>
+              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '2px' }}>📞 {cl.phone}</div>
+              {cl.taxId && cl.taxId !== '—' && (
+                <div style={{ fontSize: '11px', color: 'var(--gold)', marginBottom: '12px', fontWeight: '600' }}>🆔 م.ج: {cl.taxId}</div>
+              )}
+              {!cl.taxId || cl.taxId === '—' ? <div style={{ height: '8px' }}></div> : null}
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--gold)' }}>{fmt(t.amt) || "—"}</div>
@@ -242,6 +251,15 @@ export default function Clients({
                   value={formPhone} 
                   onChange={(e) => setFormPhone(e.target.value)}
                   placeholder="55 xxx xxx" 
+                />
+              </div>
+              <div>
+                <div className="input-label">المعرف الجبائي للعميل (Matricule Fiscal)</div>
+                <input 
+                  className="input" 
+                  value={formTaxId} 
+                  onChange={(e) => setFormTaxId(e.target.value)}
+                  placeholder="1234567/A/P/M/000" 
                 />
               </div>
               <div>
@@ -301,6 +319,15 @@ export default function Clients({
                   value={formPhone} 
                   onChange={(e) => setFormPhone(e.target.value)}
                   placeholder="55 xxx xxx" 
+                />
+              </div>
+              <div>
+                <div className="input-label">المعرف الجبائي للعميل (Matricule Fiscal)</div>
+                <input 
+                  className="input" 
+                  value={formTaxId} 
+                  onChange={(e) => setFormTaxId(e.target.value)}
+                  placeholder="1234567/A/P/M/000" 
                 />
               </div>
               <div>
