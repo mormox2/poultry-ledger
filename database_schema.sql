@@ -1,0 +1,143 @@
+-- =====================================================================
+-- DATABASE SCHEMA FOR DAWAJIN PRO (الودرني للدواجن)
+-- RUN THIS SCRIPT IN THE SUPABASE SQL EDITOR
+-- =====================================================================
+
+-- 1. Create Profiles Table (Stores user company settings)
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    company_name TEXT DEFAULT 'الودرني للدواجن' NOT NULL,
+    company_address TEXT DEFAULT 'الحامة — قابس',
+    company_phone TEXT DEFAULT '55 549 457',
+    company_tax_id TEXT DEFAULT '1234567/A/P/M/000',
+    price_per_kg NUMERIC(6,3) DEFAULT 5.800 NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS on profiles
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own profile."
+    ON public.profiles FOR SELECT
+    USING (auth.uid() = id);
+
+CREATE POLICY "Users can update their own profile."
+    ON public.profiles FOR UPDATE
+    USING (auth.uid() = id);
+
+-- 2. Create Clients Table
+CREATE TABLE IF NOT EXISTS public.clients (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    profile_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    address TEXT DEFAULT '—',
+    phone TEXT DEFAULT '—',
+    tax_id TEXT DEFAULT '—',
+    color INTEGER DEFAULT 0 NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS on clients
+ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own clients."
+    ON public.clients FOR SELECT
+    USING (auth.uid() = profile_id);
+
+CREATE POLICY "Users can insert their own clients."
+    ON public.clients FOR INSERT
+    WITH CHECK (auth.uid() = profile_id);
+
+CREATE POLICY "Users can update their own clients."
+    ON public.clients FOR UPDATE
+    USING (auth.uid() = profile_id);
+
+CREATE POLICY "Users can delete their own clients."
+    ON public.clients FOR DELETE
+    USING (auth.uid() = profile_id);
+
+-- 3. Create Ledger Entries Table (Daily weights registry)
+CREATE TABLE IF NOT EXISTS public.ledger_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
+    year INTEGER NOT NULL,
+    month INTEGER NOT NULL,
+    day INTEGER NOT NULL,
+    total_weight NUMERIC(8,3) DEFAULT NULL,
+    net_weight NUMERIC(8,3) DEFAULT NULL,
+    price NUMERIC(6,3) DEFAULT NULL,
+    amount NUMERIC(10,3) DEFAULT NULL,
+    paid NUMERIC(10,3) DEFAULT NULL,
+    holiday BOOLEAN DEFAULT false NOT NULL,
+    notes TEXT DEFAULT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    
+    -- Ensure unique daily record per client
+    CONSTRAINT unique_daily_entry_per_client UNIQUE(client_id, year, month, day)
+);
+
+-- Enable RLS on ledger_entries
+ALTER TABLE public.ledger_entries ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view ledger entries of their own clients."
+    ON public.ledger_entries FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.clients 
+            WHERE public.clients.id = public.ledger_entries.client_id 
+            AND public.clients.profile_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can insert ledger entries of their own clients."
+    ON public.ledger_entries FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.clients 
+            WHERE public.clients.id = public.ledger_entries.client_id 
+            AND public.clients.profile_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can update ledger entries of their own clients."
+    ON public.ledger_entries FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.clients 
+            WHERE public.clients.id = public.ledger_entries.client_id 
+            AND public.clients.profile_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can delete ledger entries of their own clients."
+    ON public.ledger_entries FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.clients 
+            WHERE public.clients.id = public.ledger_entries.client_id 
+            AND public.clients.profile_id = auth.uid()
+        )
+    );
+
+-- 4. Trigger to automatically create a profile row when a user signs up
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+    INSERT INTO public.profiles (id, company_name, company_address, company_phone, company_tax_id, price_per_kg)
+    VALUES (
+        new.id,
+        'الودرني للدواجن',
+        'الحامة — قابس',
+        '55 549 457',
+        '1234567/A/P/M/000',
+        5.800
+    );
+    RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Recreate trigger
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();

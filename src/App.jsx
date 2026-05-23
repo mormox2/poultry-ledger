@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './styles/main.css';
+import { supabase } from './js/supabaseClient';
 
 // Component Imports
 import Dashboard from './components/Dashboard';
@@ -22,11 +23,21 @@ import {
 } from './js/utils';
 
 export default function App() {
-  // Authentication State
+  // --- Supabase Cloud States ---
+  const [session, setSession] = useState(null);
+  const [user, setUser] = useState(null);
+  const [isCloudLoading, setIsCloudLoading] = useState(false);
+
+  // Detect if Supabase is filled in .env
+  const isSupabaseConfigured = 
+    import.meta.env.VITE_SUPABASE_URL && 
+    !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-project');
+
+  // --- Authentication States ---
   const [password, setPassword] = useState(() => localStorage.getItem("dawajin_password") || "");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Initialize state from localStorage
+  // Initialize state from localStorage (standalone fallback)
   const getInitialState = () => {
     const defaultState = {
       clients: [
@@ -50,7 +61,6 @@ export default function App() {
       const saved = localStorage.getItem("dawajin_state");
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Clean defaults and merge
         return {
           ...defaultState,
           ...parsed,
@@ -69,7 +79,38 @@ export default function App() {
   const [state, setState] = useState(getInitialState);
   const [activeInvoiceClientId, setActiveInvoiceClientId] = useState(null);
 
-  // Sync state to localStorage whenever it changes
+  // --- Supabase Session Hook & Listeners ---
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    // Get active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setSession(session);
+        setUser(session.user);
+        setIsLoggedIn(true);
+        fetchCloudData(session.user.id);
+      }
+    });
+
+    // Listen for auth events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (newSession) {
+        setSession(newSession);
+        setUser(newSession.user);
+        setIsLoggedIn(true);
+        fetchCloudData(newSession.user.id);
+      } else {
+        setSession(null);
+        setUser(null);
+        setIsLoggedIn(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Sync state to localStorage whenever it changes (Offline Cache)
   useEffect(() => {
     try {
       localStorage.setItem("dawajin_state", JSON.stringify({
@@ -94,7 +135,95 @@ export default function App() {
     document.body.classList.toggle("light-theme", isLight);
   }, [state.theme]);
 
-  // Global Handlers
+  // --- Cloud Database Fetch Loader ---
+  const fetchCloudData = async (userUuid) => {
+    setIsCloudLoading(true);
+    try {
+      // 1. Fetch Profile (Company settings)
+      const { data: profile, error: profError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userUuid)
+        .single();
+        
+      if (profError && profError.code !== 'PGRST116') throw profError;
+
+      // 2. Fetch Clients
+      const { data: dbClients, error: clError } = await supabase
+        .from('clients')
+        .select('*')
+        .order('name');
+        
+      if (clError) throw clError;
+
+      // 3. Fetch Ledger Entries
+      const { data: dbLedger, error: ledError } = await supabase
+        .from('ledger_entries')
+        .select('*');
+        
+      if (ledError) throw ledError;
+
+      // Now reconstruct state!
+      const formattedClients = dbClients.map(c => ({
+        id: c.id,
+        name: c.name,
+        address: c.address,
+        phone: c.phone,
+        color: c.color,
+        taxId: c.tax_id
+      }));
+
+      // Reconstruct ledger entries map
+      const formattedLedger = {};
+      dbLedger.forEach(e => {
+        const k = `${e.client_id}:${e.year}:${e.month}`;
+        if (!formattedLedger[k]) {
+          const days = daysInMonth(e.year, e.month);
+          formattedLedger[k] = Array.from({ length: days }, (_, i) => ({
+            d: i + 1,
+            tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
+          }));
+        }
+        
+        const idx = e.day - 1;
+        if (formattedLedger[k][idx]) {
+          formattedLedger[k][idx] = {
+            d: e.day,
+            tw: e.total_weight !== null ? String(e.total_weight) : "",
+            nw: e.net_weight !== null ? String(e.net_weight) : "",
+            price: e.price !== null ? String(e.price) : "",
+            amt: e.amount !== null ? parseFloat(e.amount) : "",
+            paid: e.paid !== null ? String(e.paid) : "",
+            holiday: e.holiday,
+            notes: e.notes || ""
+          };
+        }
+      });
+
+      setState(prev => ({
+        ...prev,
+        clients: formattedClients,
+        ledger: formattedLedger,
+        selectedClient: formattedClients.length ? formattedClients[0].id : null,
+        pricePerKg: profile ? parseFloat(profile.price_per_kg) : prev.pricePerKg,
+        companyInfo: profile ? {
+          name: profile.company_name,
+          address: profile.company_address,
+          phone: profile.company_phone,
+          taxId: profile.company_tax_id
+        } : prev.companyInfo
+      }));
+
+      toastMessage("⚡ تم مزامنة كامل البيانات مع السحابة بنجاح !");
+    } catch (err) {
+      console.error("Failed to load cloud data:", err);
+      toastMessage("❌ فشل سحب البيانات السحابية، يرجى التثبت من الاتصال", "error");
+    } finally {
+      setIsCloudLoading(false);
+    }
+  };
+
+  // --- Global Handlers ---
   const handleViewChange = (viewName) => {
     setState(prev => ({ ...prev, view: viewName }));
   };
@@ -116,8 +245,8 @@ export default function App() {
     }));
   };
 
-  const handleDefaultPriceChange = (newPrice) => {
-    // Also recalculate ledger values for current active client where no custom price is set
+  const handleDefaultPriceChange = async (newPrice) => {
+    // Optimistic UI state update
     setState(prev => {
       const updatedLedger = { ...prev.ledger };
       const k = ledgerKey(prev.selectedClient, prev.year, prev.month);
@@ -138,28 +267,56 @@ export default function App() {
         ledger: updatedLedger
       };
     });
+
+    if (isSupabaseConfigured && user) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            price_per_kg: newPrice
+          });
+        if (error) throw error;
+      } catch (err) {
+        console.error("Cloud update default price error:", err);
+      }
+    }
     
-    // Fire success toast
     toastMessage("✓ تم تحديث السعر الافتراضي وتحديث الحسابات");
   };
 
-  // Password Modification Handler
   const handleChangePassword = (newPass) => {
     localStorage.setItem("dawajin_password", newPass);
     setPassword(newPass);
     toastMessage("✓ تم تحديث كلمة المرور بنجاح");
   };
 
-  // Company Information Modification Handler
-  const handleUpdateCompanyInfo = (newInfo) => {
+  const handleUpdateCompanyInfo = async (newInfo) => {
+    // Instant local state update
     setState(prev => ({
       ...prev,
       companyInfo: newInfo
     }));
+
+    if (isSupabaseConfigured && user) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            company_name: newInfo.name,
+            company_address: newInfo.address,
+            company_phone: newInfo.phone,
+            company_tax_id: newInfo.taxId
+          });
+        if (error) throw error;
+      } catch (err) {
+        console.error("Cloud update profile error:", err);
+      }
+    }
     toastMessage("✓ تم تحديث بيانات الشركة بنجاح");
   };
 
-  // Toast Helpers
   const toastMessage = (msg, type = "success") => {
     const el = document.getElementById("toast");
     if (!el) return;
@@ -177,7 +334,7 @@ export default function App() {
     }, 2500);
   };
 
-  // Row Manipulation
+  // --- Row Manipulation ---
   const handleUpdateRow = (idx, field, val) => {
     setState(prev => {
       const updatedLedger = { ...prev.ledger };
@@ -219,6 +376,9 @@ export default function App() {
       rows[idx] = row;
       updatedLedger[k] = rows;
 
+      // Trigger Cloud sync in background
+      syncLedgerEntryToCloud(prev.selectedClient, prev.year, prev.month, idx, row);
+
       return {
         ...prev,
         ledger: updatedLedger
@@ -242,7 +402,7 @@ export default function App() {
       const rows = [...updatedLedger[k]];
       const currentHoliday = rows[idx].holiday;
       
-      rows[idx] = {
+      const updatedRow = {
         ...rows[idx],
         holiday: !currentHoliday,
         tw: !currentHoliday ? "" : rows[idx].tw,
@@ -252,12 +412,48 @@ export default function App() {
         paid: !currentHoliday ? "" : rows[idx].paid
       };
 
+      rows[idx] = updatedRow;
       updatedLedger[k] = rows;
+
+      // Trigger Cloud sync in background
+      syncLedgerEntryToCloud(prev.selectedClient, prev.year, prev.month, idx, updatedRow);
+
       return {
         ...prev,
         ledger: updatedLedger
       };
     });
+  };
+
+  // Sync a single daily ledger entry to Supabase
+  const syncLedgerEntryToCloud = async (clientUuid, year, month, idx, row) => {
+    if (!isSupabaseConfigured || !user) return;
+    const day = idx + 1;
+
+    try {
+      const { error } = await supabase
+        .from('ledger_entries')
+        .upsert({
+          client_id: clientUuid,
+          year: year,
+          month: month,
+          day: day,
+          total_weight: row.tw !== "" ? parseFloat(row.tw) : null,
+          net_weight: row.nw !== "" ? parseFloat(row.nw) : null,
+          price: row.price !== "" ? parseFloat(row.price) : null,
+          amount: row.amt !== "" ? parseFloat(row.amt) : null,
+          paid: row.paid !== "" ? parseFloat(row.paid) : null,
+          holiday: row.holiday,
+          notes: row.notes || null,
+          updated_at: new Date()
+        }, {
+          onConflict: 'client_id,year,month,day'
+        });
+
+      if (error) throw error;
+    } catch (err) {
+      console.error("Cloud row upsert error:", err);
+    }
   };
 
   const handleQuickSettle = (cid, amount) => {
@@ -295,6 +491,12 @@ export default function App() {
       }
 
       updatedLedger[k] = rows;
+
+      // Trigger Cloud sync in background for each updated row
+      rows.forEach((row, idx) => {
+        syncLedgerEntryToCloud(cid, prev.year, prev.month, idx, row);
+      });
+
       return {
         ...prev,
         ledger: updatedLedger
@@ -304,7 +506,7 @@ export default function App() {
     toastMessage("✓ تم تسوية وتوزيع الدفعات بنجاح");
   };
 
-  // Client Management Handlers
+  // --- Client Management Handlers ---
   const handleSelectClient = (cid) => {
     setState(prev => ({
       ...prev,
@@ -313,28 +515,89 @@ export default function App() {
     }));
   };
 
-  const handleAddClient = (clientData) => {
-    const newClient = {
-      id: Date.now(),
-      ...clientData
-    };
-    setState(prev => ({
-      ...prev,
-      clients: [...prev.clients, newClient],
-      selectedClient: newClient.id
-    }));
-    toastMessage("✓ تم إضافة العميل الجديد بنجاح");
+  const handleAddClient = async (clientData) => {
+    const tempId = Date.now();
+
+    if (isSupabaseConfigured && user) {
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .insert({
+            profile_id: user.id,
+            name: clientData.name,
+            address: clientData.address,
+            phone: clientData.phone,
+            tax_id: clientData.taxId,
+            color: clientData.color
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        
+        if (data) {
+          setState(prev => ({
+            ...prev,
+            clients: [...prev.clients, {
+              id: data.id,
+              name: data.name,
+              address: data.address,
+              phone: data.phone,
+              color: data.color,
+              taxId: data.tax_id
+            }],
+            selectedClient: data.id
+          }));
+          toastMessage("✓ تم إضافة العميل الجديد بنجاح");
+        }
+      } catch (err) {
+        console.error("Cloud insert client error:", err);
+        toastMessage("❌ فشل إضافة العميل في السحابة", "error");
+      }
+    } else {
+      // Local Fallback
+      const newClient = {
+        id: tempId,
+        ...clientData
+      };
+      setState(prev => ({
+        ...prev,
+        clients: [...prev.clients, newClient],
+        selectedClient: newClient.id
+      }));
+      toastMessage("✓ تم إضافة العميل الجديد بنجاح");
+    }
   };
 
-  const handleEditClient = (updatedClient) => {
+  const handleEditClient = async (updatedClient) => {
+    // Optimistic state update
     setState(prev => ({
       ...prev,
       clients: prev.clients.map(c => c.id === updatedClient.id ? updatedClient : c)
     }));
+
+    if (isSupabaseConfigured && user) {
+      try {
+        const { error } = await supabase
+          .from('clients')
+          .update({
+            name: updatedClient.name,
+            address: updatedClient.address,
+            phone: updatedClient.phone,
+            tax_id: updatedClient.taxId,
+            color: updatedClient.color
+          })
+          .eq('id', updatedClient.id);
+
+        if (error) throw error;
+      } catch (err) {
+        console.error("Cloud edit client error:", err);
+      }
+    }
     toastMessage("✓ تم تعديل بيانات العميل بنجاح");
   };
 
-  const handleDeleteClient = (cid) => {
+  const handleDeleteClient = async (cid) => {
     setState(prev => {
       const filteredClients = prev.clients.filter(c => c.id !== cid);
       const isSelectedDeleted = prev.selectedClient === cid;
@@ -344,10 +607,23 @@ export default function App() {
         selectedClient: isSelectedDeleted ? (filteredClients.length ? filteredClients[0].id : null) : prev.selectedClient
       };
     });
+
+    if (isSupabaseConfigured && user) {
+      try {
+        const { error } = await supabase
+          .from('clients')
+          .delete()
+          .eq('id', cid);
+
+        if (error) throw error;
+      } catch (err) {
+        console.error("Cloud delete client error:", err);
+      }
+    }
     toastMessage("✓ تم حذف العميل بنجاح");
   };
 
-  // Backup & Import
+  // --- Backup & Import ---
   const handleBackupExport = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
     const dlAnchorElem = document.createElement('a');
@@ -385,6 +661,22 @@ export default function App() {
     exportToCSV(state);
   };
 
+  const handleCloudLogin = (newSession, newUser) => {
+    setSession(newSession);
+    setUser(newUser);
+    setIsLoggedIn(true);
+    fetchCloudData(newUser.id);
+  };
+
+  const handleLogout = async () => {
+    if (isSupabaseConfigured) {
+      await supabase.auth.signOut();
+    }
+    setIsLoggedIn(false);
+    setSession(null);
+    setUser(null);
+  };
+
   // If user is not authenticated, render the login shield!
   if (!isLoggedIn) {
     return (
@@ -396,6 +688,7 @@ export default function App() {
           setPassword(newPass);
           setIsLoggedIn(true);
         }}
+        onCloudLogin={handleCloudLogin}
       />
     );
   }
@@ -481,6 +774,28 @@ export default function App() {
               <div className="logo-sub">{state.companyInfo.address}</div>
             </div>
           </div>
+          
+          {/* CLOUD CONNECTION SYNC BADGE INDICATOR */}
+          {isSupabaseConfigured && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              background: 'rgba(16, 185, 129, 0.08)', 
+              border: '1.5px solid rgba(16, 185, 129, 0.25)',
+              borderRadius: '20px',
+              padding: '4px 12px',
+              fontSize: '11px',
+              fontWeight: '700',
+              color: 'var(--green)'
+            }} className="no-print">
+              <span className="pulse-dot-green" style={{ margin: 0 }}></span>
+              <span>
+                {isCloudLoading ? "جاري المزامنة..." : "متصل بالسحابة"}
+              </span>
+            </div>
+          )}
+
           <nav id="nav">
             <button 
               className={state.view === 'dashboard' ? 'active' : ''} 
@@ -530,7 +845,7 @@ export default function App() {
             </button>
             <button 
               className="btn btn-outline btn-sm no-print" 
-              onClick={() => setIsLoggedIn(false)} 
+              onClick={handleLogout} 
               title="تسجيل الخروج"
               style={{ color: 'var(--red)', borderColor: 'rgba(239, 68, 68, 0.25)', background: 'rgba(239, 68, 68, 0.05)', fontWeight: '700' }}
             >
