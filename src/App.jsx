@@ -777,8 +777,8 @@ export default function App() {
               src="/poultry-ledger/assets/logo.png" 
               alt={state.companyInfo.name} 
               style={{ 
-                width: '54px', 
-                height: '54px', 
+                width: '64px', 
+                height: '64px', 
                 borderRadius: '12px', 
                 objectFit: 'contain', 
                 border: '1.5px solid rgba(212, 168, 67, 0.45)', 
@@ -786,7 +786,7 @@ export default function App() {
                 padding: '3px'
               }}
               onError={(e) => {
-                e.target.outerHTML = '<div class="logo-icon" style="width: 54px; height: 54px; font-size: 24px; border-radius: 12px;">🐔</div>';
+                e.target.outerHTML = '<div class="logo-icon" style="width: 64px; height: 64px; font-size: 30px; border-radius: 12px;">🐔</div>';
               }}
             />
             <div>
@@ -857,7 +857,7 @@ export default function App() {
               📈 <span>الملخص المالي</span>
             </button>
           </nav>
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }} className="no-print">
             <button 
               className="theme-toggle no-print" 
               onClick={handleThemeToggle} 
@@ -883,7 +883,7 @@ export default function App() {
             <select 
               id="month-sel" 
               className="input" 
-              style={{ width: 'auto', padding: '6px 10px', fontSize: '12px' }} 
+              style={{ width: 'auto', padding: '8px 12px', fontSize: '14px', fontWeight: '600' }} 
               value={state.month} 
               onChange={handleMonthChange}
             >
@@ -895,7 +895,7 @@ export default function App() {
               type="number" 
               id="year-sel" 
               className="input" 
-              style={{ width: '72px', padding: '6px 8px', fontSize: '12px', textAlign: 'center' }} 
+              style={{ width: '80px', padding: '8px 10px', fontSize: '14px', fontWeight: '600', textAlign: 'center' }} 
               value={state.year} 
               min="2020" 
               max="2035" 

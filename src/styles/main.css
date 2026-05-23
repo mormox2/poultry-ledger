@@ -112,36 +112,36 @@ header {
   z-index: 100; 
   box-shadow: 0 4px 20px rgba(0,0,0,0.05);
 }
-.header-inner { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 85px; gap: 12px; }
-.logo { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.header-inner { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 100px; gap: 16px; }
+.logo { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
 .logo-icon { 
-  width: 56px; 
-  height: 56px; 
+  width: 64px; 
+  height: 64px; 
   background: linear-gradient(135deg, var(--gold), var(--gold2)); 
   border-radius: 12px; 
   display: flex; 
   align-items: center; 
   justify-content: center; 
-  font-size: 26px; 
+  font-size: 30px; 
   box-shadow: 0 0 15px rgba(var(--gold-rgb),.3); 
 }
-.logo-text { font-weight: 800; font-size: 18px; color: var(--gold); line-height: 1.2; }
-.logo-sub { font-size: 12px; color: var(--muted); font-weight: 400; }
+.logo-text { font-weight: 800; font-size: 22px; color: var(--gold); line-height: 1.2; }
+.logo-sub { font-size: 13px; color: var(--muted); font-weight: 400; }
 
-nav { display: flex; gap: 6px; }
+nav { display: flex; gap: 8px; }
 nav button { 
-  padding: 8px 16px; 
-  border-radius: 8px; 
+  padding: 10px 18px; 
+  border-radius: 10px; 
   border: none; 
   cursor: pointer; 
   font-family: inherit; 
-  font-size: 13px; 
-  font-weight: 600; 
+  font-size: 14px; 
+  font-weight: 700; 
   transition: all .25s ease; 
   white-space: nowrap; 
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 nav button.active { background: var(--gold); color: #0a0f1d; box-shadow: 0 4px 12px rgba(var(--gold-rgb), 0.35); }
 nav button:not(.active) { background: transparent; color: var(--muted); border: 1px solid var(--border); }
@@ -149,8 +149,8 @@ nav button:not(.active):hover { border-color: var(--gold); color: var(--gold); b
 
 /* THEME TOGGLE BUTTON */
 .theme-toggle {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 1px solid var(--border);
   background: transparent;
@@ -159,7 +159,7 @@ nav button:not(.active):hover { border-color: var(--gold); color: var(--gold); b
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 18px;
   transition: all 0.2s ease;
 }
 .theme-toggle:hover {
