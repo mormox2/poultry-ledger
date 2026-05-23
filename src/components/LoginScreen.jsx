@@ -87,8 +87,9 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword }) {
                       type="button" 
                       className="password-toggle-btn"
                       onClick={() => setShowPassword(!showPassword)}
+                      title={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
                     >
-                      {showPassword ? "👁️‍عون" : "👁️"}
+                      {showPassword ? "🙈" : "👁️"}
                     </button>
                   </div>
                 </div>
@@ -124,8 +125,9 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword }) {
                     type="button" 
                     className="password-toggle-btn"
                     onClick={() => setShowPassword(!showPassword)}
+                    title={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
                   >
-                    {showPassword ? "👁️‍عون" : "👁️"}
+                    {showPassword ? "🙈" : "👁️"}
                   </button>
                 </div>
                 <button type="submit" className="btn btn-gold" style={{ width: '100%', height: '44px', fontWeight: '700' }}>

@@ -735,5 +735,39 @@ tr.holiday td {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(212, 168, 67, 0.1) !important;
 }
 
+/* HIGH-END INTERACTIVE CHART DRAWING ANIMATIONS */
+.animated-chart-line {
+  stroke-dasharray: 2000;
+  stroke-dashoffset: 2000;
+  animation: drawLine 2.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes drawLine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animated-chart-area {
+  opacity: 0;
+  animation: fadeInChartArea 1s cubic-bezier(0.25, 1, 0.5, 1) 0.8s forwards;
+}
+
+@keyframes fadeInChartArea {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes drawDonut {
+  from {
+    stroke-dashoffset: var(--circumference);
+  }
+  to {
+    stroke-dashoffset: var(--target-offset);
+  }
+}
+
+
 
 

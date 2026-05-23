@@ -18,6 +18,52 @@ export default function Ledger({
   const [quickSettleOpen, setQuickSettleOpen] = useState(false);
   const [settleAmount, setSettleAmount] = useState('');
 
+  // Excel-like spreadsheet keyboard navigation helper
+  const focusTarget = (r, c) => {
+    const el = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+    if (el) {
+      el.focus();
+      if (el.select) el.select();
+      return true;
+    }
+    return false;
+  };
+
+  const handleKeyDown = (e, rowIdx, colIdx) => {
+    const maxRows = rows.length;
+    const maxCols = 6;
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      let r = rowIdx - 1;
+      while (r >= 0) {
+        if (focusTarget(r, colIdx)) break;
+        r--;
+      }
+    } else if (e.key === 'ArrowDown' || e.key === 'Enter') {
+      e.preventDefault();
+      let r = rowIdx + 1;
+      while (r < maxRows) {
+        if (focusTarget(r, colIdx)) break;
+        r++;
+      }
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      let c = colIdx + 1;
+      while (c < maxCols) {
+        if (focusTarget(rowIdx, c)) break;
+        c++;
+      }
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      let c = colIdx - 1;
+      while (c >= 0) {
+        if (focusTarget(rowIdx, c)) break;
+        c--;
+      }
+    }
+  };
+
   if (!cl) {
     return (
       <div className="empty">
@@ -182,6 +228,9 @@ export default function Ledger({
                           value={r.tw} 
                           placeholder="0"
                           onChange={(e) => onUpdateRow(idx, 'tw', e.target.value)} 
+                          onKeyDown={(e) => handleKeyDown(e, idx, 0)}
+                          data-row={idx}
+                          data-col={0}
                           style={{ width: '70px' }}
                         />
                       </td>
@@ -193,6 +242,9 @@ export default function Ledger({
                           value={r.nw} 
                           placeholder="0"
                           onChange={(e) => onUpdateRow(idx, 'nw', e.target.value)} 
+                          onKeyDown={(e) => handleKeyDown(e, idx, 1)}
+                          data-row={idx}
+                          data-col={1}
                           style={{ width: '70px' }}
                         />
                       </td>
@@ -204,6 +256,9 @@ export default function Ledger({
                           value={r.price || ''} 
                           placeholder={state.pricePerKg}
                           onChange={(e) => onUpdateRow(idx, 'price', e.target.value)} 
+                          onKeyDown={(e) => handleKeyDown(e, idx, 2)}
+                          data-row={idx}
+                          data-col={2}
                           style={{ width: '70px', color: 'var(--gold)' }}
                         />
                       </td>
@@ -215,6 +270,9 @@ export default function Ledger({
                           value={r.amt} 
                           placeholder="—"
                           onChange={(e) => onUpdateRow(idx, 'amt', e.target.value)} 
+                          onKeyDown={(e) => handleKeyDown(e, idx, 3)}
+                          data-row={idx}
+                          data-col={3}
                           style={{ width: '90px' }}
                         />
                       </td>
@@ -225,6 +283,9 @@ export default function Ledger({
                           value={r.paid} 
                           placeholder="—"
                           onChange={(e) => onUpdateRow(idx, 'paid', e.target.value)} 
+                          onKeyDown={(e) => handleKeyDown(e, idx, 4)}
+                          data-row={idx}
+                          data-col={4}
                           style={{ width: '90px', color: r.paid ? 'var(--green)' : '' }} 
                         />
                       </td>
@@ -239,6 +300,9 @@ export default function Ledger({
                       value={r.notes || ''} 
                       placeholder="..."
                       onChange={(e) => onUpdateRow(idx, 'notes', e.target.value)} 
+                      onKeyDown={(e) => handleKeyDown(e, idx, 5)}
+                      data-row={idx}
+                      data-col={5}
                       style={{ width: '90px', color: 'var(--muted)' }}
                     />
                   </td>

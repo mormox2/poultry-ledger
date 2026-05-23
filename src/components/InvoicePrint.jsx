@@ -21,10 +21,28 @@ export default function InvoicePrint({ state, clientId, onClose }) {
         
         {/* Invoice Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #b3851b', paddingBottom: '15px', marginBottom: '25px' }}>
-          <div>
-            <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#b3851b', margin: 0 }}>الودرني للدواجن</h1>
-            <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>بيع الدواجن بالجملة والتفصيل — الحامة، قابس</p>
-            <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>الهاتف: 55 549 457</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <img 
+              src="/poultry-ledger/assets/logo.png" 
+              alt="الودرني للدواجن" 
+              style={{ 
+                width: '64px', 
+                height: '64px', 
+                borderRadius: '14px', 
+                objectFit: 'contain', 
+                border: '1.5px solid #b3851b', 
+                background: '#ffffff',
+                padding: '3px'
+              }}
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+            <div>
+              <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#b3851b', margin: 0 }}>الودرني للدواجن</h1>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>بيع الدواجن بالجملة والتفصيل — الحامة، قابس</p>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>الهاتف: 55 549 457</p>
+            </div>
           </div>
           <div style={{ textAlign: 'left' }}>
             <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', margin: 0 }}>فاتورة حساب شهري</h2>

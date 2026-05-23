@@ -196,8 +196,8 @@ export default function Analytics({ state }) {
         {/* Area and Line Paths */}
         {points.length > 0 && (
           <>
-            <path d={areaPath} fill="url(#chart-grad)" />
-            <path d={dPath} fill="none" stroke="var(--gold)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d={areaPath} fill="url(#chart-grad)" className="animated-chart-area" />
+            <path d={dPath} fill="none" stroke="var(--gold)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animated-chart-line" />
           </>
         )}
 
@@ -291,7 +291,11 @@ export default function Analytics({ state }) {
                 strokeDasharray={C} 
                 strokeDashoffset={slice.strokeOffset} 
                 transform="rotate(-90 60 60)" 
-                style={{ transition: 'stroke-dashoffset 0.6s ease' }} 
+                style={{ 
+                  '--target-offset': slice.strokeOffset,
+                  '--circumference': C,
+                  animation: 'drawDonut 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards'
+                }} 
               />
             ))}
             <circle cx="60" cy="60" r={R - 5} fill="var(--bg2)" />
