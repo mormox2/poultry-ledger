@@ -27,6 +27,7 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
   const [isCloudLoading, setIsCloudLoading] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Detect if Supabase is filled in .env
   const isSupabaseConfigured = 
@@ -226,6 +227,7 @@ export default function App() {
   // --- Global Handlers ---
   const handleViewChange = (viewName) => {
     setState(prev => ({ ...prev, view: viewName }));
+    setMobileMenuOpen(false);
   };
 
   const handleMonthChange = (e) => {
@@ -796,7 +798,16 @@ export default function App() {
             </div>
           )}
 
-          <nav id="nav">
+          {/* HAMBURGER MENU TOGGLE BUTTON */}
+          <button 
+            className={`menu-toggle no-print ${mobileMenuOpen ? 'open' : ''}`}
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            title="القائمة"
+          >
+            {mobileMenuOpen ? '✕' : '☰'}
+          </button>
+
+          <nav id="nav" className={mobileMenuOpen ? 'open' : ''}>
             <button 
               className={state.view === 'dashboard' ? 'active' : ''} 
               onClick={() => handleViewChange('dashboard')}
