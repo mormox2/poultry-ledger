@@ -338,10 +338,12 @@ tr.total-row td { background: var(--bg3); font-weight: 800; border-top: 2px soli
   background: var(--card-bg); 
   border: 1px solid var(--border); 
   border-radius: 16px; 
-  padding: 30px; 
+  padding: 24px; 
   width: 100%; 
   max-width: 480px; 
-  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   transform: scale(.92) translateY(15px); 
   transition: transform .3s cubic-bezier(.175,.885,.32,1.2); 
 }

@@ -7,9 +7,9 @@
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     company_name TEXT DEFAULT 'الودرني للدواجن' NOT NULL,
-    company_address TEXT DEFAULT 'الحامة — قابس',
-    company_phone TEXT DEFAULT '55 549 457',
-    company_tax_id TEXT DEFAULT '1234567/A/P/M/000',
+    company_address TEXT DEFAULT 'وادي النور الحامة,قابس',
+    company_phone TEXT DEFAULT '96 101 651',
+    company_tax_id TEXT DEFAULT '1895235/E',
     price_per_kg NUMERIC(6,3) DEFAULT 5.800 NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -127,9 +127,9 @@ BEGIN
     VALUES (
         new.id,
         'الودرني للدواجن',
-        'الحامة — قابس',
-        '55 549 457',
-        '1234567/A/P/M/000',
+        'وادي النور الحامة,قابس ',
+        '96 101 651',
+        '1895235/E',
         5.800
     );
     RETURN new;

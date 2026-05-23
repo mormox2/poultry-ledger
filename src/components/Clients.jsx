@@ -21,6 +21,7 @@ export default function Clients({
   const [formPhone, setFormPhone] = useState('');
   const [formColor, setFormColor] = useState(0);
   const [formTaxId, setFormTaxId] = useState('');
+  const [formNotes, setFormNotes] = useState('');
 
   const filtered = state.clients.filter(x => 
     !search || 
@@ -38,6 +39,7 @@ export default function Clients({
     setFormPhone('');
     setFormColor(0);
     setFormTaxId('');
+    setFormNotes('');
     setModalMode('add');
   };
 
@@ -48,6 +50,7 @@ export default function Clients({
     setFormPhone(cl.phone === '—' ? '' : cl.phone);
     setFormColor(cl.color);
     setFormTaxId(cl.taxId === '—' ? '' : cl.taxId || '');
+    setFormNotes(cl.notes === '—' ? '' : cl.notes || '');
     setModalMode('edit');
   };
 
@@ -67,7 +70,8 @@ export default function Clients({
       address: formAddress.trim() || "—",
       phone: formPhone.trim() || "—",
       color: formColor,
-      taxId: formTaxId.trim() || "—"
+      taxId: formTaxId.trim() || "—",
+      notes: formNotes.trim() || "—"
     });
     setModalMode(null);
   };
@@ -84,7 +88,8 @@ export default function Clients({
       address: formAddress.trim() || "—",
       phone: formPhone.trim() || "—",
       color: formColor,
-      taxId: formTaxId.trim() || "—"
+      taxId: formTaxId.trim() || "—",
+      notes: formNotes.trim() || "—"
     });
     setModalMode(null);
   };
@@ -195,9 +200,12 @@ export default function Clients({
               <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '2px' }}>📍 {cl.address}</div>
               <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '2px' }}>📞 {cl.phone}</div>
               {cl.taxId && cl.taxId !== '—' && (
-                <div style={{ fontSize: '11px', color: 'var(--gold)', marginBottom: '12px', fontWeight: '600' }}>🆔 م.ج: {cl.taxId}</div>
+                <div style={{ fontSize: '11px', color: 'var(--gold)', marginBottom: '2px', fontWeight: '600' }}>🆔 م.ج: {cl.taxId}</div>
               )}
-              {!cl.taxId || cl.taxId === '—' ? <div style={{ height: '8px' }}></div> : null}
+              {cl.notes && cl.notes !== '—' && (
+                <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '12px', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={cl.notes}>📝 {cl.notes}</div>
+              )}
+              {(!cl.taxId || cl.taxId === '—') && (!cl.notes || cl.notes === '—') ? <div style={{ height: '8px' }}></div> : null}
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--gold)' }}>{fmt(t.amt) || "—"}</div>
@@ -224,42 +232,55 @@ export default function Clients({
         <div className="modal-overlay open" onClick={() => setModalMode(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">إضافة عميل جديد</div>
-            <form onSubmit={handleAddSubmit} style={{ display: 'grid', gap: '12px' }}>
+            <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
-                <div className="input-label">الاسم *</div>
+                <div className="input-label">الاسم الكامل للعميل *</div>
                 <input 
                   className="input" 
                   value={formName} 
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="محمد بن علي" 
+                  placeholder="مثال: محمد بن علي" 
+                  required
                   autoFocus 
                 />
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <div className="input-label">الهاتف</div>
+                  <input 
+                    className="input" 
+                    value={formPhone} 
+                    onChange={(e) => setFormPhone(e.target.value)}
+                    placeholder="55 xxx xxx" 
+                  />
+                </div>
+                <div>
+                  <div className="input-label">المعرف الجبائي للعميل</div>
+                  <input 
+                    className="input" 
+                    value={formTaxId} 
+                    onChange={(e) => setFormTaxId(e.target.value)}
+                    placeholder="1234567/A/P/M/000" 
+                  />
+                </div>
+              </div>
               <div>
-                <div className="input-label">العنوان</div>
+                <div className="input-label">العنوان الجغرافي</div>
                 <input 
                   className="input" 
                   value={formAddress} 
                   onChange={(e) => setFormAddress(e.target.value)}
-                  placeholder="الحامة 1" 
+                  placeholder="مثال: الحامة 1" 
                 />
               </div>
               <div>
-                <div className="input-label">الهاتف</div>
-                <input 
+                <div className="input-label">ملاحظات خاصة بالحريف</div>
+                <textarea 
                   className="input" 
-                  value={formPhone} 
-                  onChange={(e) => setFormPhone(e.target.value)}
-                  placeholder="55 xxx xxx" 
-                />
-              </div>
-              <div>
-                <div className="input-label">المعرف الجبائي للعميل (Matricule Fiscal)</div>
-                <input 
-                  className="input" 
-                  value={formTaxId} 
-                  onChange={(e) => setFormTaxId(e.target.value)}
-                  placeholder="1234567/A/P/M/000" 
+                  value={formNotes} 
+                  onChange={(e) => setFormNotes(e.target.value)}
+                  placeholder="شروط الدفع، تصنيفات خاصة، إلخ..." 
+                  style={{ minHeight: '50px', resize: 'vertical' }}
                 />
               </div>
               <div>
@@ -278,9 +299,9 @@ export default function Clients({
                   ))}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
-                <button type="submit" className="btn btn-gold" style={{ flex: 1 }}>إضافة العميل</button>
-                <button type="button" className="btn btn-outline" onClick={() => setModalMode(null)}>إلغاء</button>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                <button type="submit" className="btn btn-gold" style={{ flex: 1, height: '40px', fontWeight: '700' }}>إضافة العميل</button>
+                <button type="button" className="btn btn-outline" onClick={() => setModalMode(null)} style={{ flex: 1, height: '40px' }}>إلغاء</button>
               </div>
             </form>
           </div>
@@ -292,42 +313,55 @@ export default function Clients({
         <div className="modal-overlay open" onClick={() => setModalMode(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-title">تعديل بيانات العميل</div>
-            <form onSubmit={handleEditSubmit} style={{ display: 'grid', gap: '12px' }}>
+            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
-                <div className="input-label">الاسم *</div>
+                <div className="input-label">الاسم الكامل للعميل *</div>
                 <input 
                   className="input" 
                   value={formName} 
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="محمد بن علي" 
+                  placeholder="مثال: محمد بن علي" 
+                  required
                   autoFocus 
                 />
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <div className="input-label">الهاتف</div>
+                  <input 
+                    className="input" 
+                    value={formPhone} 
+                    onChange={(e) => setFormPhone(e.target.value)}
+                    placeholder="55 xxx xxx" 
+                  />
+                </div>
+                <div>
+                  <div className="input-label">المعرف الجبائي للعميل</div>
+                  <input 
+                    className="input" 
+                    value={formTaxId} 
+                    onChange={(e) => setFormTaxId(e.target.value)}
+                    placeholder="1234567/A/P/M/000" 
+                  />
+                </div>
+              </div>
               <div>
-                <div className="input-label">العنوان</div>
+                <div className="input-label">العنوان الجغرافي</div>
                 <input 
                   className="input" 
                   value={formAddress} 
                   onChange={(e) => setFormAddress(e.target.value)}
-                  placeholder="الحامة 1" 
+                  placeholder="مثال: الحامة 1" 
                 />
               </div>
               <div>
-                <div className="input-label">الهاتف</div>
-                <input 
+                <div className="input-label">ملاحظات خاصة بالحريف</div>
+                <textarea 
                   className="input" 
-                  value={formPhone} 
-                  onChange={(e) => setFormPhone(e.target.value)}
-                  placeholder="55 xxx xxx" 
-                />
-              </div>
-              <div>
-                <div className="input-label">المعرف الجبائي للعميل (Matricule Fiscal)</div>
-                <input 
-                  className="input" 
-                  value={formTaxId} 
-                  onChange={(e) => setFormTaxId(e.target.value)}
-                  placeholder="1234567/A/P/M/000" 
+                  value={formNotes} 
+                  onChange={(e) => setFormNotes(e.target.value)}
+                  placeholder="شروط الدفع، تصنيفات خاصة، إلخ..." 
+                  style={{ minHeight: '50px', resize: 'vertical' }}
                 />
               </div>
               <div>
@@ -346,9 +380,9 @@ export default function Clients({
                   ))}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
-                <button type="submit" className="btn btn-gold" style={{ flex: 1 }}>حفظ التعديلات</button>
-                <button type="button" className="btn btn-outline" onClick={() => setModalMode(null)}>إلغاء</button>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                <button type="submit" className="btn btn-gold" style={{ flex: 1, height: '40px', fontWeight: '700' }}>حفظ التعديلات</button>
+                <button type="button" className="btn btn-outline" onClick={() => setModalMode(null)} style={{ flex: 1, height: '40px' }}>إلغاء</button>
               </div>
             </form>
           </div>
