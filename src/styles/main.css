@@ -218,20 +218,50 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
   justify-content: center;
   gap: 8px; 
   padding: 10px 20px; 
-  border-radius: 8px; 
+  border-radius: var(--radius); 
   border: none; 
   cursor: pointer; 
   font-family: inherit; 
   font-size: 13px; 
   font-weight: 700; 
-  transition: all .2s cubic-bezier(0.4, 0, 0.2, 1); 
+  transition: all .25s cubic-bezier(0.4, 0, 0.2, 1); 
 }
-.btn-gold { background: var(--gold); color: #0a0f1d; }
-.btn-gold:hover { background: var(--gold2); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(var(--gold-rgb),.35); }
-.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
-.btn-outline:hover { border-color: var(--gold); color: var(--gold); background: rgba(var(--gold-rgb), 0.05); }
-.btn-danger { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.25); color: var(--red); }
-.btn-danger:hover { background: rgba(239,68,68,.25); transform: translateY(-1px); }
+.btn:active {
+  transform: translateY(1px) scale(0.98) !important;
+}
+.btn-gold { 
+  background: linear-gradient(135deg, var(--gold2) 0%, var(--gold) 100%); 
+  color: #0a0f1d; 
+  box-shadow: 0 4px 15px rgba(var(--gold-rgb), 0.25);
+}
+.btn-gold:hover { 
+  background: linear-gradient(135deg, #fbbf24 0%, var(--gold2) 100%); 
+  transform: translateY(-2px); 
+  box-shadow: 0 6px 20px rgba(var(--gold-rgb), 0.4); 
+}
+.btn-outline { 
+  background: rgba(var(--gold-rgb), 0.02); 
+  border: 1.5px solid var(--border); 
+  color: var(--text); 
+}
+.btn-outline:hover { 
+  border-color: var(--gold); 
+  color: var(--gold); 
+  background: rgba(var(--gold-rgb), 0.08); 
+  box-shadow: 0 0 12px rgba(var(--gold-rgb), 0.12);
+  transform: translateY(-1px);
+}
+.btn-danger { 
+  background: rgba(239, 68, 68, 0.08); 
+  border: 1.5px solid rgba(239, 68, 68, 0.25); 
+  color: var(--red); 
+}
+.btn-danger:hover { 
+  background: rgba(239, 68, 68, 0.16); 
+  border-color: var(--red); 
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.15);
+  transform: translateY(-1px); 
+}
 .btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 6px; }
 
 /* INPUTS */
@@ -463,17 +493,76 @@ body.printing-invoice #print-invoice-area {
   }
 }
 
-/* RESPONSIVE */
+/* RESPONSIVE & MOBILE UX Overhaul */
 @media (max-width: 900px) {
   .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
 }
-@media (max-width: 700px) {
-  nav button span { display: none; }
-  .header-inner { padding: 0 12px; height: 60px; }
+
+@media (max-width: 860px) {
+  .header-inner {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    gap: 12px;
+    justify-content: space-between;
+  }
+  
+  .logo {
+    order: 1;
+  }
+  
+  /* Cloud sync badge */
+  .header-inner > div:has(.pulse-dot-green) {
+    order: 2;
+    margin-left: auto;
+  }
+  
+  /* Swipeable navbar (Middle row) */
+  nav {
+    order: 3;
+    width: 100%;
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 0;
+  }
+  nav::-webkit-scrollbar {
+    display: none; /* Hide scrollbar for clean UI */
+  }
+  nav button {
+    flex: 0 0 auto;
+  }
+  nav button span {
+    display: inline !important; /* Keep text labels readable on mobile devices */
+  }
+  
+  /* Controls row (Bottom row) */
+  .header-inner > div:has(#month-sel) {
+    order: 4;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
 }
+
+@media (max-width: 768px) {
+  .db-details-grid {
+    grid-template-columns: 1fr !important; /* Stack detail cards on mobile screens */
+  }
+}
+
 @media (max-width: 520px) {
   .stat-grid { grid-template-columns: 1fr; }
-  .sec-header { flex-direction: column; align-items: flex-start; }
+  .sec-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .header-inner > div:has(#month-sel) {
+    justify-content: center;
+  }
 }
 
 /* LOGIN SCREEN STYLES */
