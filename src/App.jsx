@@ -519,8 +519,18 @@ export default function App() {
 
       const rows = [...updatedLedger[k]];
       const row = { ...rows.at(idx) };
-      if (field === 'tw') row.tw = val;
-      else if (field === 'nw') row.nw = val;
+      if (field === 'tw') {
+        row.tw = val;
+        if (val && !row.price) {
+          row.price = prev.pricePerKg;
+        }
+      }
+      else if (field === 'nw') {
+        row.nw = val;
+        if (val && !row.price) {
+          row.price = prev.pricePerKg;
+        }
+      }
       else if (field === 'price') row.price = val;
       else if (field === 'amt') row.amt = val;
       else if (field === 'paid') row.paid = val;
@@ -534,9 +544,7 @@ export default function App() {
           row.amt = "";
         } else {
           const activePrice = parseFloat(row.price) || prev.pricePerKg || 0;
-          if (activePrice && !row.amt) {
-            row.amt = parseFloat((nwFloat * activePrice).toFixed(3));
-          }
+          row.amt = parseFloat((nwFloat * activePrice).toFixed(3));
         }
       } else if (field === 'price') {
         const customPrice = parseFloat(val);
