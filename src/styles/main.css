@@ -1364,3 +1364,19 @@ tr.holiday td {
   50% { transform: scale(1.08); filter: drop-shadow(0 0 8px rgba(212, 168, 67, 0.45)); }
   100% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(212, 168, 67, 0)); }
 }
+
+/* FORCE LTR FOR PHONE AND TAX ID INPUTS AND SPANS TO PREVENT RTL FLIP */
+input[name="compPhone"],
+input[name="compTaxId"],
+input[placeholder="1234567/A/P/M/000"],
+input[placeholder="55 xxx xxx"] {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+.font-mono,
+a[href^="tel:"] span,
+#print-invoice-area span {
+  direction: ltr !important;
+  unicode-bidi: embed !important;
+}
