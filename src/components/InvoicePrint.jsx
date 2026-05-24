@@ -423,7 +423,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
               <span>الفترة:</span>
               <span>{MONTHS.at(m - 1)} {y}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dotted #ccc', paddingTop: '4px', marginTop: '4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dotted #888', paddingTop: '4px', marginTop: '4px' }}>
               <span style={{ fontWeight: '700' }}>الحريف:</span>
               <span style={{ fontWeight: '800' }}>{cl.name}</span>
             </div>
@@ -465,7 +465,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
                   const dateStr = `${String(r.d).padStart(2, "0")}/${String(m).padStart(2, "0")}`;
                   if (r.holiday) {
                     return (
-                      <tr key={idx} style={{ borderBottom: '1px dotted #ccc' }}>
+                      <tr key={idx} style={{ borderBottom: '1px dotted #888' }}>
                         <td style={{ padding: '3px 1px', textAlign: 'right', color: '#64748b' }}>{dateStr}</td>
                         <td colSpan="3" style={{ padding: '3px 1px', textAlign: 'center', color: '#ea580c', fontWeight: '700' }}>— عطلة —</td>
                       </tr>
@@ -473,14 +473,14 @@ export default function InvoicePrint({ state, clientId, onClose }) {
                   }
                   return (
                     <React.Fragment key={idx}>
-                      <tr style={{ borderBottom: r.paid ? 'none' : '1px dotted #ccc' }}>
+                      <tr style={{ borderBottom: r.paid ? 'none' : '1px dotted #888' }}>
                         <td style={{ padding: '3px 1px', textAlign: 'right' }}>{dateStr}</td>
                         <td style={{ padding: '3px 1px', textAlign: 'center' }}>{r.nw || 0}</td>
                         <td style={{ padding: '3px 1px', textAlign: 'center' }}>{r.price || state.pricePerKg}</td>
                         <td style={{ padding: '3px 1px', textAlign: 'left', fontWeight: '700' }}>{fmt(r.amt) || "0"}</td>
                       </tr>
                       {r.paid && (
-                        <tr style={{ borderBottom: '1px dotted #ccc' }}>
+                        <tr style={{ borderBottom: '1px dotted #888' }}>
                           <td colSpan="4" style={{ padding: '2px 1px 4px 1px', textAlign: 'left', color: '#16a34a', fontSize: '8.5px', fontWeight: '700' }}>
                             ↳ تم دفع: {fmt(r.paid)} د.ت
                           </td>
@@ -509,7 +509,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
               <span>معلوم الطابع الجبائي:</span>
               <span>{fmt(timbreFiscal)} د.ت</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dotted #ccc', paddingTop: '3px', marginTop: '3px', fontWeight: '700' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dotted #888', paddingTop: '3px', marginTop: '3px', fontWeight: '700' }}>
               <span>إجمالي TTC:</span>
               <span>{fmt(totalTTC)} د.ت</span>
             </div>
@@ -537,7 +537,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
             </div>
           </div>
 
-          <div style={{ textAlign: 'center', fontSize: '8.5px', color: '#64748b', marginTop: '15px', borderTop: '1px dotted #ccc', paddingTop: '8px' }}>
+          <div style={{ textAlign: 'center', fontSize: '8.5px', color: '#64748b', marginTop: '15px', borderTop: '1px dotted #888', paddingTop: '8px' }}>
             🤝 شكراً لتعاملكم معنا ثقتكم سر نجاح مبيعاتنا
           </div>
         </div>
