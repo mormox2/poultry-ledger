@@ -65,7 +65,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
         }}></div>
 
         {/* Invoice Header */}
-        <div style={{ 
+        <div className="invoice-header" style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
@@ -163,7 +163,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           <h3 style={{ fontSize: '14px', color: '#b45309', margin: '0 0 12px 0', fontWeight: '800', borderBottom: '1px dashed #cbd5e1', paddingBottom: '6px' }}>
             👤 بيانات ومراجع الحريف الجبائية:
           </h3>
-          <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+          <table className="invoice-meta-table" style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
             <tbody>
               <tr>
                 <td style={{ textAlign: 'right', padding: '6px 0', fontWeight: '600', width: '110px', color: '#475569' }}>الاسم واللقب (Client):</td>
@@ -190,7 +190,8 @@ export default function InvoicePrint({ state, clientId, onClose }) {
         </div>
         
         {/* Ledger Items Table */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '30px' }}>
+        <div className="invoice-table-wrap">
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '30px' }}>
           <thead>
             <tr style={{ background: '#f1f5f9', borderBottom: '2.5px solid #d4a843' }}>
               <th style={{ padding: '12px 8px', textAlign: 'center', color: '#b45309', fontWeight: '800' }}>التاريخ</th>
@@ -240,7 +241,8 @@ export default function InvoicePrint({ state, clientId, onClose }) {
               })
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
         
         {/* Professional Tunisian Invoice Footer Calculations */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '35px', flexWrap: 'wrap', gap: '20px' }}>
@@ -254,7 +256,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
             * يرجى تسديد المبلغ المتبقي المستحق في الآجال المحاسبية المتفق عليها مسبقاً.
           </div>
 
-          <div style={{ width: '330px', background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '15px' }}>
+          <div className="invoice-summary-card" style={{ width: '330px', background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '15px' }}>
             <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
               <tbody>
                 <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
@@ -289,7 +291,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
         </div>
         
         {/* Hand Sign & Stamp Block */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '45px', fontSize: '13px' }}>
+        <div className="invoice-signatures" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '45px', fontSize: '13px' }}>
           <div style={{ textAlign: 'center', width: '180px' }}>
             <p style={{ margin: 0, fontWeight: '700', color: '#475569' }}>✍️ إمضاء وقبول الحريف</p>
             <div style={{ height: '70px' }}></div>

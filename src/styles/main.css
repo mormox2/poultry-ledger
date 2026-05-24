@@ -940,6 +940,115 @@ tr.holiday td {
   }
 }
 
+/* RESPONSIVE INVOICE PREVIEW ON SCREEN */
+@media (max-width: 768px) {
+  #print-invoice-area {
+    padding: 10px 5px !important;
+  }
+  
+  .a4-print-sheet {
+    padding: 20px 15px !important;
+    border-radius: 12px !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+  }
+  
+  .invoice-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+  }
+  
+  .invoice-meta-table tr {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  .invoice-meta-table td {
+    width: 100% !important;
+    padding: 4px 0 !important;
+  }
+  
+  .invoice-meta-table td:nth-child(even) {
+    margin-bottom: 8px !important;
+  }
+
+  .invoice-table-wrap {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    margin-bottom: 20px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+  }
+  
+  .invoice-table-wrap table {
+    min-width: 650px !important;
+  }
+
+  .invoice-summary-card {
+    width: 100% !important;
+  }
+  
+  .invoice-signatures {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 30px !important;
+    text-align: center !important;
+  }
+}
+
+/* PREMIUM PRINT STYLES OVERRIDE */
+@media print {
+  html, body {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  
+  #print-invoice-area {
+    display: block !important;
+    position: static !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    overflow-y: visible !important;
+  }
+  
+  .a4-print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  
+  .invoice-table-wrap {
+    overflow: visible !important;
+  }
+  
+  .invoice-table-wrap table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  
+  .invoice-table-wrap table th, 
+  .invoice-table-wrap table td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 8px 6px !important;
+  }
+  
+  .invoice-table-wrap table tr {
+    page-break-inside: avoid !important;
+  }
+}
+
 
 
 
