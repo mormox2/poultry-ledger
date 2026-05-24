@@ -1050,9 +1050,20 @@ export default function App() {
     if (isSupabaseConfigured) {
       await supabase.auth.signOut();
     }
-    
     // Clear localStorage offline cache completely to prevent data leak
     localStorage.removeItem("dawajin_state");
+
+    // Clear IndexedDB offline sync queue to prevent data leak across users
+    const db = syncDBRef.current;
+    if (db) {
+      try {
+        const tx = db.transaction(syncStoreName, 'readwrite');
+        const store = tx.objectStore(syncStoreName);
+        store.clear();
+      } catch (err) {
+        console.error("Failed to clear offline sync queue on logout:", err);
+      }
+    }
     
     // Reset React state to a clean, default blank slate
     const currentMonth = new Date().getMonth() + 1;
