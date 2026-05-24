@@ -1,0 +1,27 @@
+{
+  "name": "Dawajin Pro — الودرني للدواجن",
+  "short_name": "الودرني للدواجن",
+  "description": "لوحة تحكم ذكية لإدارة مبيعات الدواجن وحسابات العملاء اليومية بكل دقة وسهولة",
+  "start_url": "/poultry-ledger/",
+  "scope": "/poultry-ledger/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0f1d",
+  "theme_color": "#0a0f1d",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "/poultry-ledger/assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/poultry-ledger/assets/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
