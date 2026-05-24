@@ -137,27 +137,75 @@ export default function App() {
     });
   };
 
-  // Process all queued sync actions
+  // Process all queued sync actions one by one safely
   const processSyncQueue = async () => {
     const db = syncDBRef.current;
     if (!db) return;
-    const tx = db.transaction(syncStoreName, 'readwrite');
-    const store = tx.objectStore(syncStoreName);
-    const getAll = store.getAll();
-    getAll.onsuccess = async () => {
-      const items = getAll.result;
-      for (const item of items) {
-        if (item.action === 'ledger') {
-          const { clientUuid, year, month, idx, row } = item.payload;
-          await syncLedgerEntryToCloud(clientUuid, year, month, idx, row);
+
+    // 1. Gather all items and their keys in a readonly transaction first
+    // This decouples the network calls from the IndexedDB transaction event loop to avoid TransactionInactiveError
+    const queue = [];
+    try {
+      const tx = db.transaction(syncStoreName, 'readonly');
+      const store = tx.objectStore(syncStoreName);
+      
+      await new Promise((resolve) => {
+        const request = store.openCursor();
+        request.onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor) {
+            queue.push({ key: cursor.key, value: cursor.value });
+            cursor.continue();
+          } else {
+            resolve();
+          }
+        };
+        request.onerror = () => {
+          resolve();
+        };
+      });
+    } catch (err) {
+      console.error('Failed to read sync queue from IndexedDB:', err);
+      return;
+    }
+
+    if (queue.length === 0) return;
+
+    // 2. Process each item one by one asynchronously
+    for (const item of queue) {
+      let success = false;
+      try {
+        if (item.value.action === 'ledger') {
+          const { clientUuid, year, month, idx, row } = item.value.payload;
+          // syncLedgerEntryToCloud now returns true on success, false on failure
+          success = await syncLedgerEntryToCloud(clientUuid, year, month, idx, row);
+        } else {
+          // Unknown action, mark as success to clear it
+          success = true;
         }
+      } catch (err) {
+        console.error("Failed to process sync queue item:", item.value, err);
       }
-      // Clear queue after processing
-      store.clear();
-    };
-    getAll.onerror = (e) => {
-      console.error('Failed to retrieve sync queue', e);
-    };
+
+      // 3. If successful, delete this specific item from IndexedDB in a short atomic transaction
+      if (success) {
+        try {
+          const deleteTx = db.transaction(syncStoreName, 'readwrite');
+          const deleteStore = deleteTx.objectStore(syncStoreName);
+          deleteStore.delete(item.key);
+          await new Promise((resolve, reject) => {
+            deleteTx.oncomplete = () => resolve();
+            deleteTx.onerror = () => reject(deleteTx.error);
+          });
+        } catch (err) {
+          console.error("Failed to delete processed item from IndexedDB queue:", item.key, err);
+        }
+      } else {
+        // If a sync fails (e.g. network timeout or drop), stop subsequent syncs
+        // to preserve order of consecutive ledger operations
+        break;
+      }
+    }
   };
 
   // Password hashing utility (SHA-256 with cryptographically secure Salt)
@@ -779,15 +827,15 @@ export default function App() {
     }
   };
 
-  // Sync a single daily ledger entry to Supabase
+  // Sync a single daily ledger entry to Supabase (returns true on success, false on failure)
   const syncLedgerEntryToCloud = async (clientUuid, year, month, idx, row) => {
-    if (!isSupabaseConfigured || !user) return;
+    if (!isSupabaseConfigured || !user) return false;
     const day = idx + 1;
 
     // If offline, enqueue the action and exit
     if (!navigator.onLine) {
       await enqueueSync('ledger', { clientUuid, year, month, idx, row });
-      return;
+      return false;
     }
 
     try {
@@ -811,8 +859,10 @@ export default function App() {
         });
 
       if (error) throw error;
+      return true;
     } catch (err) {
       console.error("Cloud row upsert error:", err);
+      return false;
     }
   };
 
