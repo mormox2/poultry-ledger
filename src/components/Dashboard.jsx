@@ -10,7 +10,9 @@ export default function Dashboard({
   onChangePassword,
   onUpdateCompanyInfo,
   installPrompt,
-  onInstallApp
+  onInstallApp,
+  isStandalone,
+  onShowInstallGuide
 }) {
   const [showSettings, setShowSettings] = useState(false);
   const y = state.year;
@@ -89,7 +91,7 @@ export default function Dashboard({
         </div>
       </div>
 
-      {installPrompt && (
+      {!isStandalone && (
         <div className="card" style={{ 
           marginBottom: '20px', 
           background: 'linear-gradient(135deg, rgba(212, 168, 67, 0.15) 0%, rgba(17, 24, 39, 0.8) 100%)',
@@ -110,8 +112,12 @@ export default function Dashboard({
               <div style={{ fontSize: '12px', color: 'var(--muted)' }}>ثبّت تطبيق الودرني للدواجن على هاتفك أو حاسوبك للوصول السريع وتسهيل المتابعة اليومية</div>
             </div>
           </div>
-          <button className="btn btn-gold" onClick={onInstallApp} style={{ fontWeight: '700', padding: '10px 24px' }}>
-            📥 تثبيت الآن
+          <button 
+            className="btn btn-gold" 
+            onClick={installPrompt ? onInstallApp : onShowInstallGuide} 
+            style={{ fontWeight: '700', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            {installPrompt ? '📥 تثبيت الآن' : '📲 دليل التثبيت'}
           </button>
         </div>
       )}

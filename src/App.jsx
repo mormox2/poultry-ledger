@@ -10,6 +10,7 @@ import Analytics from './components/Analytics';
 import Summary from './components/Summary';
 import InvoicePrint from './components/InvoicePrint';
 import LoginScreen from './components/LoginScreen';
+import InstallModal from './components/InstallModal';
 
 // Utilities Import
 import { 
@@ -81,6 +82,44 @@ export default function App() {
   const [state, setState] = useState(getInitialState);
   const [activeInvoiceClientId, setActiveInvoiceClientId] = useState(null);
   const [installPrompt, setInstallPrompt] = useState(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const [deviceType, setDeviceType] = useState('other');
+
+  useEffect(() => {
+    const checkStandalone = () => {
+      const isMStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      setIsStandalone(isMStandalone);
+    };
+
+    checkStandalone();
+    
+    // Listen to media query changes (PWA modes)
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', checkStandalone);
+    } else {
+      mediaQuery.addListener(checkStandalone);
+    }
+
+    // Detect device OS
+    const ua = navigator.userAgent.toLowerCase();
+    if (/iphone|ipad|ipod/.test(ua)) {
+      setDeviceType('ios');
+    } else if (/android/.test(ua)) {
+      setDeviceType('android');
+    } else {
+      setDeviceType('other');
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', checkStandalone);
+      } else {
+        mediaQuery.removeListener(checkStandalone);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const handler = (e) => {
@@ -979,6 +1018,8 @@ export default function App() {
             onUpdateCompanyInfo={handleUpdateCompanyInfo}
             installPrompt={installPrompt}
             onInstallApp={handleInstallClick}
+            isStandalone={isStandalone}
+            onShowInstallGuide={() => setShowInstallModal(true)}
           />
         );
       case "ledger":
@@ -1112,10 +1153,10 @@ export default function App() {
             </button>
           </nav>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }} className="no-print">
-            {installPrompt && (
+            {!isStandalone && (
               <button 
                 className="btn btn-gold btn-sm no-print" 
-                onClick={handleInstallClick}
+                onClick={installPrompt ? handleInstallClick : () => setShowInstallModal(true)}
                 style={{ fontWeight: '700', gap: '4px', height: '44px' }}
                 title="تثبيت التطبيق"
               >
@@ -1176,6 +1217,15 @@ export default function App() {
           onClose={() => setActiveInvoiceClientId(null)} 
         />
       )}
+
+      {/* RENDER DYNAMIC PWA INSTALL GUIDE MODAL */}
+      <InstallModal 
+        isOpen={showInstallModal}
+        onClose={() => setShowInstallModal(false)}
+        deviceType={deviceType}
+        onInstallApp={handleInstallClick}
+        installPrompt={installPrompt}
+      />
     </>
   );
 }
