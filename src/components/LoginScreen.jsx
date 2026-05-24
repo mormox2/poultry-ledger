@@ -32,7 +32,7 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
     }, 500);
   };
 
-  const handleLocalSubmit = (e) => {
+  const handleLocalSubmit = async (e) => {
     e.preventDefault();
     if (isLocalSetupMode) {
       if (!password.trim()) {
@@ -45,7 +45,13 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
       }
       onSetPassword(password.trim());
     } else {
-      if (password.trim() === savedPassword) {
+      // Hash entered password and compare with stored hash
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password.trim());
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashed = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      if (hashed === savedPassword) {
         onLogin();
       } else {
         triggerError("كلمة المرور غير صحيحة !");

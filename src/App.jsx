@@ -23,6 +23,11 @@ import {
   exportToCSV 
 } from './js/utils';
 
+// --- Offline Sync Queue (IndexedDB) Setup ---
+const syncDBName = 'PoultryLedgerDB';
+const syncStoreName = 'sync_queue';
+
+
 export default function App() {
   // --- Supabase Cloud States ---
   const [session, setSession] = useState(null);
@@ -85,6 +90,84 @@ export default function App() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [deviceType, setDeviceType] = useState('other');
+  const syncDBRef = useRef(null);
+
+  // Initialize IndexedDB for offline sync queue
+  useEffect(() => {
+    if (!('indexedDB' in window)) {
+      console.warn('IndexedDB not supported; offline sync queue disabled');
+      return;
+    }
+    const request = indexedDB.open(syncDBName, 1);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(syncStoreName)) {
+        db.createObjectStore(syncStoreName, { autoIncrement: true });
+      }
+    };
+    request.onsuccess = () => {
+      syncDBRef.current = request.result;
+      // Process any pending items if we are already online
+      if (navigator.onLine) processSyncQueue();
+    };
+    request.onerror = (e) => {
+      console.error('Failed to open IndexedDB for sync queue', e);
+    };
+  }, []);
+
+  // Listen for online events to flush the queue
+  useEffect(() => {
+    const handler = () => {
+      processSyncQueue();
+    };
+    window.addEventListener('online', handler);
+    return () => window.removeEventListener('online', handler);
+  }, []);
+
+  // Helper to enqueue a sync action
+  const enqueueSync = async (action, payload) => {
+    const db = syncDBRef.current;
+    if (!db) return;
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(syncStoreName, 'readwrite');
+      const store = tx.objectStore(syncStoreName);
+      store.add({ action, payload });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  };
+
+  // Process all queued sync actions
+  const processSyncQueue = async () => {
+    const db = syncDBRef.current;
+    if (!db) return;
+    const tx = db.transaction(syncStoreName, 'readwrite');
+    const store = tx.objectStore(syncStoreName);
+    const getAll = store.getAll();
+    getAll.onsuccess = async () => {
+      const items = getAll.result;
+      for (const item of items) {
+        if (item.action === 'ledger') {
+          const { clientUuid, year, month, idx, row } = item.payload;
+          await syncLedgerEntryToCloud(clientUuid, year, month, idx, row);
+        }
+      }
+      // Clear queue after processing
+      store.clear();
+    };
+    getAll.onerror = (e) => {
+      console.error('Failed to retrieve sync queue', e);
+    };
+  };
+
+  // Password hashing utility (SHA-256)
+  const hashPassword = async (plain) => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(plain);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  };
 
   useEffect(() => {
     const checkStandalone = () => {
@@ -506,9 +589,10 @@ export default function App() {
     toastMessage("✓ تم تحديث السعر الافتراضي وتحديث الحسابات");
   };
 
-  const handleChangePassword = (newPass) => {
-    localStorage.setItem("dawajin_password", newPass);
-    setPassword(newPass);
+  const handleChangePassword = async (newPass) => {
+    const hashed = await hashPassword(newPass);
+    localStorage.setItem("dawajin_password", hashed);
+    setPassword(hashed);
     toastMessage("✓ تم تحديث كلمة المرور بنجاح");
   };
 
@@ -697,6 +781,12 @@ export default function App() {
   const syncLedgerEntryToCloud = async (clientUuid, year, month, idx, row) => {
     if (!isSupabaseConfigured || !user) return;
     const day = idx + 1;
+
+    // If offline, enqueue the action and exit
+    if (!navigator.onLine) {
+      await enqueueSync('ledger', { clientUuid, year, month, idx, row });
+      return;
+    }
 
     try {
       const { error } = await supabase
@@ -993,9 +1083,8 @@ export default function App() {
       <LoginScreen 
         savedPassword={password}
         onLogin={() => setIsLoggedIn(true)}
-        onSetPassword={(newPass) => {
-          localStorage.setItem("dawajin_password", newPass);
-          setPassword(newPass);
+        onSetPassword={async (newPass) => {
+          await handleChangePassword(newPass);
           setIsLoggedIn(true);
         }}
         onCloudLogin={handleCloudLogin}
