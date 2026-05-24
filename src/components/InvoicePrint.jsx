@@ -354,7 +354,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           <button className="btn btn-gold" onClick={() => window.print()} style={{ minWidth: '130px', height: '40px', fontWeight: '700' }}>
             🖨️ طباعة الآن
           </button>
-          <button className="btn btn-outline" onClick={onClose} style={{ minWidth: '130px', height: '40px', fontWeight: '700' }}>
+          <button className="btn btn-outline" onClick={onClose} style={{ minWidth: '130px', height: '40px', fontWeight: '700', color: '#475569', borderColor: '#cbd5e1', background: '#ffffff' }}>
             إلغاء وإغلاق
           </button>
         </div>
