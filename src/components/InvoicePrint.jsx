@@ -3,6 +3,7 @@ import { MONTHS, getRows, getTotals, calcBalance, fmt } from '../js/utils';
 
 export default function InvoicePrint({ state, clientId, onClose }) {
   const [printMode, setPrintMode] = useState('a4'); // 'a4' or 'thermal'
+  const [pdfLoading, setPdfLoading] = useState(false);
   const y = state.year;
   const m = state.month;
   
@@ -28,6 +29,48 @@ export default function InvoicePrint({ state, clientId, onClose }) {
     month: 'long', 
     day: 'numeric' 
   });
+
+  const handleExportPDF = async () => {
+    setPdfLoading(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const html2canvas = (await import('html2canvas')).default;
+
+      const selector = printMode === 'a4' ? '.a4-print-sheet' : '.thermal-print-sheet';
+      const element = document.querySelector(selector);
+      if (!element) throw new Error("Target sheet not found");
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      let pdf;
+
+      if (printMode === 'a4') {
+        pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      } else {
+        const imgWidth = 58;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        pdf = new jsPDF('p', 'mm', [imgWidth, imgHeight + 4]);
+        pdf.addImage(imgData, 'JPEG', 0, 2, imgWidth, imgHeight);
+      }
+
+      const fileName = `dawajin_pro_${invoiceNumber}.pdf`;
+      pdf.save(fileName);
+    } catch (err) {
+      console.error("Failed to generate PDF:", err);
+      alert("فشل في توليد ملف PDF. يرجى المحاولة لاحقاً.");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   return (
     <div id="print-invoice-area" style={{ 
@@ -549,6 +592,21 @@ export default function InvoicePrint({ state, clientId, onClose }) {
       }}>
         <button className="btn btn-gold" onClick={() => window.print()} style={{ minWidth: '130px', height: '40px', fontWeight: '700' }}>
           🖨️ طباعة الآن
+        </button>
+        <button 
+          className="btn btn-outline" 
+          onClick={handleExportPDF} 
+          disabled={pdfLoading}
+          style={{ 
+            minWidth: '130px', 
+            height: '40px', 
+            fontWeight: '700', 
+            color: 'var(--gold)', 
+            borderColor: 'var(--gold)', 
+            background: 'transparent' 
+          }}
+        >
+          {pdfLoading ? "⏳ جاري التصدير..." : "📥 تصدير PDF"}
         </button>
         <button className="btn btn-outline" onClick={onClose} style={{ minWidth: '130px', height: '40px', fontWeight: '700', color: '#475569', borderColor: '#cbd5e1', background: '#ffffff' }}>
           إلغاء وإغلاق
