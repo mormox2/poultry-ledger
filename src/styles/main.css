@@ -45,6 +45,69 @@ body.light-theme {
   --glass-border: rgba(229, 231, 235, 0.8);
 }
 
+/* LIGHT THEME READABILITY & CONTRAST OVERRIDES */
+body.light-theme {
+  color: var(--text) !important;
+}
+
+/* Redefine static light-slate text utility colors to dark legible tones */
+body.light-theme .text-slate-100 { color: #0f172a !important; }
+body.light-theme .text-slate-200 { color: #1e293b !important; }
+body.light-theme .text-slate-300 { color: #334155 !important; }
+body.light-theme .text-slate-400 { color: #475569 !important; }
+body.light-theme .text-slate-450 { color: #475569 !important; }
+body.light-theme .text-slate-500 { color: #64748b !important; }
+body.light-theme .text-slate-550 { color: #334155 !important; }
+body.light-theme .text-slate-600 { color: #475569 !important; }
+body.light-theme .text-slate-700 { color: #334155 !important; }
+
+/* Improve brightness contrast for amber, green, red, and blue accents in light mode */
+body.light-theme .text-amber-300 { color: #b45309 !important; }
+body.light-theme .text-amber-400 { color: #d97706 !important; }
+body.light-theme .text-emerald-300 { color: #047857 !important; }
+body.light-theme .text-emerald-400 { color: #059669 !important; }
+body.light-theme .text-red-300 { color: #b91c1c !important; }
+body.light-theme .text-red-400 { color: #dc2626 !important; }
+body.light-theme .text-sky-300 { color: #0369a1 !important; }
+body.light-theme .text-sky-400 { color: #0284c7 !important; }
+
+/* Adapt form fields and container elements with dark background classes to elegant light variations */
+body.light-theme .bg-slate-950 {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+body.light-theme .bg-slate-900 {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+body.light-theme .bg-slate-900\/50 {
+  background-color: rgba(241, 245, 249, 0.5) !important;
+  color: #0f172a !important;
+}
+body.light-theme .bg-slate-900\/20 {
+  background-color: rgba(241, 245, 249, 0.2) !important;
+}
+body.light-theme .bg-slate-900\/60 {
+  background-color: rgba(241, 245, 249, 0.6) !important;
+  color: #334155 !important;
+}
+body.light-theme .border-slate-800 {
+  border-color: #cbd5e1 !important;
+}
+body.light-theme .border-slate-850 {
+  border-color: #e2e8f0 !important;
+}
+body.light-theme .border-slate-900 {
+  border-color: #cbd5e1 !important;
+}
+body.light-theme .placeholder-slate-550::placeholder,
+body.light-theme .placeholder-slate-600::placeholder,
+body.light-theme .placeholder-slate-650::placeholder,
+body.light-theme input::placeholder,
+body.light-theme textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { 
   background: var(--bg); 
