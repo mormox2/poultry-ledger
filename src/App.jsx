@@ -304,12 +304,7 @@ export default function App() {
   const handleInstallClick = () => {
     if (!installPrompt) return;
     installPrompt.prompt();
-    installPrompt.userChoice.then((choiceResult) => {
-      if (choiceResult.outcome === 'accepted') {
-        console.log('User accepted the install prompt');
-      } else {
-        console.log('User dismissed the install prompt');
-      }
+    installPrompt.userChoice.finally(() => {
       setInstallPrompt(null);
     });
   };

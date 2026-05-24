@@ -12,6 +12,7 @@
     <meta name="theme-color" content="#0a0f1d" />
     
     <!-- Apple iOS Standalone Mobile Support -->
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="الودرني للدواجن" />
@@ -26,8 +27,9 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/poultry-ledger/sw.js')
-            .then(reg => console.log('Service Worker registered successfully!', reg))
-            .catch(err => console.error('Service Worker registration failed:', err));
+            .catch((err) => {
+              console.warn('Service Worker registration failed:', err);
+            });
         });
       }
     </script>
