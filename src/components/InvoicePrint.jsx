@@ -42,7 +42,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
     }}>
       {/* TABS SELECTOR (no-print) */}
       <div className="no-print" style={{ 
-        maxWidth: printMode === 'a4' ? '850px' : '80mm', 
+        maxWidth: printMode === 'a4' ? '850px' : '58mm', 
         margin: '0 auto 15px auto', 
         display: 'flex', 
         justifyContent: 'center', 
@@ -66,7 +66,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           onClick={() => setPrintMode('thermal')}
           style={{ fontWeight: '700', flex: 1, height: '36px' }}
         >
-          🖨️ وصل حراري 80mm
+          🖨️ وصل حراري (58mm)
         </button>
       </div>
 
@@ -378,30 +378,30 @@ export default function InvoicePrint({ state, clientId, onClose }) {
         <div className="thermal-print-sheet" style={{
           direction: 'rtl',
           fontFamily: "'IBM Plex Sans Arabic', sans-serif",
-          padding: '20px 15px',
+          padding: '16px 8px',
           color: '#000000',
           background: '#ffffff',
           borderRadius: '12px',
           border: '1px solid #e2e8f0',
-          width: '80mm',
+          width: '58mm',
           maxWidth: '100%',
           margin: '0 auto',
           boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
           position: 'relative'
         }}>
           {/* Header */}
-          <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-            <h1 style={{ fontSize: '18px', fontWeight: '800', color: '#b45309', margin: '0 0 4px 0' }}>
+          <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+            <h1 style={{ fontSize: '14px', fontWeight: '800', color: '#b45309', margin: '0 0 4px 0' }}>
               {state.companyInfo?.name || "الودرني للدواجن"}
             </h1>
-            <p style={{ fontSize: '11px', color: '#475569', margin: '2px 0 0 0', fontWeight: '600' }}>
+            <p style={{ fontSize: '9.5px', color: '#475569', margin: '2px 0 0 0', fontWeight: '600' }}>
               🏢 {state.companyInfo?.address || "وادي النور الحامة,قابس"}
             </p>
-            <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0 0 0' }}>
+            <p style={{ fontSize: '9.5px', color: '#64748b', margin: '2px 0 0 0' }}>
               📞 الهاتف: {state.companyInfo?.phone || "96 101 651"}
             </p>
             {(state.companyInfo?.taxId || "1895235/E") !== '—' && (
-              <p style={{ fontSize: '10px', color: '#b45309', margin: '2px 0 0 0', fontWeight: '700' }}>
+              <p style={{ fontSize: '9px', color: '#b45309', margin: '2px 0 0 0', fontWeight: '700' }}>
                 M.F: {state.companyInfo?.taxId || "1895235/E"}
               </p>
             )}
@@ -410,7 +410,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           <div style={{ borderTop: '1px dashed #000', margin: '8px 0' }}></div>
 
           {/* Details */}
-          <div style={{ fontSize: '11px', lineHeight: '1.6', marginBottom: '12px' }}>
+          <div style={{ fontSize: '9.5px', lineHeight: '1.6', marginBottom: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>رقم الفاتورة:</span>
               <span style={{ fontWeight: '700' }}>{invoiceNumber}</span>
@@ -444,19 +444,19 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           <div style={{ borderTop: '1px dashed #000', margin: '8px 0' }}></div>
 
           {/* Table */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px' }}>
             <thead>
               <tr style={{ borderBottom: '1px dashed #000' }}>
-                <th style={{ padding: '4px 0', textAlign: 'right', fontWeight: '800' }}>التاريخ</th>
-                <th style={{ padding: '4px 0', textAlign: 'center', fontWeight: '800' }}>الوزن</th>
-                <th style={{ padding: '4px 0', textAlign: 'center', fontWeight: '800' }}>السعر</th>
-                <th style={{ padding: '4px 0', textAlign: 'left', fontWeight: '800' }}>المجموع</th>
+                <th style={{ padding: '3px 1px', textAlign: 'right', fontWeight: '800' }}>التاريخ</th>
+                <th style={{ padding: '3px 1px', textAlign: 'center', fontWeight: '800' }}>الوزن</th>
+                <th style={{ padding: '3px 1px', textAlign: 'center', fontWeight: '800' }}>السعر</th>
+                <th style={{ padding: '3px 1px', textAlign: 'left', fontWeight: '800' }}>المجموع</th>
               </tr>
             </thead>
             <tbody>
               {activeRows.length === 0 ? (
                 <tr>
-                  <td colSpan="4" style={{ padding: '15px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan="4" style={{ padding: '10px 1px', textAlign: 'center', color: '#64748b' }}>
                     لا توجد معاملات.
                   </td>
                 </tr>
@@ -466,22 +466,22 @@ export default function InvoicePrint({ state, clientId, onClose }) {
                   if (r.holiday) {
                     return (
                       <tr key={idx} style={{ borderBottom: '1px dotted #ccc' }}>
-                        <td style={{ padding: '4px 0', textAlign: 'right', color: '#64748b' }}>{dateStr}</td>
-                        <td colSpan="3" style={{ padding: '4px 0', textAlign: 'center', color: '#ea580c', fontWeight: '700' }}>— عطلة —</td>
+                        <td style={{ padding: '3px 1px', textAlign: 'right', color: '#64748b' }}>{dateStr}</td>
+                        <td colSpan="3" style={{ padding: '3px 1px', textAlign: 'center', color: '#ea580c', fontWeight: '700' }}>— عطلة —</td>
                       </tr>
                     );
                   }
                   return (
                     <React.Fragment key={idx}>
                       <tr style={{ borderBottom: r.paid ? 'none' : '1px dotted #ccc' }}>
-                        <td style={{ padding: '4px 0', textAlign: 'right' }}>{dateStr}</td>
-                        <td style={{ padding: '4px 0', textAlign: 'center' }}>{r.nw || 0}</td>
-                        <td style={{ padding: '4px 0', textAlign: 'center' }}>{r.price || state.pricePerKg}</td>
-                        <td style={{ padding: '4px 0', textAlign: 'left', fontWeight: '700' }}>{fmt(r.amt) || "0"}</td>
+                        <td style={{ padding: '3px 1px', textAlign: 'right' }}>{dateStr}</td>
+                        <td style={{ padding: '3px 1px', textAlign: 'center' }}>{r.nw || 0}</td>
+                        <td style={{ padding: '3px 1px', textAlign: 'center' }}>{r.price || state.pricePerKg}</td>
+                        <td style={{ padding: '3px 1px', textAlign: 'left', fontWeight: '700' }}>{fmt(r.amt) || "0"}</td>
                       </tr>
                       {r.paid && (
                         <tr style={{ borderBottom: '1px dotted #ccc' }}>
-                          <td colSpan="4" style={{ padding: '2px 0 4px 0', textAlign: 'left', color: '#16a34a', fontSize: '9.5px', fontWeight: '700' }}>
+                          <td colSpan="4" style={{ padding: '2px 1px 4px 1px', textAlign: 'left', color: '#16a34a', fontSize: '8.5px', fontWeight: '700' }}>
                             ↳ تم دفع: {fmt(r.paid)} د.ت
                           </td>
                         </tr>
@@ -496,7 +496,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           <div style={{ borderTop: '1px dashed #000', margin: '8px 0' }}></div>
 
           {/* Calculations */}
-          <div style={{ fontSize: '11px', lineHeight: '1.6' }}>
+          <div style={{ fontSize: '9.5px', lineHeight: '1.6' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>إجمالي الوزن الصافي:</span>
               <span>{Math.round(totals.nw)} كغ</span>
@@ -515,9 +515,9 @@ export default function InvoicePrint({ state, clientId, onClose }) {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a' }}>
               <span>إجمالي المدفوعات:</span>
-              <span>{fmt(totals.paid)} د.t</span>
+              <span>{fmt(totals.paid)} د.ت</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #000', paddingTop: '4px', marginTop: '4px', fontSize: '13px', fontWeight: '900', color: remainingTTC > 0 ? '#dc2626' : '#16a34a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #000', paddingTop: '4px', marginTop: '4px', fontSize: '11.5px', fontWeight: '900', color: remainingTTC > 0 ? '#dc2626' : '#16a34a' }}>
               <span>الصافي المتبقي:</span>
               <span>{fmt(remainingTTC)} د.ت</span>
             </div>
@@ -526,7 +526,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           <div style={{ borderTop: '1px dashed #000', margin: '12px 0 8px 0' }}></div>
 
           {/* Simple Signature Area */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginTop: '10px', padding: '0 5px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', marginTop: '10px', padding: '0 5px' }}>
             <div style={{ textAlign: 'center' }}>
               <p style={{ margin: 0, fontWeight: '700' }}>إمضاء الحريف</p>
               <div style={{ height: '30px' }}></div>
@@ -537,7 +537,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
             </div>
           </div>
 
-          <div style={{ textAlign: 'center', fontSize: '10px', color: '#64748b', marginTop: '15px', borderTop: '1px dotted #ccc', paddingTop: '8px' }}>
+          <div style={{ textAlign: 'center', fontSize: '8.5px', color: '#64748b', marginTop: '15px', borderTop: '1px dotted #ccc', paddingTop: '8px' }}>
             🤝 شكراً لتعاملكم معنا ثقتكم سر نجاح مبيعاتنا
           </div>
         </div>
@@ -545,7 +545,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
 
       {/* GLOBAL ACTION BUTTONS (no-print) */}
       <div className="no-print" style={{ 
-        maxWidth: printMode === 'a4' ? '850px' : '80mm', 
+        maxWidth: printMode === 'a4' ? '850px' : '58mm', 
         margin: '20px auto 0 auto', 
         textAlign: 'center',
         display: 'flex',

@@ -1053,17 +1053,17 @@ tr.holiday td {
 .thermal-print-sheet {
   direction: rtl;
   font-family: 'IBM Plex Sans Arabic', 'Courier New', Courier, monospace;
-  padding: 20px 15px;
+  padding: 16px 8px;
   color: #000000 !important;
   background: #ffffff !important;
   border-radius: 12px;
   border: 1px solid #cbd5e1;
-  width: 80mm;
+  width: 58mm;
   max-width: 100%;
   margin: 0 auto;
   box-shadow: 0 10px 30px rgba(0,0,0,0.3);
   position: relative;
-  font-size: 11px;
+  font-size: 9.5px;
 }
 
 .thermal-print-sheet * {
@@ -1073,7 +1073,7 @@ tr.holiday td {
 /* THERMAL RECEIPT PRINT OVERRIDES */
 @media print {
   body:has(.thermal-print-sheet) {
-    width: 80mm !important;
+    width: 58mm !important;
     background: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
@@ -1086,7 +1086,7 @@ tr.holiday td {
     background: #ffffff !important;
     color: #000000 !important;
     padding: 0 !important;
-    width: 80mm !important;
+    width: 58mm !important;
     margin: 0 !important;
     overflow: visible !important;
   }
@@ -1095,17 +1095,17 @@ tr.holiday td {
     box-shadow: none !important;
     border: none !important;
     border-radius: 0 !important;
-    padding: 5px 2px !important;
+    padding: 5px 0 !important;
     margin: 0 !important;
-    width: 80mm !important;
-    max-width: 80mm !important;
+    width: 58mm !important;
+    max-width: 58mm !important;
     background: #ffffff !important;
     color: #000000 !important;
   }
   
-  /* Set page size to 80mm width and auto height for thermal printers */
+  /* Set page size to 58mm width and auto height for thermal printers */
   @page {
-    size: 80mm auto !important;
+    size: 58mm auto !important;
     margin: 0 !important;
   }
 }
