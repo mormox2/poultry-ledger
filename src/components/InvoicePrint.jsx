@@ -72,6 +72,38 @@ export default function InvoicePrint({ state, clientId, onClose }) {
     }
   };
 
+  const handleShareWhatsApp = () => {
+    // Format phone number
+    let phoneDigits = cl.phone ? cl.phone.replace(/[^0-9+]/g, '') : '';
+    if (phoneDigits && !phoneDigits.startsWith('+') && !phoneDigits.startsWith('216') && phoneDigits.length === 8) {
+      phoneDigits = '216' + phoneDigits;
+    }
+    // Strip starting + for wa.me format
+    if (phoneDigits.startsWith('+')) {
+      phoneDigits = phoneDigits.substring(1);
+    }
+
+    const monthName = MONTHS.at(m - 1);
+    const messageText = `*🐔 الودرني للدواجن — خلاصة الفاتورة*
+----------------------------------------
+👤 *الحريف:* ${cl.name}
+📄 *رقم الفاتورة:* ${invoiceNumber}
+📅 *الفترة:* ${monthName} ${y}
+----------------------------------------
+⚖️ *إجمالي الوزن الصافي:* ${Math.round(totals.nw)} كغ
+💰 *المجموع الصافي (HT):* ${fmt(totals.amt)} د.ت
+💸 *معلوم الطابع الجبائي:* ${fmt(timbreFiscal)} د.ت
+💳 *المجموع الإجمالي (TTC):* ${fmt(totalTTC)} د.ت
+----------------------------------------
+✅ *إجمالي المدفوعات:* ${fmt(totals.paid)} د.ت
+⚠️ *الصافي المتبقي للدفع:* ${fmt(remainingTTC)} د.ت
+----------------------------------------
+🤝 شكراً لتعاملكم معنا، ثقتكم سر نجاح مبيعاتنا!`;
+
+    const url = `https://wa.me/${phoneDigits}?text=${encodeURIComponent(messageText)}`;
+    window.open(url, '_blank');
+  };
+
   return (
     <div id="print-invoice-area" style={{ 
       display: 'block', 
@@ -607,6 +639,20 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           }}
         >
           {pdfLoading ? "⏳ جاري التصدير..." : "📥 تصدير PDF"}
+        </button>
+        <button 
+          className="btn btn-outline" 
+          onClick={handleShareWhatsApp} 
+          style={{ 
+            minWidth: '130px', 
+            height: '40px', 
+            fontWeight: '700', 
+            color: '#10b981', 
+            borderColor: '#10b981', 
+            background: 'transparent' 
+          }}
+        >
+          🟢 مشاركة WhatsApp
         </button>
         <button className="btn btn-outline" onClick={onClose} style={{ minWidth: '130px', height: '40px', fontWeight: '700', color: '#475569', borderColor: '#cbd5e1', background: '#ffffff' }}>
           إلغاء وإغلاق
