@@ -1155,7 +1155,7 @@ export default function App() {
     <>
       <div id="toast" className="no-print"></div>
 
-      <header className="sticky top-0 z-40 w-full bg-slate-950/70 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-900/60 shadow-md no-print transition-all duration-300">
+      <header className="sticky top-0 z-40 w-full shadow-md no-print transition-all duration-300">
         <div className="header-inner max-w-[1600px] mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center justify-between py-4 md:h-24 gap-4">
           
           {/* Logo & Company details */}
@@ -1200,7 +1200,7 @@ export default function App() {
           )}
 
           {/* MAIN VIEW NAVIGATION TABS */}
-          <nav id="nav" className={`no-print flex-col md:flex-row md:flex gap-1.5 ${mobileMenuOpen ? 'open flex w-full bg-slate-900/90 backdrop-blur-2xl border border-slate-800/80 rounded-2xl p-3 shadow-2xl animate-fade-in' : 'hidden'}`}>
+          <nav id="nav" className={`no-print flex-col md:flex-row md:flex gap-1.5 ${mobileMenuOpen ? 'open flex w-full' : 'hidden'}`}>
             {[
               { id: 'dashboard', label: 'الرئيسية', icon: '🏠' },
               { id: 'ledger', label: 'السجل اليومي', icon: '📋' },
