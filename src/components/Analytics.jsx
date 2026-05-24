@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { MONTHS, COLORS, getRows, getTotals, fmt, getClientColor } from '../js/utils';
+import { motion } from 'framer-motion';
+import { MONTHS, getRows, getTotals, fmt, getClientColor } from '../js/utils';
 
 export default function Analytics({ state }) {
   const y = state.year;
@@ -93,24 +94,18 @@ export default function Analytics({ state }) {
     const pctChange = ((grandAmt - prevGrandAmt) / prevGrandAmt) * 100;
     const isUp = pctChange >= 0;
     growthWidget = (
-      <div style={{ background: 'var(--bg3)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-        <div style={{ fontSize: '11px', color: 'var(--muted)' }}>نمو مبيعات الشركة MoM</div>
-        <div style={{
-          fontSize: '16px',
-          fontWeight: '800',
-          color: isUp ? 'var(--green)' : 'var(--red)',
-          fontFamily: "'Plus Jakarta Sans'",
-          marginTop: '4px'
-        }}>
+      <div className="bg-slate-950/70 border border-slate-900/60 p-4 rounded-xl text-center select-none">
+        <div className="text-[10px] text-slate-500 font-bold">نمو مبيعات الشركة MoM</div>
+        <div className={`text-base md:text-lg font-black font-mono mt-1 ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
           {isUp ? '▲ +' : '▼ -'}{Math.abs(Math.round(pctChange))}%
         </div>
       </div>
     );
   } else {
     growthWidget = (
-      <div style={{ background: 'var(--bg3)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-        <div style={{ fontSize: '11px', color: 'var(--muted)' }}>نمو مبيعات الشركة MoM</div>
-        <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>لا يوجد سجلات للشهر السابق</div>
+      <div className="bg-slate-950/70 border border-slate-900/60 p-4 rounded-xl text-center select-none">
+        <div className="text-[10px] text-slate-500 font-bold">نمو مبيعات الشركة MoM</div>
+        <div className="text-[10px] text-slate-500 mt-2 font-medium">لا يوجد سجلات للشهر السابق</div>
       </div>
     );
   }
@@ -169,35 +164,35 @@ export default function Analytics({ state }) {
     });
 
     return (
-      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" style={{ overflow: 'visible' }}>
+      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" className="overflow-visible select-none">
         <defs>
           <linearGradient id="chart-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--gold)" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="var(--gold)" stopOpacity="0.0" />
+            <stop offset="0%" stopColor="#d4a843" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#d4a843" stopOpacity="0.0" />
           </linearGradient>
         </defs>
 
         {/* Horizontal Gridlines */}
         {gridLines.map((g, idx) => (
           <g key={idx}>
-            <line x1={paddingX} y1={g.yPos} x2={width - paddingX} y2={g.yPos} stroke="var(--border)" strokeDasharray="4 4" strokeWidth="1" />
-            <text x={paddingX - 10} y={g.yPos + 4} fill="var(--muted)" fontSize="10" textAnchor="end" fontFamily="'Plus Jakarta Sans', sans-serif">{g.label}</text>
+            <line x1={paddingX} y1={g.yPos} x2={width - paddingX} y2={g.yPos} stroke="rgba(255,255,255,0.06)" strokeDasharray="4 4" strokeWidth="1" />
+            <text x={paddingX - 10} y={g.yPos + 4} fill="#64748b" fontSize="9" textAnchor="end" className="font-mono font-bold">{g.label}</text>
           </g>
         ))}
 
         {/* Vertical Day Guides */}
         {verticalGuides.map((vg, idx) => (
           <g key={idx}>
-            <line x1={vg.xPos} y1={paddingY} x2={vg.xPos} y2={height - paddingY} stroke="var(--border)" strokeOpacity="0.3" strokeWidth="1" />
-            <text x={vg.xPos} y={height - paddingY + 16} fill="var(--muted)" fontSize="10" textAnchor="middle" fontFamily="'Plus Jakarta Sans', sans-serif">{vg.label}</text>
+            <line x1={vg.xPos} y1={paddingY} x2={vg.xPos} y2={height - paddingY} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+            <text x={vg.xPos} y={height - paddingY + 16} fill="#64748b" fontSize="9" textAnchor="middle" className="font-mono font-bold">{vg.label}</text>
           </g>
         ))}
 
         {/* Area and Line Paths */}
         {points.length > 0 && (
           <>
-            <path d={areaPath} fill="url(#chart-grad)" className="animated-chart-area" />
-            <path d={dPath} fill="none" stroke="var(--gold)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animated-chart-line" />
+            <path d={areaPath} fill="url(#chart-grad)" />
+            <path d={dPath} fill="none" stroke="#d4a843" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </>
         )}
 
@@ -210,8 +205,6 @@ export default function Analytics({ state }) {
           const dateStr = `${y}/${String(m).padStart(2, '0')}/${String(pt.d).padStart(2, '0')}`;
 
           const handleMouse = (e) => {
-            const rect = e.currentTarget.ownerSVGElement.getBoundingClientRect();
-            // Calculate coordinate relative to SVG container or page
             setTooltip({
               show: true,
               x: e.pageX + 15,
@@ -228,12 +221,11 @@ export default function Analytics({ state }) {
               key={idx}
               cx={pt.x} 
               cy={pt.y} 
-              r="4" 
-              fill="var(--gold)" 
-              stroke="var(--bg2)" 
-              strokeWidth="1.5" 
-              className="chart-dot" 
-              style={{ cursor: 'pointer' }}
+              r="4.5" 
+              fill="#d4a843" 
+              stroke="#0f172a" 
+              strokeWidth="2" 
+              className="transition-all hover:r-6 cursor-pointer" 
               onMouseEnter={handleMouse}
               onMouseMove={handleMouse}
               onMouseLeave={() => setTooltip(prev => ({ ...prev, show: false }))}
@@ -249,8 +241,8 @@ export default function Analytics({ state }) {
     const total = shares.reduce((a, c) => a + c.amount, 0);
     if (total === 0) {
       return (
-        <div style={{ padding: '40px', color: 'var(--muted)', textAlign: 'center' }}>
-          لا توجد مبيعات في هذا الشهر للرسم البياني
+        <div className="py-16 text-slate-550 text-xs text-center font-medium">
+          لا توجد مبيعات نشطة لهذا الشهر لعرض مخطط توزيع الحصص
         </div>
       );
     }
@@ -276,8 +268,8 @@ export default function Analytics({ state }) {
     });
 
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '20px', alignItems: 'center' }}>
-        <div style={{ position: 'relative', width: '120px', height: '120px' }}>
+      <div className="flex flex-col sm:flex-row items-center gap-6 text-right">
+        <div className="relative w-32 h-32 flex-shrink-0">
           <svg viewBox="0 0 120 120" width="120" height="120">
             {slices.map((slice, idx) => (
               <circle 
@@ -287,32 +279,29 @@ export default function Analytics({ state }) {
                 r={R} 
                 fill="transparent" 
                 stroke={slice.color} 
-                strokeWidth="10" 
+                strokeWidth="9" 
                 strokeDasharray={C} 
                 strokeDashoffset={slice.strokeOffset} 
                 transform="rotate(-90 60 60)" 
-                style={{ 
-                  '--target-offset': slice.strokeOffset,
-                  '--circumference': C,
-                  animation: 'drawDonut 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards'
-                }} 
+                className="transition-all duration-300"
               />
             ))}
-            <circle cx="60" cy="60" r={R - 5} fill="var(--bg2)" />
+            <circle cx="60" cy="60" r={R - 4.5} fill="#0b1222" />
           </svg>
-          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
-            <div style={{ fontSize: '9px', color: 'var(--muted)' }}>المجموع</div>
-            <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--gold)', fontFamily: "'Plus Jakarta Sans'" }}>{fmt(total)}</div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none text-center">
+            <span className="text-[9px] text-slate-550 font-bold">المجموع</span>
+            <span className="text-[11px] font-black text-amber-400 font-mono mt-0.5">{fmt(total)}</span>
           </div>
         </div>
-        <div style={{ maxHeight: '150px', overflowY: 'auto', paddingRight: '4px' }}>
+        
+        <div className="flex-1 max-h-[160px] overflow-y-auto pr-1 space-y-2.5 w-full scrollbar-thin">
           {slices.map((slice, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: slice.color }}></div>
-                <span style={{ fontWeight: '600' }}>{slice.name}</span>
+            <div key={idx} className="flex items-center justify-between text-xs border-b border-slate-900/40 pb-1.5 last:border-none">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-slate-950 flex-shrink-0" style={{ background: slice.color }} />
+                <span className="font-bold text-slate-200">{slice.name}</span>
               </div>
-              <span style={{ color: 'var(--muted)', fontFamily: "'Plus Jakarta Sans'" }}>
+              <span className="text-slate-450 font-semibold font-mono text-[11px]">
                 {fmt(slice.amount)} د.ت ({Math.round(slice.pct)}%)
               </span>
             </div>
@@ -323,135 +312,131 @@ export default function Analytics({ state }) {
   };
 
   return (
-    <div className="fade-in">
-      <div className="sec-header">
-        <div className="sec-title">التحليلات والمؤشرات البيانية — {MONTHS.at(m - 1)} {y}</div>
+    <motion.div 
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6"
+    >
+      {/* HEADER SECTION */}
+      <div className="bg-slate-900/40 border border-slate-800/60 backdrop-blur-md rounded-2xl p-4 md:p-6 shadow-sm text-right">
+        <h2 className="text-xl md:text-2xl font-black bg-gradient-to-r from-amber-200 via-amber-300 to-amber-500 bg-clip-text text-transparent">
+          التحليلات والمؤشرات البيانية — {MONTHS.at(m - 1)} {y}
+        </h2>
+        <p className="text-xs text-slate-400 font-medium mt-1">قراءة بيانية شاملة لمستويات الطلب والنمو والحصص السوقية للعملاء</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-        <div className="card" style={{ gridColumn: 'span 2' }}>
-          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '14px' }}>
-            📈 حركة مبيعات العميل النشط ({activeClient ? activeClient.name : '—'})
-          </div>
-          <div style={{ height: '260px', width: '100%', position: 'relative' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ACTIVE CLIENT SALES CHART */}
+        <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-lg lg:col-span-3 text-right">
+          <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 mb-6 justify-start">
+            <span>📈</span>
+            <span>حركة مبيعات العميل النشط ({activeClient ? activeClient.name : '—'})</span>
+          </h3>
+          <div className="h-64 w-full relative">
             {activeClient ? renderSVGLineChart() : (
-              <div style={{ color: 'var(--muted)', textAlign: 'center', padding: '40px' }}>
-                حدد عميلاً لعرض المخطط
-              </div>
+              <div className="text-slate-500 text-xs py-16 text-center">حدد عميلاً لعرض المخطط البياني</div>
             )}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '6px', textAlign: 'center' }}>
+          <div className="text-[10px] text-slate-500 font-medium mt-4 text-center select-none">
             المحور الأفقي: أيام الشهر | المحور العمودي: المبيعات الإجمالية بالدينار (د.ت)
           </div>
         </div>
 
-        <div className="card">
-          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '14px' }}>
-            🍩 توزيع مبيعات العملاء السوقية
-          </div>
+        {/* MARKET SHARE DISTRIBUTION CHART */}
+        <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-lg lg:col-span-1 text-right">
+          <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 mb-6 justify-start">
+            <span>🍩</span>
+            <span>توزيع مبيعات العملاء السوقية</span>
+          </h3>
           <div>{renderSVGDonutChart()}</div>
         </div>
 
-        <div className="card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', alignContent: 'start' }}>
-          <div style={{ gridColumn: 'span 2', fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '4px' }}>
-            📊 إحصائيات الأداء البياني للشركة
-          </div>
+        {/* METRICS & STATISTICS PANEL */}
+        <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-lg lg:col-span-2 text-right">
+          <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 mb-6 justify-start">
+            <span>📊</span>
+            <span>إحصائيات الأداء البياني للشركة</span>
+          </h3>
 
-          <div style={{ background: 'var(--bg3)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>معدل سعر الكيلوغرام الفعلي</div>
-            <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--gold)', fontFamily: "'Plus Jakarta Sans'", marginTop: '4px' }}>
-              {fmt(avgPrice)} د.ت
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-slate-950/40 border border-slate-900/60 p-3.5 rounded-xl text-center select-none">
+              <div className="text-[10px] text-slate-500 font-bold">سعر الكيلوغرام الفعلي</div>
+              <div className="text-sm font-black text-amber-400 font-mono mt-1">{fmt(avgPrice)} د.ت</div>
             </div>
-          </div>
 
-          <div style={{ background: 'var(--bg3)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>أيام تسليم الدواجن النشطة</div>
-            <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--blue)', fontFamily: "'Plus Jakarta Sans'", marginTop: '4px' }}>
-              {totalActiveDays} يوم تسليم
+            <div className="bg-slate-950/40 border border-slate-900/60 p-3.5 rounded-xl text-center select-none">
+              <div className="text-[10px] text-slate-500 font-bold">شحنات تسليم الدواجن</div>
+              <div className="text-sm font-black text-sky-400 font-mono mt-1">{totalActiveDays} شحنة</div>
             </div>
-          </div>
 
-          <div style={{ background: 'var(--bg3)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>معدل الإيرادات اليومية</div>
-            <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--gold)', fontFamily: "'Plus Jakarta Sans'", marginTop: '4px' }}>
-              {fmt(avgDailySales)} د.ت
+            <div className="bg-slate-950/40 border border-slate-900/60 p-3.5 rounded-xl text-center select-none">
+              <div className="text-[10px] text-slate-500 font-bold">معدل الإيرادات اليومي</div>
+              <div className="text-sm font-black text-amber-400 font-mono mt-1">{fmt(avgDailySales)} د.ت</div>
             </div>
-          </div>
 
-          <div style={{ background: 'var(--bg3)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>معدل شحنات التوزيع اليومي</div>
-            <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--blue)', fontFamily: "'Plus Jakarta Sans'", marginTop: '4px' }}>
-              {Math.round(avgDailyWeight)} كغ
+            <div className="bg-slate-950/40 border border-slate-900/60 p-3.5 rounded-xl text-center select-none">
+              <div className="text-[10px] text-slate-500 font-bold">معدل الوزن اليومي</div>
+              <div className="text-sm font-black text-sky-400 font-mono mt-1">{Math.round(avgDailyWeight)} كغ</div>
             </div>
-          </div>
 
-          <div style={{ background: 'var(--bg3)', padding: '12px', borderRadius: '8px', textAlign: 'center', gridColumn: 'span 2' }}>
-            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>أعلى حجم تسليم للشركة في يوم واحد</div>
-            <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--green)', fontFamily: "'Plus Jakarta Sans'", marginTop: '4px' }}>
-              {Math.round(maxDayVol)} كغ{' '}
-              <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: '400' }}>
-                بتاريخ ({maxDayDate || '—'})
-              </span>
+            {/* Peak volume info */}
+            <div className="bg-slate-950/40 border border-slate-900/60 p-4 rounded-xl text-center select-none col-span-2">
+              <div className="text-[10px] text-slate-500 font-bold">أعلى حجم تسليم للشركة في يوم واحد</div>
+              <div className="text-sm font-black text-emerald-400 font-mono mt-1">
+                {Math.round(maxDayVol)} كغ{' '}
+                <span className="text-[9px] text-slate-500 font-medium">({maxDayDate || '—'})</span>
+              </div>
             </div>
-          </div>
 
-          <div style={{ background: 'var(--bg3)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>بطل الشراء للشهر 🏆</div>
-            <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--gold)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={bestBuyerName}>
-              {bestBuyerName}{' '}
-              <span style={{ fontSize: '10px', color: 'var(--muted)', fontWeight: '400' }}>
-                ({Math.round(bestBuyerWt)} كغ)
-              </span>
+            {/* Best Buyer & Best payer */}
+            <div className="bg-slate-950/40 border border-slate-900/60 p-3.5 rounded-xl text-center col-span-1">
+              <div className="text-[10px] text-slate-500 font-bold">بطل الشراء للشهر 🏆</div>
+              <div className="text-xs font-black text-amber-400 mt-1.5 truncate max-w-full block" title={bestBuyerName}>
+                {bestBuyerName} <span className="text-[9px] text-slate-500 font-medium block mt-0.5">({Math.round(bestBuyerWt)} كغ)</span>
+              </div>
             </div>
-          </div>
 
-          <div style={{ background: 'var(--bg3)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>أفضل التزام بالتسديد 💸</div>
-            <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--green)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={bestPayName}>
-              {bestPayName}{' '}
-              <span style={{ fontSize: '10px', color: 'var(--muted)', fontWeight: '400' }}>
-                ({bestPayPct}%)
-              </span>
+            <div className="bg-slate-950/40 border border-slate-900/60 p-3.5 rounded-xl text-center col-span-1">
+              <div className="text-[10px] text-slate-500 font-bold">أفضل التزام بالتسديد 💸</div>
+              <div className="text-xs font-black text-emerald-450 mt-1.5 truncate max-w-full block" title={bestPayName}>
+                {bestPayName} <span className="text-[9px] text-slate-500 font-medium block mt-0.5">({bestPayPct}%)</span>
+              </div>
             </div>
-          </div>
 
-          <div style={{ gridColumn: 'span 2' }}>{growthWidget}</div>
+            {/* MoM Growth widget */}
+            <div className="col-span-2 sm:col-span-4">{growthWidget}</div>
+          </div>
         </div>
       </div>
 
-      {/* REACT DIRECT PORTED CHART TOOLTIP */}
+      {/* RENDER DUST-FREE REACT PORTAL CHART TOOLTIP */}
       {tooltip.show && (
         <div 
-          id="chart-tooltip" 
+          className="fixed z-[100] bg-slate-950/95 border border-slate-800/80 p-3.5 rounded-xl shadow-2xl min-w-[170px] select-none pointer-events-none text-right backdrop-blur-sm"
           style={{ 
-            display: 'block', 
             left: `${tooltip.x}px`, 
             top: `${tooltip.y}px` 
           }}
         >
-          <div style={{ fontWeight: '700', color: 'var(--gold)', marginBottom: '6px', borderBottom: '1px solid var(--border)', paddingBottom: '4px', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          <div className="font-bold text-amber-400 text-[10px] border-b border-slate-900 pb-1.5 mb-2 font-mono">
             {tooltip.date}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', marginBottom: '3px' }}>
-            <span style={{ color: 'var(--muted)' }}>الوزن الصافي:</span>
-            <span style={{ fontWeight: '700', color: 'var(--blue)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              {tooltip.nw} كغ
-            </span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', marginBottom: '3px' }}>
-            <span style={{ color: 'var(--muted)' }}>السعر الفردي:</span>
-            <span style={{ fontWeight: '700', color: 'var(--gold)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              {fmt(tooltip.price)} د.ت
-            </span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', fontWeight: '800', marginTop: '6px', borderTop: '1px dashed var(--border)', paddingTop: '6px' }}>
-            <span style={{ color: 'var(--muted)' }}>المبلغ الجملي:</span>
-            <span style={{ color: 'var(--green)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              {fmt(tooltip.amt)} د.ت
-            </span>
+          <div className="space-y-1.5 text-[10px] font-semibold text-slate-400">
+            <div className="flex justify-between gap-5">
+              <span>الوزن الصافي:</span>
+              <span className="text-sky-400 font-bold font-mono">{tooltip.nw} كغ</span>
+            </div>
+            <div className="flex justify-between gap-5">
+              <span>السعر الفردي:</span>
+              <span className="text-amber-450 font-bold font-mono">{fmt(tooltip.price)} د.ت</span>
+            </div>
+            <div className="flex justify-between gap-5 pt-2 mt-2 border-t border-slate-900 font-extrabold text-[11px]">
+              <span>المجموع الفردي:</span>
+              <span className="text-emerald-400 font-bold font-mono">{fmt(tooltip.amt)} د.ت</span>
+            </div>
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

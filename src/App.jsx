@@ -285,6 +285,7 @@ export default function App() {
   useEffect(() => {
     const isLight = state.theme === "light";
     document.body.classList.toggle("light-theme", isLight);
+    document.documentElement.classList.toggle("dark", !isLight);
   }, [state.theme]);
 
   // --- Cloud Database Fetch Loader ---
@@ -1154,147 +1155,138 @@ export default function App() {
     <>
       <div id="toast" className="no-print"></div>
 
-      <header>
-        <div className="header-inner">
-          <div className="logo">
-            <img 
-              src="/poultry-ledger/assets/icon.svg" 
-              alt={state.companyInfo.name} 
-              style={{ 
-                width: '64px', 
-                height: '64px', 
-                borderRadius: '12px', 
-                objectFit: 'contain', 
-                border: '1.5px solid rgba(212, 168, 67, 0.45)', 
-                background: '#ffffff',
-                padding: '3px'
-              }}
-              onError={(e) => {
-                e.target.outerHTML = '<div class="logo-icon" style="width: 64px; height: 64px; font-size: 30px; border-radius: 12px;">🐔</div>';
-              }}
-            />
-            <div>
-              <div className="logo-text">{state.companyInfo.name}</div>
-              <div className="logo-sub">{state.companyInfo.address}</div>
+      <header className="sticky top-0 z-40 w-full bg-slate-950/70 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-900/60 shadow-md no-print transition-all duration-300">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center justify-between py-4 md:h-24 gap-4">
+          
+          {/* Logo & Company details */}
+          <div className="flex items-center gap-3.5 flex-shrink-0 w-full md:w-auto justify-between md:justify-start">
+            <div className="flex items-center gap-3.5">
+              <img 
+                src="/poultry-ledger/assets/icon.svg" 
+                alt={state.companyInfo.name} 
+                className="w-14 h-14 rounded-2xl object-contain border border-amber-500/35 p-1 bg-white shadow-md shadow-amber-500/5"
+                onError={(e) => {
+                  e.target.outerHTML = '<div class="w-14 h-14 bg-gradient-to-tr from-amber-500 to-amber-300 text-2xl flex items-center justify-center rounded-2xl shadow-md border border-amber-400/30">🐔</div>';
+                }}
+              />
+              <div className="text-right">
+                <div className="font-black text-base md:text-lg bg-gradient-to-r from-amber-200 via-amber-300 to-amber-500 bg-clip-text text-transparent leading-snug">
+                  {state.companyInfo.name}
+                </div>
+                <div className="text-[10px] md:text-xs text-slate-400 font-medium">{state.companyInfo.address}</div>
+              </div>
             </div>
+
+            {/* HAMBURGER MENU TOGGLE BUTTON (Mobile only) */}
+            <button 
+              className={`menu-toggle md:hidden no-print flex w-10 h-10 rounded-xl items-center justify-center border font-bold transition-all duration-200 ${
+                mobileMenuOpen 
+                  ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-md shadow-amber-500/10' 
+                  : 'bg-slate-900/60 text-amber-500 border-slate-800'
+              }`}
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              title="القائمة"
+            >
+              {mobileMenuOpen ? '✕' : '☰'}
+            </button>
           </div>
           
           {/* CLOUD CONNECTION SYNC BADGE INDICATOR */}
           {isSupabaseConfigured && (
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '6px', 
-              background: 'rgba(16, 185, 129, 0.08)', 
-              border: '1.5px solid rgba(16, 185, 129, 0.25)',
-              borderRadius: '20px',
-              padding: '4px 12px',
-              fontSize: '11px',
-              fontWeight: '700',
-              color: 'var(--green)'
-            }} className="no-print">
-              <span className="pulse-dot-green" style={{ margin: 0 }}></span>
+            <div className="no-print flex items-center gap-1.5 bg-emerald-500/5 border border-emerald-500/15 rounded-full px-3 py-1 text-[10px] font-bold text-emerald-400 md:ml-auto select-none">
+              <span className="pulse-dot-green"></span>
               <span>
                 {isCloudLoading ? "جاري المزامنة..." : "متصل بالسحابة"}
               </span>
             </div>
           )}
 
-          {/* HAMBURGER MENU TOGGLE BUTTON */}
-          <button 
-            className={`menu-toggle no-print ${mobileMenuOpen ? 'open' : ''}`}
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            title="القائمة"
-          >
-            {mobileMenuOpen ? '✕' : '☰'}
-          </button>
-
-          <nav id="nav" className={mobileMenuOpen ? 'open' : ''}>
-            <button 
-              className={state.view === 'dashboard' ? 'active' : ''} 
-              onClick={() => handleViewChange('dashboard')}
-            >
-              🏠 <span>الرئيسية</span>
-            </button>
-            <button 
-              className={state.view === 'ledger' ? 'active' : ''} 
-              onClick={() => handleViewChange('ledger')}
-            >
-              📋 <span>السجل اليومي</span>
-            </button>
-            <button 
-              className={state.view === 'clients' ? 'active' : ''} 
-              onClick={() => handleViewChange('clients')}
-            >
-              👥 <span>العملاء</span>
-            </button>
-            <button 
-              className={state.view === 'analytics' ? 'active' : ''} 
-              onClick={() => handleViewChange('analytics')}
-            >
-              📊 <span>التحليلات</span>
-            </button>
-            <button 
-              className={state.view === 'summary' ? 'active' : ''} 
-              onClick={() => handleViewChange('summary')}
-            >
-              📈 <span>الملخص المالي</span>
-            </button>
+          {/* MAIN VIEW NAVIGATION TABS */}
+          <nav id="nav" className={`no-print flex-col md:flex-row md:flex gap-1.5 ${mobileMenuOpen ? 'flex w-full bg-slate-900/90 backdrop-blur-2xl border border-slate-800/80 rounded-2xl p-3 shadow-2xl animate-fade-in' : 'hidden'}`}>
+            {[
+              { id: 'dashboard', label: 'الرئيسية', icon: '🏠' },
+              { id: 'ledger', label: 'السجل اليومي', icon: '📋' },
+              { id: 'clients', label: 'العملاء', icon: '👥' },
+              { id: 'analytics', label: 'التحليلات', icon: '📊' },
+              { id: 'summary', label: 'الملخص المالي', icon: '📈' }
+            ].map(tab => (
+              <button 
+                key={tab.id}
+                className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition-all duration-200 flex items-center gap-2 w-full md:w-auto ${
+                  state.view === tab.id 
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/10' 
+                    : 'bg-transparent text-slate-400 hover:text-amber-400 hover:bg-slate-900/60 border border-transparent hover:border-slate-850'
+                }`}
+                onClick={() => handleViewChange(tab.id)}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            ))}
           </nav>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }} className="no-print">
+
+          {/* ACTIONS & SELECTORS ROW */}
+          <div className="no-print flex items-center gap-2 flex-shrink-0 w-full md:w-auto justify-end">
+            
+            {/* COMPACT APP INSTALL BUTTON */}
             {!isStandalone && (
               <button 
-                className="btn btn-gold btn-sm no-print" 
+                className="no-print flex items-center justify-center gap-1.5 h-10 px-3 border border-slate-800 bg-slate-900/50 hover:bg-amber-500 hover:text-slate-950 hover:border-amber-500 rounded-xl text-slate-300 font-black text-xs transition-all duration-200" 
                 onClick={installPrompt ? handleInstallClick : () => setShowInstallModal(true)}
-                style={{ fontWeight: '700', gap: '4px', height: '44px' }}
-                title="تثبيت التطبيق"
+                title="تثبيت التطبيق على الجهاز"
               >
-                📲 <span>تثبيت</span>
+                <span>📥</span>
+                <span className="hidden lg:inline">تثبيت</span>
               </button>
             )}
 
+            {/* THEME TOGGLE BUTTON */}
             <button 
-              className="theme-toggle no-print" 
+              className="no-print flex items-center justify-center w-10 h-10 rounded-xl border border-slate-800 bg-slate-900/50 text-amber-500 hover:bg-slate-900 hover:border-amber-500/40 hover:scale-105 transition-all duration-200 text-base" 
               onClick={handleThemeToggle} 
               title="تغيير المظهر"
             >
               {state.theme === 'light' ? '☀️' : '🌙'}
             </button>
 
+            {/* CLOUD LOGOUT BUTTON */}
             <button 
-              className="btn btn-outline btn-sm no-print" 
+              className="no-print flex items-center justify-center h-10 px-3.5 rounded-xl border border-red-500/20 bg-red-500/5 text-red-400 hover:bg-red-500/10 hover:border-red-500/40 font-bold text-xs transition-all duration-200" 
               onClick={handleLogout} 
               title="تسجيل الخروج"
-              style={{ color: 'var(--red)', borderColor: 'rgba(239, 68, 68, 0.25)', background: 'rgba(239, 68, 68, 0.05)', fontWeight: '700' }}
             >
-              🔒 خروج
+              <span>🔒 خروج</span>
             </button>
-            <select 
-              id="month-sel" 
-              className="input" 
-              style={{ width: 'auto', padding: '8px 12px', fontSize: '14px', fontWeight: '600' }} 
-              value={state.month} 
-              onChange={handleMonthChange}
-            >
-              {MONTHS.map((name, i) => (
-                <option key={i} value={i + 1}>{name}</option>
-              ))}
-            </select>
-            <input 
-              type="number" 
-              id="year-sel" 
-              className="input" 
-              style={{ width: '80px', padding: '8px 10px', fontSize: '14px', fontWeight: '600', textAlign: 'center' }} 
-              value={state.year} 
-              min="2020" 
-              max="2035" 
-              onChange={handleYearChange}
-            />
+
+            {/* DATE CONTROLS SELECTORS */}
+            <div className="flex items-center gap-1 bg-slate-900/40 border border-slate-800/80 rounded-xl p-1 h-10">
+              <select 
+                id="month-sel" 
+                className="bg-transparent text-slate-200 font-bold text-xs outline-none cursor-pointer py-1 px-2 border-none" 
+                value={state.month} 
+                onChange={handleMonthChange}
+              >
+                {MONTHS.map((name, i) => (
+                  <option key={i} value={i + 1} className="bg-slate-950 text-slate-100">{name}</option>
+                ))}
+              </select>
+              <span className="text-slate-600">|</span>
+              <input 
+                type="number" 
+                id="year-sel" 
+                className="bg-transparent text-slate-200 font-bold text-xs outline-none py-1 px-1 border-none w-14 text-center font-mono" 
+                value={state.year} 
+                min="2020" 
+                max="2035" 
+                onChange={handleYearChange}
+              />
+            </div>
+
           </div>
         </div>
       </header>
 
-      <main id="main-content">
+      <main id="main-content" className="max-w-[1600px] mx-auto px-4 md:px-8 py-6">
         {renderActiveView()}
       </main>
 

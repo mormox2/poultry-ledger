@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { MONTHS, COLORS, getTotals, fmt, getClientColor } from '../js/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+import Atropos from 'atropos/react';
+import 'atropos/css';
+import { MONTHS, getTotals, fmt, getClientColor } from '../js/utils';
 
 export default function Dashboard({ 
   state, 
@@ -42,188 +45,251 @@ export default function Dashboard({
     }
   };
 
+  // Framer Motion Animation Settings
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 15 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } }
+  };
+
   return (
-    <div className="fade-in">
-      <div className="sec-header">
-        <div className="sec-title">لوحة القيادة الرئيسية — {MONTHS.at(m - 1)} {y}</div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{state.clients.length} عميل نشط</span>
-          <button 
-            className={`btn ${showSettings ? 'btn-gold' : 'btn-outline'} btn-sm`} 
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6"
+    >
+      {/* SECTION HEADER */}
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/40 border border-slate-800/60 backdrop-blur-md rounded-2xl p-4 md:p-6 shadow-sm">
+        <div className="text-right">
+          <h2 className="text-xl md:text-2xl font-black bg-gradient-to-r from-amber-200 via-amber-300 to-amber-500 bg-clip-text text-transparent">
+            لوحة القيادة الرئيسية — {MONTHS.at(m - 1)} {y}
+          </h2>
+          <p className="text-xs text-slate-400 font-medium mt-1">{state.clients.length} عميل نشط مسجل في النظام</p>
+        </div>
+        <div className="flex gap-2.5 items-center w-full sm:w-auto">
+          <motion.button 
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all duration-200 ${
+              showSettings 
+                ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-lg shadow-amber-500/10' 
+                : 'bg-slate-900/60 text-slate-300 border-slate-850 hover:border-amber-500/40 hover:text-amber-400'
+            }`}
             onClick={() => setShowSettings(!showSettings)}
-            style={{ fontWeight: '700' }}
           >
-            {showSettings ? "⚙️ إخفاء الإعدادات" : "⚙️ إعدادات النظام"}
-          </button>
+            <span>⚙️</span>
+            <span>{showSettings ? "إخفاء الإعدادات" : "إعدادات النظام"}</span>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="stat-grid" style={{ marginBottom: '20px' }}>
-        <div className="stat gold">
-          <div className="stat-label">إجمالي المبيعات</div>
-          <div className="stat-value">{fmt(grandAmt) || "—"}</div>
-          <div className="stat-sub">لجميع العملاء</div>
-        </div>
-        <div className="stat green">
-          <div className="stat-label">إجمالي المدفوع</div>
-          <div className="stat-value">{fmt(grandPaid) || "—"}</div>
-          <div className="stat-sub">النقد المستلم للشركة</div>
-        </div>
-        <div className="stat grand-debt red">
-          <div className="stat-label">إجمالي الديون المعلقة</div>
-          <div className="stat-value" style={{ color: grandRem > 0 ? 'var(--red)' : 'var(--blue)' }}>{fmt(grandRem) || "—"}</div>
-          <div className="stat-sub">{debtors.length} عملاء متبقين</div>
-        </div>
-        <div className="stat blue">
-          <div className="stat-label">إجمالي الوزن الصافي</div>
-          <div className="stat-value">{Math.round(grandNw)} كغ</div>
-          <div className="stat-sub">الكامل: {Math.round(grandTw)} كغ</div>
-        </div>
-        <div className="stat green">
-          <div className="stat-label">نسبة تحصيل الديون</div>
-          <div className="stat-value">{collectionRate}%</div>
-          <div className="stat-sub">كفاءة تحصيل المبيعات</div>
-        </div>
-        <div className="stat gold">
-          <div className="stat-label">نسبة الوزن الصافي المردودية</div>
-          <div className="stat-value">{yieldRatio}%</div>
-          <div className="stat-sub">صافي الوزن / كامل الوزن</div>
-        </div>
-      </div>
+      {/* STAT CARDS */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {[
+          { label: "إجمالي المبيعات", val: fmt(grandAmt) || "—", sub: "لجميع العملاء", color: "border-t-amber-400/80 text-amber-400 bg-gradient-to-br from-amber-500/5 to-transparent" },
+          { label: "إجمالي المدفوع", val: fmt(grandPaid) || "—", sub: "النقد المستلم للشركة", color: "border-t-emerald-400/80 text-emerald-400 bg-gradient-to-br from-emerald-500/5 to-transparent" },
+          { label: "إجمالي الديون المعلقة", val: fmt(grandRem) || "—", sub: `${debtors.length} عملاء متبقين`, color: grandRem > 0 ? "border-t-red-500/80 text-red-400 bg-gradient-to-br from-red-500/5 to-transparent" : "border-t-sky-400/80 text-sky-400 bg-gradient-to-br from-sky-500/5 to-transparent" },
+          { label: "إجمالي الوزن الصافي", val: `${Math.round(grandNw)} كغ`, sub: `الكامل: ${Math.round(grandTw)} كغ`, color: "border-t-sky-400/80 text-sky-400 bg-gradient-to-br from-sky-500/5 to-transparent" },
+          { label: "نسبة تحصيل الديون", val: `${collectionRate}%`, sub: "كفاءة تحصيل المبيعات", color: "border-t-emerald-400/80 text-emerald-400 bg-gradient-to-br from-emerald-500/5 to-transparent" },
+          { label: "نسبة الوزن الصافي المردودية", val: `${yieldRatio}%`, sub: "صافي الوزن / كامل الوزن", color: "border-t-amber-400/80 text-amber-400 bg-gradient-to-br from-amber-500/5 to-transparent" }
+        ].map((st, i) => (
+          <Atropos key={i} rotateXMax={10} rotateYMax={10} shadow={false} className="w-full">
+            <div className={`h-full border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden transition-all duration-300 hover:border-slate-700/80 border-t-[4px] bg-slate-900/30 backdrop-blur-sm ${st.color}`}>
+              <div className="text-xs text-slate-400 font-semibold mb-2">{st.label}</div>
+              <div className="text-xl md:text-2xl font-black tracking-tight font-mono">{st.val}</div>
+              <div className="text-[10px] text-slate-500 mt-2 font-medium">{st.sub}</div>
+            </div>
+          </Atropos>
+        ))}
+      </motion.div>
 
+      {/* PWA INSTALLATION BANNER */}
       {!isStandalone && (
-        <div className="card" style={{ 
-          marginBottom: '20px', 
-          background: 'linear-gradient(135deg, rgba(212, 168, 67, 0.15) 0%, rgba(17, 24, 39, 0.8) 100%)',
-          border: '1.5px solid var(--gold)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '16px',
-          padding: '16px 20px',
-          borderRadius: '16px',
-          boxShadow: '0 10px 25px rgba(212, 168, 67, 0.1)'
-        }}>
-          <div style={{ display: 'flex', gap: '14px', alignItems: 'center', textAlign: 'right' }}>
-            <div style={{ fontSize: '32px' }}>📲</div>
+        <motion.div 
+          variants={itemVariants}
+          className="relative bg-gradient-to-r from-amber-500/10 via-slate-900/70 to-slate-900/70 border border-amber-500/20 backdrop-blur-md rounded-2xl p-5 md:p-6 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4 overflow-hidden"
+        >
+          {/* Subtle decoration light inside banner */}
+          <div className="absolute top-[-50%] left-[-20%] w-[30%] h-[150%] bg-amber-500/10 rotate-12 blur-[40px] pointer-events-none" />
+          
+          <div className="flex gap-4 items-center text-right z-10">
+            <div className="text-3xl p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl leading-none">📲</div>
             <div>
-              <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--gold)', marginBottom: '4px' }}>تثبيت التطبيق على جهازك</div>
-              <div style={{ fontSize: '12px', color: 'var(--muted)' }}>ثبّت تطبيق الودرني للدواجن على هاتفك أو حاسوبك للوصول السريع وتسهيل المتابعة اليومية</div>
+              <h3 className="text-base font-extrabold text-amber-300">تثبيت التطبيق على جهازك</h3>
+              <p className="text-xs text-slate-400 font-medium mt-1">ثبّت تطبيق الودرني للدواجن على هاتفك أو حاسوبك للوصول السريع وتسهيل المتابعة اليومية</p>
             </div>
           </div>
-          <button 
-            className="btn btn-gold" 
-            onClick={installPrompt ? onInstallApp : onShowInstallGuide} 
-            style={{ fontWeight: '700', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          
+          <motion.button 
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            className="btn bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-xs py-3 px-6 rounded-xl shadow-lg shadow-amber-500/10 z-10 w-full md:w-auto"
+            onClick={installPrompt ? onInstallApp : onShowInstallGuide}
           >
             {installPrompt ? '📥 تثبيت الآن' : '📲 دليل التثبيت'}
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }} className="db-details-grid">
-        <div className="card">
-          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '14px' }}>🏆 أكثر العملاء مشتريات (هذا الشهر)</div>
+      {/* CHARTS / DETAILS GRID */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* TOP CLIENTS BAR CHART / LIST */}
+        <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-lg">
+          <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 mb-6 justify-start">
+            <span>🏆</span>
+            <span>أكثر العملاء مشتريات (هذا الشهر)</span>
+          </h3>
+          
           {topClients.length === 0 ? (
-            <div style={{ color: 'var(--muted)', fontSize: '13px', textAlign: 'center', padding: '20px' }}>لا توجد بيانات</div>
+            <div className="text-slate-500 text-xs py-12 text-center">لا توجد بيانات متاحة لهذا الشهر</div>
           ) : (
-            topClients.map((cl, i) => {
-              const pct = grandAmt ? Math.round(cl.amt / grandAmt * 100) : 0;
-              return (
-                <div key={cl.id} style={{ marginBottom: '12px', cursor: 'pointer' }} onClick={() => onSelectClient(cl.id)}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        background: getClientColor(cl.color),
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '11px',
-                        fontWeight: '800',
-                        color: '#0b1520'
-                      }}>{i + 1}</div>
-                      <span style={{ fontSize: '13px', fontWeight: '600' }}>{cl.name}</span>
+            <div className="space-y-4">
+              {topClients.map((cl, i) => {
+                const pct = grandAmt ? Math.round(cl.amt / grandAmt * 100) : 0;
+                return (
+                  <motion.div 
+                    whileHover={{ x: -2 }}
+                    key={cl.id} 
+                    className="group cursor-pointer text-right" 
+                    onClick={() => onSelectClient(cl.id)}
+                  >
+                    <div className="flex justify-between items-center mb-1.5">
+                      <div className="flex items-center gap-2.5">
+                        <div 
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black text-slate-950 shadow-md group-hover:scale-105 transition-transform"
+                          style={{ background: getClientColor(cl.color) }}
+                        >
+                          {i + 1}
+                        </div>
+                        <span className="text-xs font-bold text-slate-200 group-hover:text-amber-300 transition-colors">{cl.name}</span>
+                      </div>
+                      <span className="text-xs font-extrabold text-amber-400/90 font-mono">{fmt(cl.amt) || "—"}</span>
                     </div>
-                    <span style={{ fontSize: '12px', color: 'var(--gold)', fontWeight: '700' }}>{fmt(cl.amt) || "—"}</span>
-                  </div>
-                  <div className="progress-wrap">
-                    <div className="progress-bar" style={{ width: `${pct}%`, background: getClientColor(cl.color) }}></div>
-                  </div>
-                </div>
-              );
-            })
+                    {/* Visual Progress Bar Wrapper */}
+                    <div className="w-full bg-slate-950/60 rounded-full h-2.5 overflow-hidden border border-slate-800/40 p-[1px]">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className="h-full rounded-full"
+                        style={{ background: getClientColor(cl.color) }}
+                      />
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           )}
         </div>
 
-        <div className="card">
-          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--red)', marginBottom: '14px' }}>⚠️ حسابات الديون المعلقة</div>
+        {/* DEBTORS / ACCOUNTS RECEIVABLE LIST */}
+        <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-lg">
+          <h3 className="text-sm font-black text-red-400 flex items-center gap-2 mb-6 justify-start">
+            <span>⚠️</span>
+            <span>حسابات الديون المعلقة</span>
+          </h3>
+          
           {debtors.length === 0 ? (
-            <div style={{ color: 'var(--green)', fontSize: '13px', textAlign: 'center', padding: '20px' }}>🎉 جميع الحسابات مسوّاة بشكل كامل</div>
+            <div className="text-emerald-400 text-xs py-12 text-center font-bold">🎉 جميع الحسابات مسوّاة بشكل كامل</div>
           ) : (
-            debtors.map(cl => (
-              <div key={cl.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 12px', background: 'rgba(239,68,68,.07)', borderRadius: '8px', marginBottom: '6px', cursor: 'pointer' }} onClick={() => onSelectClient(cl.id)}>
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: '600' }}>{cl.name}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{cl.address}</div>
-                </div>
-                <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--red)' }}>{fmt(cl.amt - cl.paid)}</div>
-                  <div style={{ fontSize: '10px', color: 'var(--muted)' }}>متبقي بذمته</div>
-                </div>
-              </div>
-            ))
+            <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+              {debtors.map(cl => (
+                <motion.div 
+                  whileHover={{ scale: 1.01, x: -2 }}
+                  key={cl.id} 
+                  className="flex justify-between items-center p-3 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/20 rounded-xl cursor-pointer transition-all duration-200 text-right"
+                  onClick={() => onSelectClient(cl.id)}
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-bold text-slate-200">{cl.name}</span>
+                    <span className="text-[10px] text-slate-500 font-semibold">{cl.address || "—"}</span>
+                  </div>
+                  <div className="text-left">
+                    <span className="text-xs font-black text-red-400 block font-mono">{fmt(cl.amt - cl.paid)}</span>
+                    <span className="text-[9px] text-slate-500 block font-medium">متبقي بذمته</span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
-      {showSettings && (
-        <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px', marginTop: '16px' }}>
-          <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)' }}>⚙️ إعدادات السعر الافتراضي</div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+      {/* SETTINGS AREA */}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0, y: 15 }}
+            animate={{ opacity: 1, height: 'auto', y: 0 }}
+            exit={{ opacity: 0, height: 0, y: 15 }}
+            transition={{ duration: 0.4, cubicBezier: [0.16, 1, 0.3, 1] }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-hidden pt-4 border-t border-slate-800/40"
+          >
+            {/* DEFAULT PRICE CARD */}
+            <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
               <div>
-                <div className="input-label">سعر الكيلوغرام الافتراضي (د.ت)</div>
-                <input 
-                  type="number" 
-                  step="0.001"
-                  className="input" 
-                  style={{ width: '140px' }} 
-                  value={state.pricePerKg} 
-                  onChange={(e) => onPriceChange(parseFloat(e.target.value) || 0)} 
-                  placeholder="5.800"
-                />
-                <div className="price-hint">يُعتمد للتسعير التلقائي الفوري</div>
+                <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 mb-4 justify-start">
+                  <span>⚙️</span>
+                  <span>إعدادات السعر الافتراضي</span>
+                </h3>
+                
+                <div className="space-y-4 text-right">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">سعر الكيلوغرام الافتراضي (د.ت)</label>
+                    <input 
+                      type="number" 
+                      step="0.001"
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-sm text-slate-100 placeholder-slate-600 outline-none transition-all duration-200 text-left font-mono" 
+                      value={state.pricePerKg} 
+                      onChange={(e) => onPriceChange(parseFloat(e.target.value) || 0)} 
+                      placeholder="5.800"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-1.5 font-medium">يُعتمد للتسعير التلقائي الفوري للوزن الصافي</p>
+                  </div>
+                </div>
               </div>
-              <div style={{ padding: '12px 16px', background: 'var(--bg3)', borderRadius: '8px', fontSize: '13px', flex: 1, minWidth: '180px' }}>
-                <span style={{ color: 'var(--muted)' }}>مثال: 100كغ × </span>
-                <span style={{ color: 'var(--gold)', fontWeight: '700' }}>{fmt(state.pricePerKg)}</span>
-                <span style={{ color: 'var(--muted)' }}> = </span>
-                <span style={{ color: 'var(--green)', fontWeight: '700' }}>{fmt(100 * state.pricePerKg)} د.ت</span>
+              
+              <div className="p-3 bg-slate-950 rounded-xl text-xs flex justify-between items-center mt-6 border border-slate-900">
+                <span className="text-slate-500 font-bold">المردودية:</span>
+                <span className="text-emerald-400 font-black font-mono">{fmt(100 * state.pricePerKg)} د.ت / 100كغ</span>
               </div>
             </div>
-          </div>
 
-          <div className="card">
-            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '14px' }}>🔒 تغيير كلمة مرور الإدارة</div>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: '150px' }}>
-                <div className="input-label">كلمة المرور الجديدة</div>
-                <input 
-                  type="password"
-                  className="input"
-                  id="new-dashboard-password"
-                  placeholder="أدخل كلمة المرور الجديدة"
-                />
+            {/* PASSWORD SECURITY CARD */}
+            <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+              <div>
+                <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 mb-4 justify-start">
+                  <span>🔒</span>
+                  <span>تغيير كلمة مرور الإدارة</span>
+                </h3>
+                
+                <div className="space-y-4 text-right">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">كلمة المرور الجديدة</label>
+                    <input 
+                      type="password"
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-sm text-slate-100 placeholder-slate-600 outline-none transition-all duration-200 text-left font-mono"
+                      id="new-dashboard-password"
+                      placeholder="أدخل كلمة المرور الجديدة"
+                    />
+                  </div>
+                </div>
               </div>
-              <button 
-                className="btn btn-gold btn-sm" 
-                style={{ height: '38px' }}
+
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs py-3 px-4 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-6"
                 onClick={() => {
                   const el = document.getElementById("new-dashboard-password");
                   const newPass = el?.value?.trim();
@@ -235,96 +301,125 @@ export default function Dashboard({
                   if (el) el.value = "";
                 }}
               >
-                تحديث
-              </button>
+                💾 تحديث كلمة المرور
+              </motion.button>
             </div>
-          </div>
 
-          <div className="card">
-            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '14px' }}>📁 إدارة البيانات والنسخ الاحتياطي</div>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '12px' }}>
-              <button className="btn btn-outline btn-sm" onClick={onBackupExport}>
-                📤 تصدير ملف النسخة الاحتياطية (JSON)
-              </button>
-              <label className="btn btn-outline btn-sm" style={{ margin: 0, cursor: 'pointer' }}>
-                📥 استيراد نسخة احتياطية (JSON)
-                <input type="file" accept=".json" onChange={handleFileImport} style={{ display: 'none' }} />
-              </label>
+            {/* DATA MANAGEMENT CARD */}
+            <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+              <div>
+                <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 mb-4 justify-start">
+                  <span>📁</span>
+                  <span>إدارة البيانات والنسخ الاحتياطي</span>
+                </h3>
+                <p className="text-xs text-slate-400 font-medium leading-relaxed mb-4 text-right">
+                  حمل نسخة كاملة من بيانات النظام أو استعدها من ملف خارجي بأمان لضمان عدم ضياع أي فاتورة.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2.5 mt-4">
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full py-2.5 px-4 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/40 text-slate-200 hover:text-amber-400 rounded-xl font-bold text-xs transition-all duration-200 flex items-center justify-center gap-2"
+                  onClick={onBackupExport}
+                >
+                  <span>📤</span>
+                  <span>تصدير ملف النسخة الاحتياطية (JSON)</span>
+                </motion.button>
+
+                <label className="w-full py-2.5 px-4 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/40 text-slate-200 hover:text-amber-400 rounded-xl font-bold text-xs transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer text-center">
+                  <span>📥</span>
+                  <span>استيراد نسخة احتياطية (JSON)</span>
+                  <input type="file" accept=".json" onChange={handleFileImport} className="hidden" />
+                </label>
+              </div>
             </div>
-          </div>
 
-          <div className="card" style={{ gridColumn: 'span 2' }}>
-            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gold)', marginBottom: '14px' }}>⚙️ إعدادات هوية المؤسسة ورأس الفاتورة (الودرني للدواجن)</div>
-            <form 
-              key={`${state.companyInfo?.name || ""}-${state.companyInfo?.address || ""}-${state.companyInfo?.phone || ""}-${state.companyInfo?.taxId || ""}`}
-              onSubmit={(e) => {
-                e.preventDefault();
-                const newName = e.target.elements.compName.value.trim();
-                const newAddr = e.target.elements.compAddr.value.trim();
-                const newPhone = e.target.elements.compPhone.value.trim();
-                const newTaxId = e.target.elements.compTaxId.value.trim();
-                if (!newName) {
-                  alert("الرجاء إدخال اسم الشركة");
-                  return;
-                }
-                onUpdateCompanyInfo({
-                  name: newName,
-                  address: newAddr || "—",
-                  phone: newPhone || "—",
-                  taxId: newTaxId || "—"
-                });
-              }} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', alignItems: 'end' }} className="company-info-form">
-              <div>
-                <div className="input-label">اسم الشركة الموزعة *</div>
-                <input 
-                  type="text"
-                  name="compName"
-                  className="input"
-                  defaultValue={state.companyInfo?.name || "الودرني للدواجن"}
-                  required
-                />
-              </div>
-              <div>
-                <div className="input-label">العنوان الجغرافي للشركة</div>
-                <input 
-                  type="text"
-                  name="compAddr"
-                  className="input"
-                  defaultValue={state.companyInfo?.address || "وادي النور الحامة,قابس"}
-                  placeholder="وادي النور الحامة,قابس"
-                />
-              </div>
-              <div>
-                <div className="input-label">رقم الهاتف للشركة</div>
-                <input 
-                  type="text"
-                  name="compPhone"
-                  className="input"
-                  defaultValue={state.companyInfo?.phone || "96 101 651"}
-                  placeholder="96 101 651"
-                />
-              </div>
-              <div>
-                <div className="input-label">المعرف الجبائي للمؤسسة (Matricule Fiscal)</div>
-                <input 
-                  type="text"
-                  name="compTaxId"
-                  className="input"
-                  defaultValue={state.companyInfo?.taxId || "1895235/E"}
-                  placeholder="1895235/E"
-                />
-              </div>
-              <button 
-                type="submit" 
-                className="btn btn-gold btn-sm" 
-                style={{ height: '38px', gridColumn: 'span 2', marginTop: '6px' }}
+            {/* COMPANY SETTINGS CARD (FULL WIDTH IN DRAWER) */}
+            <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-lg col-span-1 md:col-span-2 lg:col-span-3">
+              <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 mb-5 justify-start">
+                <span>🏢</span>
+                <span>إعدادات هوية المؤسسة ورأس الفاتورة</span>
+              </h3>
+              
+              <form 
+                key={`${state.companyInfo?.name || ""}-${state.companyInfo?.address || ""}-${state.companyInfo?.phone || ""}-${state.companyInfo?.taxId || ""}`}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const newName = e.target.elements.compName.value.trim();
+                  const newAddr = e.target.elements.compAddr.value.trim();
+                  const newPhone = e.target.elements.compPhone.value.trim();
+                  const newTaxId = e.target.elements.compTaxId.value.trim();
+                  if (!newName) {
+                    alert("الرجاء إدخال اسم الشركة");
+                    return;
+                  }
+                  onUpdateCompanyInfo({
+                    name: newName,
+                    address: newAddr || "—",
+                    phone: newPhone || "—",
+                    taxId: newTaxId || "—"
+                  });
+                }} 
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-right"
               >
-                💾 حفظ وتحديث هوية المؤسسة
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">اسم الشركة الموزعة *</label>
+                  <input 
+                    type="text"
+                    name="compName"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200"
+                    defaultValue={state.companyInfo?.name || "الودرني للدواجن"}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">العنوان الجغرافي للشركة</label>
+                  <input 
+                    type="text"
+                    name="compAddr"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200"
+                    defaultValue={state.companyInfo?.address || "وادي النور الحامة,قابس"}
+                    placeholder="وادي النور الحامة,قابس"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">رقم الهاتف للشركة</label>
+                  <input 
+                    type="text"
+                    name="compPhone"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200"
+                    defaultValue={state.companyInfo?.phone || "96 101 651"}
+                    placeholder="96 101 651"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">المعرف الجبائي للمؤسسة (Matricule Fiscal)</label>
+                  <input 
+                    type="text"
+                    name="compTaxId"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200"
+                    defaultValue={state.companyInfo?.taxId || "1895235/E"}
+                    placeholder="1895235/E"
+                  />
+                </div>
+                
+                <div className="col-span-1 sm:col-span-2 lg:col-span-4 mt-3">
+                  <motion.button 
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    type="submit" 
+                    className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs py-3 px-6 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    💾 حفظ وتحديث هوية المؤسسة
+                  </motion.button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

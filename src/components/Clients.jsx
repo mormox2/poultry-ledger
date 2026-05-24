@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { COLORS, getTotals, fmt, getClientColor } from '../js/utils';
 
 export default function Clients({ 
@@ -27,7 +28,7 @@ export default function Clients({
   const filtered = state.clients.filter(x => 
     !search || 
     x.name.toLowerCase().includes(search.toLowerCase()) || 
-    x.phone.includes(search)
+    (x.phone && x.phone.includes(search))
   );
 
   // Compute VIP threshold
@@ -100,315 +101,500 @@ export default function Clients({
     setModalMode(null);
   };
 
+  // Stagger animation configurations
+  const gridVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.04
+      }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, scale: 0.95, y: 15 },
+    show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } }
+  };
+
   return (
-    <div className="fade-in">
-      <div className="sec-header">
-        <div className="sec-title">إدارة حسابات العملاء ({state.clients.length})</div>
-        <button className="btn btn-gold" onClick={handleOpenAdd}>+ إضافة عميل جديد</button>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="space-y-6"
+    >
+      {/* HEADER ROW */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/40 border border-slate-800/60 backdrop-blur-md rounded-2xl p-4 md:p-6 shadow-sm text-right">
+        <div>
+          <h2 className="text-xl md:text-2xl font-black bg-gradient-to-r from-amber-200 via-amber-300 to-amber-500 bg-clip-text text-transparent">
+            إدارة حسابات العملاء ({state.clients.length})
+          </h2>
+          <p className="text-xs text-slate-400 font-medium mt-1">تتبع مستحقات المشترين والموردين وتحديث بيانات الاتصال الخاصة بهم</p>
+        </div>
+        <motion.button 
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleOpenAdd}
+          className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2"
+        >
+          <span>+</span>
+          <span>إضافة عميل جديد</span>
+        </motion.button>
       </div>
 
-      <div className="search-wrap" style={{ marginBottom: '16px', maxWidth: '320px' }}>
-        <span className="icon">🔍</span>
+      {/* SEARCH AND FILTERS BAR */}
+      <div className="w-full max-w-md relative text-right">
+        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm select-none">🔍</span>
         <input 
-          className="input" 
-          style={{ paddingRight: '36px' }} 
-          placeholder="بحث عن عميل..." 
+          type="text" 
+          className="w-full bg-slate-900/50 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-3 pl-4 pr-10 text-xs text-slate-100 placeholder-slate-550 outline-none transition-all duration-200" 
+          placeholder="بحث سريع عن عميل بالاسم أو الهاتف..." 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
-      <div className="card-grid">
-        {filtered.map(cl => {
-          const t = getTotals(state.ledger, cl.id, y, m);
-          const rem = t.amt - t.paid;
-          
-          let badges = [];
-          if (t.amt > 0) {
-            if (rem <= 0) {
-              badges.push(
-                <span key="paid" className="badge badge-green" style={{ fontSize: '9px', padding: '2px 8px', marginRight: '4px' }}>مخلص 💸</span>
-              );
-            } else {
-              badges.push(
-                <span key="debt" className="badge badge-red" style={{ fontSize: '9px', padding: '2px 8px', marginRight: '4px' }}>مدين ⚠️</span>
-              );
-            }
+      {/* CLIENT CARDS GRID */}
+      {filtered.length === 0 ? (
+        <div className="bg-slate-900/20 border border-slate-850 rounded-2xl p-16 text-center text-slate-500 text-xs">
+          <div className="text-4xl mb-3">👥</div>
+          <div>لم يتم العثور على أي حريف يطابق البحث</div>
+        </div>
+      ) : (
+        <motion.div 
+          variants={gridVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+        >
+          {filtered.map(cl => {
+            const t = getTotals(state.ledger, cl.id, y, m);
+            const rem = t.amt - t.paid;
             
-            // VIP check
-            if (t.amt >= maxAmt * 0.7 && t.amt > 100) {
-              badges.push(
-                <span key="vip" className="badge" style={{
-                  fontSize: '9px',
-                  padding: '2px 8px',
-                  background: 'rgba(212,168,67,0.12)',
-                  color: 'var(--gold)',
-                  border: '1px solid rgba(212,168,67,0.25)',
-                  marginRight: '4px'
-                }}>كبير الحرفاء ⭐</span>
-              );
+            let badges = [];
+            if (t.amt > 0) {
+              if (rem <= 0) {
+                badges.push(
+                  <span key="paid" className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 text-[9px] font-black px-2 py-0.5 rounded-full select-none">مخلص 💸</span>
+                );
+              } else {
+                badges.push(
+                  <span key="debt" className="bg-red-500/15 text-red-400 border border-red-500/25 text-[9px] font-black px-2 py-0.5 rounded-full select-none">مدين ⚠️</span>
+                );
+              }
+              
+              // VIP check
+              if (t.amt >= maxAmt * 0.7 && t.amt > 100) {
+                badges.push(
+                  <span key="vip" className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-black px-2 py-0.5 rounded-full select-none">كبير العملاء ⭐</span>
+                );
+              }
             }
-          }
 
-          return (
-            <div key={cl.id} className={`client-card ${cl.id === state.selectedClient ? 'selected' : ''}`} onClick={() => onSelectClient(cl.id)}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                <div style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '50%',
-                  background: getClientColor(cl.color),
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '20px',
-                  fontWeight: '800',
-                  color: '#0b1520'
-                }}>
-                  {cl.name[0]}
-                </div>
-                <div style={{ display: 'flex', gap: '6px' }} className="no-print">
-                  <button 
-                    className="btn btn-outline btn-sm" 
-                    onClick={(e) => { e.stopPropagation(); handleOpenEdit(cl); }}
-                  >
-                    ✏️
-                  </button>
-                  {state.clients.length > 1 && (
-                    <button 
-                      className="btn btn-danger btn-sm" 
-                      onClick={(e) => { e.stopPropagation(); handleOpenDelete(cl); }}
+            return (
+              <motion.div 
+                variants={cardVariants}
+                whileHover={{ y: -4, borderColor: 'rgba(245, 158, 11, 0.25)' }}
+                key={cl.id} 
+                className={`group border rounded-2xl p-5 shadow-lg cursor-pointer flex flex-col justify-between transition-all duration-300 bg-slate-900/30 backdrop-blur-sm ${
+                  cl.id === state.selectedClient ? 'border-amber-500 shadow-amber-500/5' : 'border-slate-800/80 hover:border-slate-700/80'
+                }`}
+                onClick={() => onSelectClient(cl.id)}
+              >
+                <div>
+                  {/* Top layout */}
+                  <div className="flex justify-between items-start mb-4">
+                    <div 
+                      className="w-11 h-11 rounded-full flex items-center justify-center text-lg font-black text-slate-950 shadow-md group-hover:scale-105 transition-transform"
+                      style={{ background: getClientColor(cl.color) }}
                     >
-                      🗑️
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div style={{
-                fontSize: '15px',
-                fontWeight: '800',
-                color: getClientColor(cl.color),
-                marginBottom: '4px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '6px'
-              }}>
-                <span>{cl.name}</span>
-                <div style={{ display: 'flex', gap: '4px' }}>{badges}</div>
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '2px' }}>📍 {cl.address}</div>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '2px' }}>📞 {cl.phone}</div>
-              {cl.taxId && cl.taxId !== '—' && (
-                <div style={{ fontSize: '11px', color: 'var(--gold)', marginBottom: '2px', fontWeight: '600' }}>🆔 م.ج: {cl.taxId}</div>
-              )}
-              {cl.notes && cl.notes !== '—' && (
-                <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '12px', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={cl.notes}>📝 {cl.notes}</div>
-              )}
-              {(!cl.taxId || cl.taxId === '—') && (!cl.notes || cl.notes === '—') ? <div style={{ height: '8px' }}></div> : null}
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--gold)' }}>{fmt(t.amt) || "—"}</div>
-                  <div style={{ fontSize: '10px', color: 'var(--muted)' }}>الجملي</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--green)' }}>{fmt(t.paid) || "—"}</div>
-                  <div style={{ fontSize: '10px', color: 'var(--muted)' }}>المدفوع</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '700', color: rem > 0 ? 'var(--red)' : 'var(--green)' }}>
-                    {rem > 0 ? fmt(rem) : '✓'}
+                      {cl.name[0]}
+                    </div>
+                    
+                    {/* Action buttons (pencil & bin) */}
+                    <div className="flex gap-1.5 items-center no-print opacity-80 group-hover:opacity-100 transition-opacity">
+                      <motion.button 
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="p-2 border border-slate-800 bg-slate-950/60 hover:border-amber-500/40 hover:text-amber-400 rounded-lg text-[10px] transition-colors" 
+                        onClick={(e) => { e.stopPropagation(); handleOpenEdit(cl); }}
+                        title="تعديل بيانات الحريف"
+                      >
+                        ✏️
+                      </motion.button>
+                      {state.clients.length > 1 && (
+                        <motion.button 
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="p-2 border border-slate-850 bg-slate-950/60 hover:border-red-500/40 hover:text-red-400 rounded-lg text-[10px] transition-colors" 
+                          onClick={(e) => { e.stopPropagation(); handleOpenDelete(cl); }}
+                          title="حذف الحريف نهائيًا"
+                        >
+                          🗑️
+                        </motion.button>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ fontSize: '10px', color: 'var(--muted)' }}>الباقي</div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
 
-      {/* ADD MODAL */}
-      {modalMode === 'add' && createPortal(
-        <div className="modal-overlay open" onClick={() => setModalMode(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">إضافة عميل جديد</div>
-            <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div>
-                <div className="input-label">الاسم الكامل للعميل *</div>
-                <input 
-                  className="input" 
-                  value={formName} 
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="مثال: محمد بن علي" 
-                  required
-                  autoFocus 
-                />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <div className="input-label">الهاتف</div>
-                  <input 
-                    className="input" 
-                    value={formPhone} 
-                    onChange={(e) => setFormPhone(e.target.value)}
-                    placeholder="55 xxx xxx" 
-                  />
+                  {/* Name and Badges */}
+                  <div className="space-y-1.5 text-right">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-sm font-black text-slate-100 group-hover:text-amber-300 transition-colors" style={{ color: getClientColor(cl.color) }}>
+                        {cl.name}
+                      </span>
+                      <div className="flex gap-1 flex-wrap">{badges}</div>
+                    </div>
+                    
+                    {/* Address & Contacts details */}
+                    <div className="space-y-1 text-slate-400 text-xs mt-3">
+                      {cl.address && cl.address !== '—' && (
+                        <div className="flex items-center gap-1.5 justify-end">
+                          <span>{cl.address}</span>
+                          <span className="text-slate-600 font-bold select-none text-[10px]">📍</span>
+                        </div>
+                      )}
+                      
+                      {cl.phone && cl.phone !== '—' && (
+                        <a 
+                          href={`tel:${cl.phone}`} 
+                          onClick={(e) => e.stopPropagation()} 
+                          className="flex items-center gap-1.5 justify-end hover:text-amber-400 transition-colors"
+                        >
+                          <span className="font-mono text-[11px] font-semibold">{cl.phone}</span>
+                          <span className="text-slate-600 font-bold select-none text-[10px]">📞</span>
+                        </a>
+                      )}
+                      
+                      {cl.taxId && cl.taxId !== '—' && (
+                        <div className="flex items-center gap-1.5 justify-end text-[10px] text-amber-500/80 font-bold">
+                          <span className="font-mono">{cl.taxId}</span>
+                          <span className="select-none">🆔 م.ج:</span>
+                        </div>
+                      )}
+                      
+                      {cl.notes && cl.notes !== '—' && (
+                        <p className="text-[10px] text-slate-500 font-medium italic truncate mt-2 border-t border-slate-800/40 pt-1.5 text-right w-full" title={cl.notes}>
+                          <span>📝 {cl.notes}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div className="input-label">المعرف الجبائي للعميل</div>
-                  <input 
-                    className="input" 
-                    value={formTaxId} 
-                    onChange={(e) => setFormTaxId(e.target.value)}
-                    placeholder="1234567/A/P/M/000" 
-                  />
+
+                {/* Footer totals layout */}
+                <div className="grid grid-cols-3 gap-2 pt-3 mt-4 border-t border-slate-800/60 text-center select-none">
+                  <div>
+                    <div className="text-[10px] text-slate-500 font-bold">المجموع الجملي</div>
+                    <div className="text-xs font-black text-amber-400/90 font-mono mt-0.5">{fmt(t.amt) || "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-500 font-bold">المدفوع الكلي</div>
+                    <div className="text-xs font-black text-emerald-400/90 font-mono mt-0.5">{fmt(t.paid) || "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-500 font-bold">الباقي بذمته</div>
+                    <div className={`text-xs font-black font-mono mt-0.5 ${rem > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                      {rem > 0 ? fmt(rem) : '✓'}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <div className="input-label">العنوان الجغرافي</div>
-                <input 
-                  className="input" 
-                  value={formAddress} 
-                  onChange={(e) => setFormAddress(e.target.value)}
-                  placeholder="مثال: الحامة 1" 
-                />
-              </div>
-              <div>
-                <div className="input-label">ملاحظات خاصة بالحريف</div>
-                <textarea 
-                  className="input" 
-                  value={formNotes} 
-                  onChange={(e) => setFormNotes(e.target.value)}
-                  placeholder="شروط الدفع، تصنيفات خاصة، إلخ..." 
-                  style={{ minHeight: '50px', resize: 'vertical' }}
-                />
-              </div>
-              <div>
-                <div className="input-label">رمز اللون المميز للعميل</div>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                  {COLORS.map((col, i) => (
-                    <div 
-                      key={i}
-                      className="color-opt" 
-                      style={{ 
-                        background: col, 
-                        outline: i === formColor ? '2px solid var(--gold)' : 'none' 
-                      }} 
-                      onClick={() => setFormColor(i)}
-                    ></div>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
-                <button type="submit" className="btn btn-gold" style={{ flex: 1, height: '40px', fontWeight: '700' }}>إضافة العميل</button>
-                <button type="button" className="btn btn-outline" onClick={() => setModalMode(null)} style={{ flex: 1, height: '40px' }}>إلغاء</button>
-              </div>
-            </form>
-          </div>
-        </div>,
-        document.body
+
+              </motion.div>
+            );
+          })}
+        </motion.div>
       )}
 
-      {/* EDIT MODAL */}
-      {modalMode === 'edit' && createPortal(
-        <div className="modal-overlay open" onClick={() => setModalMode(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">تعديل بيانات العميل</div>
-            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div>
-                <div className="input-label">الاسم الكامل للعميل *</div>
-                <input 
-                  className="input" 
-                  value={formName} 
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="مثال: محمد بن علي" 
-                  required
-                  autoFocus 
-                />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+      {/* DYNAMIC MODALS USING REACT PORTALS */}
+      <AnimatePresence>
+        {/* ADD CLIENT MODAL */}
+        {modalMode === 'add' && createPortal(
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => setModalMode(null)}
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl relative overflow-hidden text-right"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-base md:text-lg font-black text-amber-300 border-b border-slate-800/80 pb-3 mb-5">إضافة عميل جديد للنظام</h3>
+              
+              <form onSubmit={handleAddSubmit} className="space-y-4">
                 <div>
-                  <div className="input-label">الهاتف</div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">الاسم الكامل للعميل *</label>
                   <input 
-                    className="input" 
-                    value={formPhone} 
-                    onChange={(e) => setFormPhone(e.target.value)}
-                    placeholder="55 xxx xxx" 
+                    type="text"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200" 
+                    value={formName} 
+                    onChange={(e) => setFormName(e.target.value)}
+                    placeholder="مثال: محمد بن علي" 
+                    required
+                    autoFocus 
                   />
                 </div>
-                <div>
-                  <div className="input-label">المعرف الجبائي للعميل</div>
-                  <input 
-                    className="input" 
-                    value={formTaxId} 
-                    onChange={(e) => setFormTaxId(e.target.value)}
-                    placeholder="1234567/A/P/M/000" 
-                  />
-                </div>
-              </div>
-              <div>
-                <div className="input-label">العنوان الجغرافي</div>
-                <input 
-                  className="input" 
-                  value={formAddress} 
-                  onChange={(e) => setFormAddress(e.target.value)}
-                  placeholder="مثال: الحامة 1" 
-                />
-              </div>
-              <div>
-                <div className="input-label">ملاحظات خاصة بالحريف</div>
-                <textarea 
-                  className="input" 
-                  value={formNotes} 
-                  onChange={(e) => setFormNotes(e.target.value)}
-                  placeholder="شروط الدفع، تصنيفات خاصة، إلخ..." 
-                  style={{ minHeight: '50px', resize: 'vertical' }}
-                />
-              </div>
-              <div>
-                <div className="input-label">رمز اللون المميز للعميل</div>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                  {COLORS.map((col, i) => (
-                    <div 
-                      key={i}
-                      className="color-opt" 
-                      style={{ 
-                        background: col, 
-                        outline: i === formColor ? '2px solid var(--gold)' : 'none' 
-                      }} 
-                      onClick={() => setFormColor(i)}
-                    ></div>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
-                <button type="submit" className="btn btn-gold" style={{ flex: 1, height: '40px', fontWeight: '700' }}>حفظ التعديلات</button>
-                <button type="button" className="btn btn-outline" onClick={() => setModalMode(null)} style={{ flex: 1, height: '40px' }}>إلغاء</button>
-              </div>
-            </form>
-          </div>
-        </div>,
-        document.body
-      )}
 
-      {/* DELETE MODAL */}
-      {modalMode === 'delete' && createPortal(
-        <div className="modal-overlay open" onClick={() => setModalMode(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title" style={{ color: 'var(--red)' }}>تأكيد حذف العميل</div>
-            <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '16px' }}>
-              هل أنت متأكد من حذف العميل <strong>{activeClient?.name}</strong>؟<br />
-              سوف يتم حذف جميع بيانات وسجلات هذا العميل بشكل نهائي!
-            </p>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button className="btn btn-danger" style={{ flex: 1 }} onClick={handleDeleteConfirm}>نعم، حذف العميل</button>
-              <button className="btn btn-outline" onClick={() => setModalMode(null)}>إلغاء</button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-    </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">المعرف الجبائي للعميل</label>
+                    <input 
+                      type="text"
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono" 
+                      value={formTaxId} 
+                      onChange={(e) => setFormTaxId(e.target.value)}
+                      placeholder="1234567/A/P/M/000" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">رقم الهاتف</label>
+                    <input 
+                      type="tel"
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono" 
+                      value={formPhone} 
+                      onChange={(e) => setFormPhone(e.target.value)}
+                      placeholder="55 xxx xxx" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">العنوان الجغرافي</label>
+                  <input 
+                    type="text"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200" 
+                    value={formAddress} 
+                    onChange={(e) => setFormAddress(e.target.value)}
+                    placeholder="مثال: الحامة 1" 
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">ملاحظات وشروط خاصة بالحساب</label>
+                  <textarea 
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 min-h-[50px] resize-y" 
+                    value={formNotes} 
+                    onChange={(e) => setFormNotes(e.target.value)}
+                    placeholder="شروط الدفع والتسليم، تصنيفات معينة، إلخ..." 
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">رمز اللون المميز للحساب</label>
+                  <div className="flex gap-2 justify-start mt-2">
+                    {COLORS.map((col, i) => (
+                      <motion.div 
+                        whileHover={{ scale: 1.15 }}
+                        whileTap={{ scale: 0.9 }}
+                        key={i}
+                        className="w-8 h-8 rounded-full cursor-pointer shadow-md transition-all duration-150 relative" 
+                        style={{ 
+                          background: col,
+                          border: i === formColor ? '2px solid white' : '1px solid rgba(0,0,0,0.15)',
+                          boxShadow: i === formColor ? '0 0 10px rgba(255,255,255,0.3)' : 'none'
+                        }} 
+                        onClick={() => setFormColor(i)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2.5 pt-4 mt-6">
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="submit" 
+                    className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs py-3 rounded-xl shadow-md transition-all duration-200"
+                  >
+                    إضافة العميل
+                  </motion.button>
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="button" 
+                    className="flex-1 py-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl font-bold text-xs transition-all duration-200"
+                    onClick={() => setModalMode(null)}
+                  >
+                    إلغاء
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>,
+          document.body
+        )}
+
+        {/* EDIT CLIENT MODAL */}
+        {modalMode === 'edit' && createPortal(
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => setModalMode(null)}
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl relative overflow-hidden text-right"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-base md:text-lg font-black text-amber-300 border-b border-slate-800/80 pb-3 mb-5">تعديل بيانات الحريف</h3>
+              
+              <form onSubmit={handleEditSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">الاسم الكامل للعميل *</label>
+                  <input 
+                    type="text"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200" 
+                    value={formName} 
+                    onChange={(e) => setFormName(e.target.value)}
+                    placeholder="مثال: محمد بن علي" 
+                    required
+                    autoFocus 
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">المعرف الجبائي للعميل</label>
+                    <input 
+                      type="text"
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono" 
+                      value={formTaxId} 
+                      onChange={(e) => setFormTaxId(e.target.value)}
+                      placeholder="1234567/A/P/M/000" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">رقم الهاتف</label>
+                    <input 
+                      type="tel"
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono" 
+                      value={formPhone} 
+                      onChange={(e) => setFormPhone(e.target.value)}
+                      placeholder="55 xxx xxx" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">العنوان الجغرافي</label>
+                  <input 
+                    type="text"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200" 
+                    value={formAddress} 
+                    onChange={(e) => setFormAddress(e.target.value)}
+                    placeholder="مثال: الحامة 1" 
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">ملاحظات وشروط خاصة بالحساب</label>
+                  <textarea 
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 min-h-[50px] resize-y" 
+                    value={formNotes} 
+                    onChange={(e) => setFormNotes(e.target.value)}
+                    placeholder="شروط الدفع والتسليم، تصنيفات معينة، إلخ..." 
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">رمز اللون المميز للحساب</label>
+                  <div className="flex gap-2 justify-start mt-2">
+                    {COLORS.map((col, i) => (
+                      <motion.div 
+                        whileHover={{ scale: 1.15 }}
+                        whileTap={{ scale: 0.9 }}
+                        key={i}
+                        className="w-8 h-8 rounded-full cursor-pointer shadow-md transition-all duration-150 relative" 
+                        style={{ 
+                          background: col,
+                          border: i === formColor ? '2px solid white' : '1px solid rgba(0,0,0,0.15)',
+                          boxShadow: i === formColor ? '0 0 10px rgba(255,255,255,0.3)' : 'none'
+                        }} 
+                        onClick={() => setFormColor(i)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2.5 pt-4 mt-6">
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="submit" 
+                    className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs py-3 rounded-xl shadow-md transition-all duration-200"
+                  >
+                    حفظ التعديلات
+                  </motion.button>
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="button" 
+                    className="flex-1 py-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl font-bold text-xs transition-all duration-200"
+                    onClick={() => setModalMode(null)}
+                  >
+                    إلغاء
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>,
+          document.body
+        )}
+
+        {/* DELETE CLIENT CONFIRMATION MODAL */}
+        {modalMode === 'delete' && createPortal(
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => setModalMode(null)}
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl relative overflow-hidden text-right"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-base md:text-lg font-black text-red-400 border-b border-slate-800/80 pb-3 mb-4">تأكيد حذف الحساب نهائيًا</h3>
+              
+              <p className="text-xs md:text-sm text-slate-300 leading-relaxed mb-6">
+                هل أنت متأكد تمامًا من حذف حساب العميل <strong className="text-amber-400">{activeClient?.name}</strong>؟<br />
+                <span className="text-red-400 font-bold block mt-1.5">⚠️ تحذير: ستقوم هذه العملية بحذف جميع السجلات اليومية والمعاملات والديون المرتبطة به بشكل نهائي وغير قابل للاسترداد!</span>
+              </p>
+              
+              <div className="flex gap-2.5">
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs py-3 rounded-xl shadow-md transition-all duration-200" 
+                  onClick={handleDeleteConfirm}
+                >
+                  نعم، حذف العميل نهائيًا
+                </motion.button>
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-1 py-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl font-bold text-xs transition-all duration-200"
+                  onClick={() => setModalMode(null)}
+                >
+                  إلغاء التراجع
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>,
+          document.body
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
