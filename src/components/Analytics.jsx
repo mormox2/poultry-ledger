@@ -16,6 +16,11 @@ export default function Analytics({ state }) {
     amt: 0
   });
 
+  const [activeClientId, setActiveClientId] = useState(state.selectedClient || (state.clients[0]?.id || null));
+  const [chartMetric, setChartMetric] = useState('sales'); // 'sales' or 'weight'
+  const [hoveredSliceIdx, setHoveredSliceIdx] = useState(null); // for donut chart interactivity
+  const [hoveredLinePoint, setHoveredLinePoint] = useState(null); // for snapping vertical indicator line
+
   const allTotals = state.clients.map(cl => ({ 
     ...cl, 
     ...getTotals(state.ledger, cl.id, y, m) 
@@ -52,7 +57,7 @@ export default function Analytics({ state }) {
   });
 
   const avgPrice = priceCount ? parseFloat((priceSum / priceCount).toFixed(3)) : state.pricePerKg;
-  const activeClient = state.clients.find(x => x.id === state.selectedClient) || state.clients[0];
+  const activeClient = state.clients.find(x => x.id === activeClientId) || state.clients[0];
 
   const grandAmt = allTotals.reduce((a, x) => a + x.amt, 0);
   const grandNw = allTotals.reduce((a, x) => a + x.nw, 0);
@@ -115,8 +120,14 @@ export default function Analytics({ state }) {
     if (!activeClient) return null;
     const rows = getRows(state.ledger, activeClient.id, y, m);
     const days = rows.length;
-    const data = rows.map(r => ({ d: r.d, val: (parseFloat(r.amt) || 0) }));
-    const maxVal = Math.max(...data.map(d => d.val), 1000);
+    
+    // Dynamic mapping depending on metric selected
+    const data = rows.map(r => ({ 
+      d: r.d, 
+      val: chartMetric === 'sales' ? (parseFloat(r.amt) || 0) : (parseFloat(r.nw) || 0) 
+    }));
+    
+    const maxVal = Math.max(...data.map(d => d.val), chartMetric === 'sales' ? 1000 : 200);
 
     const width = 800;
     const height = 240;
@@ -163,19 +174,46 @@ export default function Analytics({ state }) {
       }
     });
 
+    const totalLength = 3000;
+
     return (
-      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" className="overflow-visible select-none">
+      <svg 
+        key={`${activeClientId}-${chartMetric}`} 
+        viewBox={`0 0 ${width} ${height}`} 
+        width="100%" 
+        height="100%" 
+        className="overflow-visible select-none"
+      >
         <defs>
           <linearGradient id="chart-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#d4a843" stopOpacity="0.25" />
+            <stop offset="0%" stopColor="#d4a843" stopOpacity="0.3" />
             <stop offset="100%" stopColor="#d4a843" stopOpacity="0.0" />
           </linearGradient>
+          <filter id="neon-glow" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#d4a843" floodOpacity="0.4" />
+          </filter>
         </defs>
 
-        {/* Horizontal Gridlines */}
+        <style>{`
+          @keyframes draw-curve {
+            to {
+              stroke-dashoffset: 0;
+            }
+          }
+          .circle-dot {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+          .circle-dot:hover {
+            r: 7 !important;
+            stroke-width: 3px !important;
+            filter: drop-shadow(0 0 4px #d4a843);
+          }
+        `}</style>
+
+        {/* Horizontal Gridlines (Slate soft contrast) */}
         {gridLines.map((g, idx) => (
           <g key={idx}>
-            <line x1={paddingX} y1={g.yPos} x2={width - paddingX} y2={g.yPos} stroke="rgba(255,255,255,0.06)" strokeDasharray="4 4" strokeWidth="1" />
+            <line x1={paddingX} y1={g.yPos} x2={width - paddingX} y2={g.yPos} stroke="rgba(148, 163, 184, 0.12)" strokeDasharray="4 4" strokeWidth="1" />
             <text x={paddingX - 10} y={g.yPos + 4} fill="#64748b" fontSize="9" textAnchor="end" className="font-mono font-bold">{g.label}</text>
           </g>
         ))}
@@ -183,20 +221,47 @@ export default function Analytics({ state }) {
         {/* Vertical Day Guides */}
         {verticalGuides.map((vg, idx) => (
           <g key={idx}>
-            <line x1={vg.xPos} y1={paddingY} x2={vg.xPos} y2={height - paddingY} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+            <line x1={vg.xPos} y1={paddingY} x2={vg.xPos} y2={height - paddingY} stroke="rgba(148, 163, 184, 0.12)" strokeWidth="1" />
             <text x={vg.xPos} y={height - paddingY + 16} fill="#64748b" fontSize="9" textAnchor="middle" className="font-mono font-bold">{vg.label}</text>
           </g>
         ))}
 
-        {/* Area and Line Paths */}
+        {/* Vertical glowing snapped indicator tracker */}
+        {hoveredLinePoint !== null && (
+          <line 
+            x1={hoveredLinePoint} 
+            y1={paddingY} 
+            x2={hoveredLinePoint} 
+            y2={height - paddingY} 
+            stroke="rgba(212, 168, 67, 0.3)" 
+            strokeWidth="1.5" 
+            strokeDasharray="3 3"
+            pointerEvents="none"
+          />
+        )}
+
+        {/* Area and Line Paths with Neon Glow & Draw-In Animation */}
         {points.length > 0 && (
           <>
             <path d={areaPath} fill="url(#chart-grad)" />
-            <path d={dPath} fill="none" stroke="#d4a843" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path 
+              d={dPath} 
+              fill="none" 
+              stroke="#d4a843" 
+              strokeWidth="2.5" 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              filter="url(#neon-glow)"
+              style={{
+                strokeDasharray: totalLength,
+                strokeDashoffset: totalLength,
+                animation: 'draw-curve 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards'
+              }}
+            />
           </>
         )}
 
-        {/* Circle Hotspots */}
+        {/* Circle Hotspots with hover dynamic effects */}
         {points.map((pt, idx) => {
           if (pt.val <= 0) return null;
           const row = rows.at(pt.d - 1);
@@ -205,15 +270,21 @@ export default function Analytics({ state }) {
           const dateStr = `${y}/${String(m).padStart(2, '0')}/${String(pt.d).padStart(2, '0')}`;
 
           const handleMouse = (e) => {
+            setHoveredLinePoint(pt.x);
             setTooltip({
               show: true,
-              x: e.pageX + 15,
-              y: e.pageY - 15,
+              x: e.clientX + 15,
+              y: e.clientY - 15,
               date: dateStr,
               nw,
               price,
-              amt: pt.val
+              amt: chartMetric === 'sales' ? pt.val : (parseFloat(row.amt) || 0)
             });
+          };
+
+          const handleMouseLeave = () => {
+            setHoveredLinePoint(null);
+            setTooltip(prev => ({ ...prev, show: false }));
           };
 
           return (
@@ -223,12 +294,12 @@ export default function Analytics({ state }) {
               cy={pt.y} 
               r="4.5" 
               fill="#d4a843" 
-              stroke="#0f172a" 
-              strokeWidth="2" 
-              className="transition-all hover:r-6 cursor-pointer" 
+              stroke="var(--bg)" 
+              strokeWidth="2.5" 
+              className="circle-dot cursor-pointer" 
               onMouseEnter={handleMouse}
               onMouseMove={handleMouse}
-              onMouseLeave={() => setTooltip(prev => ({ ...prev, show: false }))}
+              onMouseLeave={handleMouseLeave}
             />
           );
         })}
@@ -271,22 +342,30 @@ export default function Analytics({ state }) {
       <div className="flex flex-col sm:flex-row items-center gap-6 text-right">
         <div className="relative w-32 h-32 flex-shrink-0">
           <svg viewBox="0 0 120 120" width="120" height="120">
-            {slices.map((slice, idx) => (
-              <circle 
-                key={idx}
-                cx="60" 
-                cy="60" 
-                r={R} 
-                fill="transparent" 
-                stroke={slice.color} 
-                strokeWidth="9" 
-                strokeDasharray={C} 
-                strokeDashoffset={slice.strokeOffset} 
-                transform="rotate(-90 60 60)" 
-                className="transition-all duration-300"
-              />
-            ))}
-            <circle cx="60" cy="60" r={R - 4.5} fill="#0b1222" />
+            {slices.map((slice, idx) => {
+              const isHovered = hoveredSliceIdx === idx;
+              return (
+                <circle 
+                  key={idx}
+                  cx="60" 
+                  cy="60" 
+                  r={isHovered ? R + 0.8 : R} 
+                  fill="transparent" 
+                  stroke={slice.color} 
+                  strokeWidth={isHovered ? "11.5" : "9"} 
+                  strokeDasharray={C} 
+                  strokeDashoffset={slice.strokeOffset} 
+                  transform="rotate(-90 60 60)" 
+                  className="transition-all duration-300 cursor-pointer"
+                  onMouseEnter={() => setHoveredSliceIdx(idx)}
+                  onMouseLeave={() => setHoveredSliceIdx(null)}
+                  style={{
+                    filter: isHovered ? `drop-shadow(0 0 3px ${slice.color}80)` : 'none'
+                  }}
+                />
+              );
+            })}
+            <circle cx="60" cy="60" r={R - 4.5} fill="var(--bg)" className="transition-all duration-300" />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none text-center">
             <span className="text-[9px] text-slate-550 font-bold">المجموع</span>
@@ -295,17 +374,25 @@ export default function Analytics({ state }) {
         </div>
         
         <div className="flex-1 max-h-[160px] overflow-y-auto pr-1 space-y-2.5 w-full scrollbar-thin">
-          {slices.map((slice, idx) => (
-            <div key={idx} className="flex items-center justify-between text-xs border-b border-slate-900/40 pb-1.5 last:border-none">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded bg-slate-950 flex-shrink-0" style={{ background: slice.color }} />
-                <span className="font-bold text-slate-200">{slice.name}</span>
+          {slices.map((slice, idx) => {
+            const isHovered = hoveredSliceIdx === idx;
+            return (
+              <div 
+                key={idx} 
+                className={`flex items-center justify-between text-xs border-b border-slate-900/40 pb-1.5 last:border-none transition-all duration-250 cursor-pointer ${isHovered ? 'bg-amber-500/10 pr-2.5 rounded-lg pl-1.5 py-0.5' : ''}`}
+                onMouseEnter={() => setHoveredSliceIdx(idx)}
+                onMouseLeave={() => setHoveredSliceIdx(null)}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded bg-slate-950 flex-shrink-0" style={{ background: slice.color }} />
+                  <span className={`font-bold ${isHovered ? 'text-amber-400' : 'text-slate-200'}`}>{slice.name}</span>
+                </div>
+                <span className="text-slate-450 font-semibold font-mono text-[11px]">
+                  {fmt(slice.amount)} د.ت ({Math.round(slice.pct)}%)
+                </span>
               </div>
-              <span className="text-slate-450 font-semibold font-mono text-[11px]">
-                {fmt(slice.amount)} د.ت ({Math.round(slice.pct)}%)
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
@@ -328,17 +415,52 @@ export default function Analytics({ state }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ACTIVE CLIENT SALES CHART */}
         <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-lg lg:col-span-3 text-right">
-          <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 mb-6 justify-start">
-            <span>📈</span>
-            <span>حركة مبيعات العميل النشط ({activeClient ? activeClient.name : '—'})</span>
-          </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 justify-start">
+              <span>📈</span>
+              <span>حركة مبيعات العميل النشط ({activeClient ? activeClient.name : '—'})</span>
+            </h3>
+            
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+              {/* Metric Toggle */}
+              <div className="flex items-center bg-slate-950/50 border border-slate-800/80 p-0.5 rounded-xl text-[10px] font-bold w-full sm:w-auto">
+                <button 
+                  className={`px-3 py-1.5 rounded-lg transition-all flex-1 sm:flex-none text-center ${chartMetric === 'sales' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/35' : 'text-slate-400 hover:text-slate-200 border border-transparent'}`}
+                  onClick={() => setChartMetric('sales')}
+                >
+                  💰 المبيعات (د.ت)
+                </button>
+                <button 
+                  className={`px-3 py-1.5 rounded-lg transition-all flex-1 sm:flex-none text-center ${chartMetric === 'weight' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/35' : 'text-slate-400 hover:text-slate-200 border border-transparent'}`}
+                  onClick={() => setChartMetric('weight')}
+                >
+                  ⚖️ الوزن (كغ)
+                </button>
+              </div>
+
+              {/* Client Selector dropdown */}
+              <select
+                value={activeClientId}
+                onChange={(e) => setActiveClientId(Number(e.target.value))}
+                className="bg-slate-950/60 border border-slate-800/80 text-xs font-bold text-slate-200 rounded-xl px-3 py-2 outline-none cursor-pointer focus:border-amber-500/50 transition-colors w-full sm:w-auto"
+                style={{ direction: 'rtl' }}
+              >
+                {state.clients.map(cl => (
+                  <option key={cl.id} value={cl.id} className="bg-slate-950 text-slate-200">
+                    👤 {cl.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
           <div className="h-64 w-full relative">
             {activeClient ? renderSVGLineChart() : (
               <div className="text-slate-500 text-xs py-16 text-center">حدد عميلاً لعرض المخطط البياني</div>
             )}
           </div>
           <div className="text-[10px] text-slate-500 font-medium mt-4 text-center select-none">
-            المحور الأفقي: أيام الشهر | المحور العمودي: المبيعات الإجمالية بالدينار (د.ت)
+            المحور الأفقي: أيام الشهر | المحور العمودي: {chartMetric === 'sales' ? 'المبيعات الإجمالية بالدينار (د.ت)' : 'إجمالي الأوزان المسلمة (كغ)'}
           </div>
         </div>
 
