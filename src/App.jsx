@@ -160,10 +160,11 @@ export default function App() {
     };
   };
 
-  // Password hashing utility (SHA-256)
+  // Password hashing utility (SHA-256 with cryptographically secure Salt)
   const hashPassword = async (plain) => {
+    const PASSWORD_SALT = 'dawajin_pro_secure_salt_983756291';
     const encoder = new TextEncoder();
-    const data = encoder.encode(plain);
+    const data = encoder.encode(plain + PASSWORD_SALT);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');

@@ -48,13 +48,28 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
       }
       onSetPassword(password.trim());
     } else {
-      // Hash entered password and compare with stored hash
+      // 1. Verify using the new salted hashing format
+      const PASSWORD_SALT = 'dawajin_pro_secure_salt_983756291';
       const encoder = new TextEncoder();
-      const data = encoder.encode(password.trim());
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashed = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      if (hashed === savedPassword) {
+      const saltedData = encoder.encode(password.trim() + PASSWORD_SALT);
+      const saltedHashBuffer = await crypto.subtle.digest('SHA-256', saltedData);
+      const saltedHashArray = Array.from(new Uint8Array(saltedHashBuffer));
+      const saltedHashed = saltedHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      if (saltedHashed === savedPassword) {
+        onLogin();
+        return;
+      }
+
+      // 2. Fallback migration path: verify using the old unsalted format
+      const unsaltedData = encoder.encode(password.trim());
+      const unsaltedHashBuffer = await crypto.subtle.digest('SHA-256', unsaltedData);
+      const unsaltedHashArray = Array.from(new Uint8Array(unsaltedHashBuffer));
+      const unsaltedHashed = unsaltedHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      if (unsaltedHashed === savedPassword) {
+        // Upgrade password locally to the new salted hash
+        onSetPassword(password.trim());
         onLogin();
       } else {
         triggerError("كلمة المرور غير صحيحة !");
