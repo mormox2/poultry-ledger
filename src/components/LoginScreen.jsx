@@ -8,7 +8,6 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
   const [confirmPassword, setConfirmPassword] = useState('');
   
   // UI states
-  const [isRegistering, setIsRegistering] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [shake, setShake] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -66,34 +65,16 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
     }
 
     try {
-      if (isRegistering) {
-        // Registering a new user
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password: password.trim()
-        });
+      // Logging in an existing user
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password.trim()
+      });
 
-        if (error) throw error;
-        
-        if (data?.user && data.session) {
-          onCloudLogin(data.session, data.user);
-        } else {
-          // If e-mail confirmation is enabled
-          alert("✓ تم إنشاء الحساب بنجاح ! الرجاء تأكيد بريدك الإلكتروني إذا تطلب الأمر لتسجيل الدخول.");
-          setIsRegistering(false);
-        }
-      } else {
-        // Logging in an existing user
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: password.trim()
-        });
+      if (error) throw error;
 
-        if (error) throw error;
-
-        if (data?.session && data?.user) {
-          onCloudLogin(data.session, data.user);
-        }
+      if (data?.session && data?.user) {
+        onCloudLogin(data.session, data.user);
       }
     } catch (err) {
       console.error("Auth error:", err);
@@ -130,9 +111,7 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
           {isSupabaseConfigured ? (
             <>
               <p className="login-subtitle">
-                {isRegistering 
-                  ? "إنشاء حساب سحابي جديد لإدارة مبيعاتك" 
-                  : "تسجيل الدخول السحابي الآمن للوحة القيادة"}
+                تسجيل الدخول السحابي الآمن للوحة القيادة
               </p>
 
               {errorMsg && (
@@ -195,28 +174,8 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
                   style={{ width: '100%', marginTop: '10px', height: '44px', fontWeight: '700' }}
                   disabled={loading}
                 >
-                  {loading 
-                    ? "الرجاء الانتظار..." 
-                    : isRegistering 
-                      ? "تسجيل حساب جديد والدخول" 
-                      : "تسجيل الدخول السحابي"}
+                  {loading ? "الرجاء الانتظار..." : "تسجيل الدخول السحابي"}
                 </button>
-
-                <div style={{ marginTop: '14px', fontSize: '12px' }}>
-                  <button
-                    type="button"
-                    style={{ background: 'transparent', border: 'none', color: 'var(--gold)', cursor: 'pointer', fontWeight: '700', fontFamily: 'inherit' }}
-                    onClick={() => {
-                      setIsRegistering(!isRegistering);
-                      setErrorMsg('');
-                    }}
-                    disabled={loading}
-                  >
-                    {isRegistering 
-                      ? "لديك حساب بالفعل؟ سجل دخولك" 
-                      : "ليس لديك حساب؟ أنشئ حساباً جديداً مجاناً"}
-                  </button>
-                </div>
               </form>
             </>
           ) : (
