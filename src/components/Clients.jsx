@@ -260,14 +260,14 @@ export default function Clients({
                           onClick={(e) => e.stopPropagation()} 
                           className="flex items-center gap-1.5 justify-end hover:text-amber-400 transition-colors"
                         >
-                          <span className="font-mono text-[11px] font-semibold">{cl.phone}</span>
+                          <span className="font-mono text-[11px] font-semibold" dir="ltr">{cl.phone}</span>
                           <span className="text-slate-600 font-bold select-none text-[10px]">📞</span>
                         </a>
                       )}
                       
                       {cl.taxId && cl.taxId !== '—' && (
                         <div className="flex items-center gap-1.5 justify-end text-[10px] text-amber-500/80 font-bold">
-                          <span className="font-mono">{cl.taxId}</span>
+                          <span className="font-mono" dir="ltr">{cl.taxId}</span>
                           <span className="select-none">🆔 م.ج:</span>
                         </div>
                       )}
@@ -344,7 +344,8 @@ export default function Clients({
                     <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">المعرف الجبائي للعميل</label>
                     <input 
                       type="text"
-                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono" 
+                      dir="ltr"
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono input-ltr" 
                       value={formTaxId} 
                       onChange={(e) => setFormTaxId(e.target.value)}
                       placeholder="1234567/A/P/M/000" 
@@ -354,7 +355,8 @@ export default function Clients({
                     <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">رقم الهاتف</label>
                     <input 
                       type="tel"
-                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono" 
+                      dir="ltr"
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono input-ltr" 
                       value={formPhone} 
                       onChange={(e) => setFormPhone(e.target.value)}
                       placeholder="55 xxx xxx" 
@@ -465,7 +467,8 @@ export default function Clients({
                     <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">المعرف الجبائي للعميل</label>
                     <input 
                       type="text"
-                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono" 
+                      dir="ltr"
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono input-ltr" 
                       value={formTaxId} 
                       onChange={(e) => setFormTaxId(e.target.value)}
                       placeholder="1234567/A/P/M/000" 
@@ -475,7 +478,8 @@ export default function Clients({
                     <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">رقم الهاتف</label>
                     <input 
                       type="tel"
-                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono" 
+                      dir="ltr"
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono input-ltr" 
                       value={formPhone} 
                       onChange={(e) => setFormPhone(e.target.value)}
                       placeholder="55 xxx xxx" 

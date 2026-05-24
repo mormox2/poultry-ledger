@@ -578,14 +578,18 @@ body.printing-invoice #print-invoice-area {
     color: black !important;
     padding: 0 !important;
   }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }
 
 /* RESPONSIVE & MOBILE UX Overhaul */
-@media (max-width: 900px) {
+@media screen and (max-width: 900px) {
   .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
 }
 
-@media (max-width: 860px) {
+@media screen and (max-width: 860px) {
   .header-inner {
     position: relative;
     height: auto;
@@ -717,13 +721,13 @@ body.printing-invoice #print-invoice-area {
   }
 }
 
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   .db-details-grid {
     grid-template-columns: 1fr !important; /* Stack detail cards on mobile screens */
   }
 }
 
-@media (max-width: 520px) {
+@media screen and (max-width: 520px) {
   .stat-grid { grid-template-columns: 1fr; }
   .sec-header { flex-direction: column; align-items: flex-start; gap: 8px; }
   .header-inner > div:has(#month-sel) {
@@ -902,7 +906,7 @@ body.printing-invoice #print-invoice-area {
 }
 
 /* MOBILE AND TABLET COLLAPSE RESPONSIVENESS */
-@media (max-width: 860px) {
+@media screen and (max-width: 860px) {
   .login-hero-panel {
     display: none;
   }
@@ -1058,7 +1062,7 @@ tr.holiday td {
 }
 
 /* RESPONSIVE INVOICE PREVIEW ON SCREEN */
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   #print-invoice-area {
     padding: 10px 5px !important;
   }
@@ -1117,6 +1121,10 @@ tr.holiday td {
 
 /* PREMIUM PRINT STYLES OVERRIDE */
 @media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
   html, body {
     overflow: visible !important;
     height: auto !important;

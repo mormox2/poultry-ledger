@@ -207,11 +207,11 @@ export default function InvoicePrint({ state, clientId, onClose }) {
                   🏢 {state.companyInfo?.address || "وادي النور الحامة,قابس"}
                 </p>
                 <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                  📞 الهاتف: {state.companyInfo?.phone || "96 101 651"}
+                  📞 الهاتف: <span dir="ltr">{state.companyInfo?.phone || "96 101 651"}</span>
                 </p>
                 {(state.companyInfo?.taxId || "1895235/E") !== '—' && (
                   <p style={{ fontSize: '11px', color: '#b45309', margin: '2px 0 0 0', fontWeight: '700' }}>
-                    🆔 المعرف الجبائي (M.F.): {state.companyInfo?.taxId || "1895235/E"}
+                    🆔 المعرف الجبائي (M.F.): <span dir="ltr">{state.companyInfo?.taxId || "1895235/E"}</span>
                   </p>
                 )}
               </div>
@@ -276,7 +276,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
                   <td style={{ textAlign: 'right', padding: '6px 0', fontWeight: '600', width: '110px', color: '#475569' }}>الاسم واللقب (Client):</td>
                   <td style={{ textAlign: 'right', padding: '6px 0', fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{cl.name}</td>
                   <td style={{ textAlign: 'right', padding: '6px 0', fontWeight: '600', width: '110px', color: '#475569' }}>رقم الهاتف (Tel):</td>
-                  <td style={{ textAlign: 'right', padding: '6px 0', color: '#1e293b', fontWeight: '600' }}>{cl.phone}</td>
+                  <td style={{ textAlign: 'right', padding: '6px 0', color: '#1e293b', fontWeight: '600' }}><span dir="ltr">{cl.phone}</span></td>
                 </tr>
                 <tr>
                   <td style={{ textAlign: 'right', padding: '6px 0', fontWeight: '600', color: '#475569' }}>المقر (Adresse):</td>
@@ -288,7 +288,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
                   <tr>
                     <td style={{ textAlign: 'right', padding: '6px 0', fontWeight: '600', color: '#475569' }}>المعرف الجبائي (M.F.):</td>
                     <td colSpan="3" style={{ textAlign: 'right', padding: '6px 0', color: '#1e293b', fontWeight: '800', letterSpacing: '0.5px' }}>
-                      {cl.taxId}
+                      <span dir="ltr">{cl.taxId}</span>
                     </td>
                   </tr>
                 )}
@@ -499,7 +499,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
             {cl.phone && cl.phone !== '—' && (
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>الهاتف:</span>
-                <span>{cl.phone}</span>
+                <span dir="ltr">{cl.phone}</span>
               </div>
             )}
             {cl.address && cl.address !== '—' && (

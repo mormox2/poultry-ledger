@@ -389,7 +389,8 @@ export default function Dashboard({
                   <input 
                     type="text"
                     name="compPhone"
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200"
+                    dir="ltr"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 input-ltr"
                     defaultValue={state.companyInfo?.phone || "96 101 651"}
                     placeholder="96 101 651"
                   />
@@ -399,7 +400,8 @@ export default function Dashboard({
                   <input 
                     type="text"
                     name="compTaxId"
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200"
+                    dir="ltr"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 input-ltr font-mono"
                     defaultValue={state.companyInfo?.taxId || "1895235/E"}
                     placeholder="1895235/E"
                   />
