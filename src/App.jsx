@@ -37,6 +37,10 @@ export default function App() {
   const [isCloudLoading, setIsCloudLoading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // --- Network & Offline Sync States ---
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+
   // Detect if Supabase is filled in .env
   const isSupabaseConfigured = 
     import.meta.env.VITE_SUPABASE_URL && 
@@ -94,6 +98,22 @@ export default function App() {
   const [deviceType, setDeviceType] = useState('other');
   const syncDBRef = useRef(null);
 
+  // Helper to count pending offline sync actions in IndexedDB
+  const updatePendingSyncCount = async () => {
+    const db = syncDBRef.current;
+    if (!db) return;
+    try {
+      const tx = db.transaction(syncStoreName, 'readonly');
+      const store = tx.objectStore(syncStoreName);
+      const countReq = store.count();
+      countReq.onsuccess = () => {
+        setPendingSyncCount(countReq.result);
+      };
+    } catch (err) {
+      console.error("Failed to count pending sync actions:", err);
+    }
+  };
+
   // Initialize IndexedDB for offline sync queue
   useEffect(() => {
     if (!('indexedDB' in window)) {
@@ -109,6 +129,7 @@ export default function App() {
     };
     request.onsuccess = () => {
       syncDBRef.current = request.result;
+      updatePendingSyncCount();
       // Process any pending items if we are already online
       if (navigator.onLine) processSyncQueue();
     };
@@ -117,13 +138,21 @@ export default function App() {
     };
   }, []);
 
-  // Listen for online events to flush the queue
+  // Listen for online/offline events to manage network status and flush queue
   useEffect(() => {
-    const handler = () => {
+    const handleOnline = () => {
+      setIsOnline(true);
       processSyncQueue();
     };
-    window.addEventListener('online', handler);
-    return () => window.removeEventListener('online', handler);
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   // Helper to enqueue a sync action
@@ -134,7 +163,10 @@ export default function App() {
       const tx = db.transaction(syncStoreName, 'readwrite');
       const store = tx.objectStore(syncStoreName);
       store.add({ action, payload });
-      tx.oncomplete = () => resolve();
+      tx.oncomplete = () => {
+        updatePendingSyncCount();
+        resolve();
+      };
       tx.onerror = () => reject(tx.error);
     });
   };
@@ -196,7 +228,10 @@ export default function App() {
           const deleteStore = deleteTx.objectStore(syncStoreName);
           deleteStore.delete(item.key);
           await new Promise((resolve, reject) => {
-            deleteTx.oncomplete = () => resolve();
+            deleteTx.oncomplete = () => {
+              updatePendingSyncCount();
+              resolve();
+            };
             deleteTx.onerror = () => reject(deleteTx.error);
           });
         } catch (err) {
@@ -208,6 +243,8 @@ export default function App() {
         break;
       }
     }
+    // Final counter refresh
+    updatePendingSyncCount();
   };
 
   // Password hashing utility (SHA-256 with cryptographically secure Salt)
@@ -1253,12 +1290,29 @@ export default function App() {
             </button>
           </div>
           
-          {/* CLOUD CONNECTION SYNC BADGE INDICATOR */}
+          {/* DYNAMIC NETWORK & CLOUD SYNC STATUS BADGE */}
           {isSupabaseConfigured && (
-            <div className="no-print flex items-center gap-1.5 bg-emerald-500/5 border border-emerald-500/15 rounded-full px-3 py-1 text-[10px] font-bold text-emerald-400 md:ml-auto select-none">
-              <span className="pulse-dot-green"></span>
+            <div className={`no-print flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold md:ml-auto select-none border transition-all duration-300 ${
+              !isOnline 
+                ? 'bg-red-500/5 border-red-500/20 text-red-400 shadow-md shadow-red-500/5'
+                : pendingSyncCount > 0 || isCloudLoading
+                  ? 'bg-amber-500/5 border-amber-500/20 text-amber-400 shadow-md shadow-amber-500/5'
+                  : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400 shadow-md'
+            }`}>
+              <span className={
+                !isOnline 
+                  ? 'pulse-dot-red'
+                  : pendingSyncCount > 0 || isCloudLoading
+                    ? 'pulse-dot-blue'
+                    : 'pulse-dot-green'
+              }></span>
               <span>
-                {isCloudLoading ? "جاري المزامنة..." : "متصل بالسحابة"}
+                {!isOnline 
+                  ? `غير متصل — ${pendingSyncCount > 0 ? `${pendingSyncCount} معلقة` : "العمل محلياً"}`
+                  : pendingSyncCount > 0 || isCloudLoading
+                    ? `جاري المزامنة (${pendingSyncCount} معلقة)...`
+                    : "متصل بالسحابة (مزامنة كاملة)"
+                }
               </span>
             </div>
           )}
