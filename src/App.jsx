@@ -1,16 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import './styles/main.css';
 import { supabase } from './js/supabaseClient';
 
-// Component Imports
+// Critical Components (Statically Imported for Instant Load)
 import Dashboard from './components/Dashboard';
-import Ledger from './components/Ledger';
-import Clients from './components/Clients';
-import Analytics from './components/Analytics';
-import Summary from './components/Summary';
-import InvoicePrint from './components/InvoicePrint';
 import LoginScreen from './components/LoginScreen';
-import InstallModal from './components/InstallModal';
+
+// Secondary Components (Lazy Loaded for Code Splitting)
+const Ledger = lazy(() => import('./components/Ledger'));
+const Clients = lazy(() => import('./components/Clients'));
+const Analytics = lazy(() => import('./components/Analytics'));
+const Summary = lazy(() => import('./components/Summary'));
+const InvoicePrint = lazy(() => import('./components/InvoicePrint'));
+const InstallModal = lazy(() => import('./components/InstallModal'));
 
 // Utilities Import
 import { 
@@ -1336,26 +1338,37 @@ export default function App() {
       </header>
 
       <main id="main-content" className="max-w-[1600px] mx-auto px-4 md:px-8 py-6">
-        {renderActiveView()}
+        <Suspense fallback={
+          <div className="flex flex-col items-center justify-center py-32 gap-4">
+            <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+            <div className="text-xs text-slate-400 font-bold select-none">جاري تحميل الصفحة...</div>
+          </div>
+        }>
+          {renderActiveView()}
+        </Suspense>
       </main>
 
       {/* RENDER DYNAMIC BILL PREVIEW OVERLAY IF ACTIVE */}
       {activeInvoiceClientId !== null && (
-        <InvoicePrint 
-          state={state} 
-          clientId={activeInvoiceClientId} 
-          onClose={() => setActiveInvoiceClientId(null)} 
-        />
+        <Suspense fallback={null}>
+          <InvoicePrint 
+            state={state} 
+            clientId={activeInvoiceClientId} 
+            onClose={() => setActiveInvoiceClientId(null)} 
+          />
+        </Suspense>
       )}
 
       {/* RENDER DYNAMIC PWA INSTALL GUIDE MODAL */}
-      <InstallModal 
-        isOpen={showInstallModal}
-        onClose={() => setShowInstallModal(false)}
-        deviceType={deviceType}
-        onInstallApp={handleInstallClick}
-        installPrompt={installPrompt}
-      />
+      <Suspense fallback={null}>
+        <InstallModal 
+          isOpen={showInstallModal}
+          onClose={() => setShowInstallModal(false)}
+          deviceType={deviceType}
+          onInstallApp={handleInstallClick}
+          installPrompt={installPrompt}
+        />
+      </Suspense>
 
       {/* FLOATING PWA APP INSTALL BUTTON */}
       {!isStandalone && (
