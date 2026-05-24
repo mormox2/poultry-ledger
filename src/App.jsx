@@ -1179,10 +1179,8 @@ export default function App() {
 
             {/* HAMBURGER MENU TOGGLE BUTTON (Mobile only) */}
             <button 
-              className={`menu-toggle md:hidden no-print flex w-10 h-10 rounded-xl items-center justify-center border font-bold transition-all duration-200 ${
-                mobileMenuOpen 
-                  ? 'open bg-amber-500 text-slate-950 border-amber-500 shadow-md shadow-amber-500/10' 
-                  : 'bg-slate-900/60 text-amber-500 border-slate-800'
+              className={`menu-toggle md:hidden no-print flex items-center justify-center font-bold transition-all duration-200 ${
+                mobileMenuOpen ? 'open' : ''
               }`}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               title="القائمة"
