@@ -100,14 +100,14 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#070b13] font-sans text-slate-100 overflow-hidden relative">
+    <div className="login-container min-h-screen w-full flex flex-col lg:flex-row bg-[#070b13] font-sans text-slate-100 overflow-hidden relative">
       
       {/* Background Ambient Decorative Lights */}
       <div className="absolute top-[-20%] right-[-10%] w-[50vw] h-[50vw] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none z-0" />
       <div className="absolute bottom-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none z-0" />
 
       {/* RIGHT SIDE: SECURE LOGIN CARD PANEL */}
-      <div className="flex-1 flex items-center justify-center p-6 md:p-12 relative z-10 lg:order-2">
+      <div className="login-form-panel flex-1 flex items-center justify-center p-6 md:p-12 relative z-10 lg:order-2">
         <Atropos 
           className="w-full max-w-[420px] my-auto"
           activeOffset={40}
@@ -119,7 +119,7 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.6, cubicBezier: [0.16, 1, 0.3, 1] }}
-            className={`w-full bg-slate-950/60 backdrop-blur-xl border border-slate-800/80 rounded-[2rem] p-8 md:p-10 shadow-2xl relative overflow-hidden transition-all duration-300 hover:border-amber-500/30 ${shake ? 'animate-shake' : ''}`}
+            className={`login-card w-full bg-slate-950/60 backdrop-blur-xl border border-slate-800/80 rounded-[2rem] p-8 md:p-10 shadow-2xl relative overflow-hidden transition-all duration-300 hover:border-amber-500/30 ${shake ? 'animate-shake shake' : ''}`}
             style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)' }}
           >
             {/* Top gold line accent */}
@@ -129,27 +129,27 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
               {/* Logo / Badge */}
               <motion.div 
                 whileHover={{ scale: 1.05 }}
-                className="mb-6 relative cursor-pointer"
+                className="login-logo-container mb-6 relative cursor-pointer"
                 data-atropos-offset="5"
               >
                 <div className="absolute -inset-1 rounded-[1.8rem] bg-gradient-to-r from-amber-500 to-amber-300 opacity-20 blur-sm animate-pulse" />
                 <img 
                   src="/poultry-ledger/assets/icon.svg" 
                   alt="شعار الودرني للدواجن" 
-                  className="w-24 h-24 rounded-[1.6rem] object-contain border-2 border-amber-500/40 p-2.5 bg-slate-900 shadow-xl relative z-10"
+                  className="login-logo-img w-24 h-24 rounded-[1.6rem] object-contain border-2 border-amber-500/40 p-2.5 bg-slate-900 shadow-xl relative z-10"
                   onError={(e) => {
-                    e.target.outerHTML = '<div class="w-24 h-24 rounded-[1.6rem] bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-5xl shadow-xl border border-amber-400/40 relative z-10">🐔</div>';
+                    e.target.outerHTML = '<div class="login-logo-img w-24 h-24 rounded-[1.6rem] bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-5xl shadow-xl border border-amber-400/40 relative z-10">🐔</div>';
                   }}
                 />
               </motion.div>
               
-              <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight mb-2" data-atropos-offset="3">
+              <h2 className="login-title text-2xl md:text-3xl font-extrabold tracking-tight mb-2" data-atropos-offset="3">
                 <span className="bg-gradient-to-r from-amber-200 via-amber-300 to-amber-500 bg-clip-text text-transparent">
                   الودرني للدواجن
                 </span>
               </h2>
               
-              <p className="text-xs text-slate-400 font-medium mb-6" data-atropos-offset="2">
+              <p className="login-subtitle text-xs text-slate-400 font-medium mb-6" data-atropos-offset="2">
                 {isSupabaseConfigured ? "تسجيل الدخول السحابي الآمن للوحة القيادة" : "لوحة التحكم الآمنة للحسابات"}
               </p>
             </div>
@@ -325,24 +325,24 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
       </div>
 
       {/* LEFT SIDE: SPLIT CORPORATE HERO PANEL */}
-      <div className="flex-1 min-h-[30vh] lg:min-h-screen relative lg:flex flex-col justify-end p-8 md:p-16 overflow-hidden bg-slate-950 z-0 lg:order-1">
+      <div className="login-hero-panel flex-1 min-h-[30vh] lg:min-h-screen relative lg:flex flex-col justify-end p-8 md:p-16 overflow-hidden bg-slate-950 z-0 lg:order-1">
         
         {/* Visual Hero Image & Shadow Overlay */}
         <div className="absolute inset-0 bg-[url('/poultry-ledger/assets/hero.webp')] bg-cover bg-center opacity-40 mix-blend-luminosity" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#070b13] via-[#070b13]/60 to-transparent lg:bg-gradient-to-l lg:from-slate-950 lg:via-slate-950/70 lg:to-transparent" />
+        <div className="login-hero-overlay absolute inset-0 bg-gradient-to-t from-[#070b13] via-[#070b13]/60 to-transparent lg:bg-gradient-to-l lg:from-slate-950 lg:via-slate-950/70 lg:to-transparent" />
         
-        <div className="relative z-10 max-w-lg mt-auto text-right mr-auto lg:mr-0">
+        <div className="login-hero-text relative z-10 max-w-lg mt-auto text-right mr-auto lg:mr-0">
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2, duration: 0.8 }}
           >
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-4 leading-tight">
+            <h1 className="login-hero-h1 text-3xl md:text-4xl lg:text-5xl font-extrabold mb-4 leading-tight">
               <span className="bg-gradient-to-r from-amber-100 via-amber-200 to-amber-400 bg-clip-text text-transparent">
                 الودرني للدواجن
               </span>
             </h1>
-            <p className="text-sm md:text-base text-slate-300 font-medium leading-relaxed mb-6 max-w-md">
+            <p className="login-hero-p text-sm md:text-base text-slate-300 font-medium leading-relaxed mb-6 max-w-md">
               الريادة والتميز في تجارة الدواجن بالجملة والتفصيل في الحامة وقابس. 
               شريككم الموثوق وحلولنا الرقمية الذكية لإدارة مبيعاتكم وحساباتكم اليومية بكل دقة وسهولة.
             </p>

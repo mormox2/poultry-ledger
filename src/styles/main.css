@@ -660,6 +660,15 @@ body.printing-invoice #print-invoice-area {
 }
 
 /* LOGIN SCREEN STYLES */
+/* Atropos 3D interactive layer fix to allow click and focus events on form fields & buttons */
+.atropos-scale {
+  pointer-events: none;
+}
+.atropos-rotate,
+.atropos-inner {
+  pointer-events: auto;
+}
+
 .login-container {
   display: flex;
   min-height: 100vh;
