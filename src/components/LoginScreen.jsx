@@ -97,7 +97,7 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
         <div className={`login-card ${shake ? 'shake' : ''}`}>
           <div className="login-logo-container">
             <img 
-              src="/poultry-ledger/assets/logo.png" 
+              src="/poultry-ledger/assets/icon.svg" 
               alt="شعار الودرني للدواجن" 
               className="login-logo-img"
               onError={(e) => {

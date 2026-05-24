@@ -1003,7 +1003,7 @@ export default function App() {
         <div className="header-inner">
           <div className="logo">
             <img 
-              src="/poultry-ledger/assets/logo.png" 
+              src="/poultry-ledger/assets/icon.svg" 
               alt={state.companyInfo.name} 
               style={{ 
                 width: '64px', 

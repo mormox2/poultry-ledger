@@ -108,7 +108,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <img 
-                src="/poultry-ledger/assets/logo.png" 
+                src="/poultry-ledger/assets/icon.svg" 
                 alt={state.companyInfo?.name || "الودرني للدواجن"} 
                 style={{ 
                   width: '72px', 
