@@ -80,6 +80,29 @@ export default function App() {
 
   const [state, setState] = useState(getInitialState);
   const [activeInvoiceClientId, setActiveInvoiceClientId] = useState(null);
+  const [installPrompt, setInstallPrompt] = useState(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    installPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      } else {
+        console.log('User dismissed the install prompt');
+      }
+      setInstallPrompt(null);
+    });
+  };
 
   const stateRef = useRef(state);
   useEffect(() => {
@@ -954,6 +977,8 @@ export default function App() {
             onBackupImport={handleBackupImport}
             onChangePassword={handleChangePassword}
             onUpdateCompanyInfo={handleUpdateCompanyInfo}
+            installPrompt={installPrompt}
+            onInstallApp={handleInstallClick}
           />
         );
       case "ledger":
@@ -1087,6 +1112,17 @@ export default function App() {
             </button>
           </nav>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }} className="no-print">
+            {installPrompt && (
+              <button 
+                className="btn btn-gold btn-sm no-print" 
+                onClick={handleInstallClick}
+                style={{ fontWeight: '700', gap: '4px', height: '44px' }}
+                title="تثبيت التطبيق"
+              >
+                📲 <span>تثبيت</span>
+              </button>
+            )}
+
             <button 
               className="theme-toggle no-print" 
               onClick={handleThemeToggle} 

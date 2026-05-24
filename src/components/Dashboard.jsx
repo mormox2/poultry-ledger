@@ -8,7 +8,9 @@ export default function Dashboard({
   onBackupExport, 
   onBackupImport,
   onChangePassword,
-  onUpdateCompanyInfo
+  onUpdateCompanyInfo,
+  installPrompt,
+  onInstallApp
 }) {
   const [showSettings, setShowSettings] = useState(false);
   const y = state.year;
@@ -86,6 +88,33 @@ export default function Dashboard({
           <div className="stat-sub">صافي الوزن / كامل الوزن</div>
         </div>
       </div>
+
+      {installPrompt && (
+        <div className="card" style={{ 
+          marginBottom: '20px', 
+          background: 'linear-gradient(135deg, rgba(212, 168, 67, 0.15) 0%, rgba(17, 24, 39, 0.8) 100%)',
+          border: '1.5px solid var(--gold)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '16px',
+          padding: '16px 20px',
+          borderRadius: '16px',
+          boxShadow: '0 10px 25px rgba(212, 168, 67, 0.1)'
+        }}>
+          <div style={{ display: 'flex', gap: '14px', alignItems: 'center', textAlign: 'right' }}>
+            <div style={{ fontSize: '32px' }}>📲</div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--gold)', marginBottom: '4px' }}>تثبيت التطبيق على جهازك</div>
+              <div style={{ fontSize: '12px', color: 'var(--muted)' }}>ثبّت تطبيق الودرني للدواجن على هاتفك أو حاسوبك للوصول السريع وتسهيل المتابعة اليومية</div>
+            </div>
+          </div>
+          <button className="btn btn-gold" onClick={onInstallApp} style={{ fontWeight: '700', padding: '10px 24px' }}>
+            📥 تثبيت الآن
+          </button>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }} className="db-details-grid">
         <div className="card">
