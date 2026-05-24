@@ -1,3 +1,0 @@
-Déposez dans ce dossier vos fichiers d'images publiques comme votre logo ou image de couverture (ex: logo.png, hero.png).
-
-Ils seront directement accessibles via l'adresse relative /poultry-ledger/assets/nom_de_fichier.png
