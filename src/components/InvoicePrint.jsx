@@ -97,14 +97,14 @@ export default function InvoicePrint({ state, clientId, onClose }) {
                 {state.companyInfo?.name || "الودرني للدواجن"}
               </h1>
               <p style={{ fontSize: '13px', color: '#475569', margin: '4px 0 0 0', fontWeight: '600' }}>
-                🏢 {state.companyInfo?.address || "الحامة — قابس"}
+                🏢 {state.companyInfo?.address || "وادي النور الحامة,قابس"}
               </p>
               <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                📞 الهاتف: {state.companyInfo?.phone || "55 549 457"}
+                📞 الهاتف: {state.companyInfo?.phone || "96 101 651"}
               </p>
-              {state.companyInfo?.taxId && state.companyInfo.taxId !== '—' && (
+              {(state.companyInfo?.taxId || "1895235/E") !== '—' && (
                 <p style={{ fontSize: '11px', color: '#b45309', margin: '2px 0 0 0', fontWeight: '700' }}>
-                  🆔 المعرف الجبائي (M.F.): {state.companyInfo.taxId}
+                  🆔 المعرف الجبائي (M.F.): {state.companyInfo?.taxId || "1895235/E"}
                 </p>
               )}
             </div>

@@ -48,15 +48,15 @@ export default function App() {
       ledger: {},
       selectedClient: null,
       view: "dashboard",
-      pricePerKg: 6.0,
+      pricePerKg: 5.800,
       theme: "dark",
       month: currentMonth,
       year: currentYear,
       companyInfo: {
-        name: "شركة دواجن",
-        address: "",
-        phone: "",
-        taxId: ""
+        name: "الودرني للدواجن",
+        address: "وادي النور الحامة,قابس",
+        phone: "96 101 651",
+        taxId: "1895235/E"
       }
     };
     try {
@@ -900,15 +900,15 @@ export default function App() {
       ledger: {},
       selectedClient: null,
       view: "dashboard",
-      pricePerKg: 6.0,
+      pricePerKg: 5.800,
       theme: state.theme,
       month: currentMonth,
       year: currentYear,
       companyInfo: {
-        name: "شركة دواجن",
-        address: "",
-        phone: "",
-        taxId: ""
+        name: "الودرني للدواجن",
+        address: "وادي النور الحامة,قابس",
+        phone: "96 101 651",
+        taxId: "1895235/E"
       }
     });
 

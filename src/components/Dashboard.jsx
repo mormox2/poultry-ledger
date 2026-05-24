@@ -255,7 +255,7 @@ export default function Dashboard({
                   type="text"
                   name="compAddr"
                   className="input"
-                  defaultValue={state.companyInfo?.address || ""}
+                  defaultValue={state.companyInfo?.address || "وادي النور الحامة,قابس"}
                   placeholder="وادي النور الحامة,قابس"
                 />
               </div>
@@ -265,8 +265,8 @@ export default function Dashboard({
                   type="text"
                   name="compPhone"
                   className="input"
-                  defaultValue={state.companyInfo?.phone || ""}
-                  placeholder="99 889 663"
+                  defaultValue={state.companyInfo?.phone || "96 101 651"}
+                  placeholder="96 101 651"
                 />
               </div>
               <div>
@@ -275,7 +275,7 @@ export default function Dashboard({
                   type="text"
                   name="compTaxId"
                   className="input"
-                  defaultValue={state.companyInfo?.taxId || ""}
+                  defaultValue={state.companyInfo?.taxId || "1895235/E"}
                   placeholder="1895235/E"
                 />
               </div>
