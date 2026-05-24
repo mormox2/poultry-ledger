@@ -270,7 +270,11 @@ main { max-width: 100%; padding: 24px 40px; }
 .btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 6px; }
 
 /* INPUTS */
-input, select, textarea { font-family: inherit; }
+input, select, textarea { 
+  font-family: inherit; 
+  direction: rtl;
+  text-align: right;
+}
 .input { 
   width: 100%; 
   background: var(--bg); 
@@ -282,8 +286,19 @@ input, select, textarea { font-family: inherit; }
   font-size: 13px; 
   transition: border .2s ease, box-shadow .2s ease; 
   outline: none; 
+  direction: rtl;
+  text-align: right;
 }
 .input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(var(--gold-rgb), 0.15); }
+input[type="email"], 
+input[type="password"], 
+input[type="tel"], 
+input[type="url"],
+.password-input-wrapper input,
+.input-ltr {
+  direction: ltr !important;
+  text-align: left !important;
+}
 .input::placeholder { color: var(--muted); }
 .input-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
 
