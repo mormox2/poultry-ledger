@@ -397,14 +397,8 @@ export default function InvoicePrint({ state, clientId, onClose }) {
             <p style={{ fontSize: '9.5px', color: '#475569', margin: '2px 0 0 0', fontWeight: '600' }}>
               🏢 {state.companyInfo?.address || "وادي النور الحامة,قابس"}
             </p>
-            <p style={{ fontSize: '9.5px', color: '#64748b', margin: '2px 0 0 0' }}>
-              📞 الهاتف: {state.companyInfo?.phone || "96 101 651"}
-            </p>
-            {(state.companyInfo?.taxId || "1895235/E") !== '—' && (
-              <p style={{ fontSize: '9px', color: '#b45309', margin: '2px 0 0 0', fontWeight: '700' }}>
-                M.F: {state.companyInfo?.taxId || "1895235/E"}
-              </p>
-            )}
+            
+            
           </div>
 
           <div style={{ borderTop: '1px dashed #000', margin: '8px 0' }}></div>
