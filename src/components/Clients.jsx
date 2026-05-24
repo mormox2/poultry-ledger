@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { COLORS, getTotals, fmt, getClientColor } from '../js/utils';
 
 export default function Clients({ 
@@ -61,6 +60,11 @@ export default function Clients({
     setModalMode('delete');
   };
 
+  const closeModal = () => {
+    setModalMode(null);
+    setActiveClient(null);
+  };
+
   const handleAddSubmit = (e) => {
     e.preventDefault();
     if (!formName.trim()) {
@@ -75,7 +79,7 @@ export default function Clients({
       taxId: formTaxId.trim() || "—",
       notes: formNotes.trim() || "—"
     });
-    setModalMode(null);
+    closeModal();
   };
 
   const handleEditSubmit = (e) => {
@@ -93,12 +97,12 @@ export default function Clients({
       taxId: formTaxId.trim() || "—",
       notes: formNotes.trim() || "—"
     });
-    setModalMode(null);
+    closeModal();
   };
 
   const handleDeleteConfirm = () => {
     onDeleteClient(activeClient.id);
-    setModalMode(null);
+    closeModal();
   };
 
   // Stagger animation configurations
@@ -305,24 +309,20 @@ export default function Clients({
         </motion.div>
       )}
 
-      {/* DYNAMIC MODALS USING REACT PORTALS */}
-      <AnimatePresence>
-        {/* ADD CLIENT MODAL */}
-        {modalMode === 'add' && createPortal(
+      {/* DYNAMIC MODALS */}
+      {modalMode === 'add' && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={closeModal}
+        >
           <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4"
-            onClick={() => setModalMode(null)}
+            initial={{ scale: 0.95, y: 15 }}
+            animate={{ scale: 1, y: 0 }}
+            className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl relative overflow-hidden text-right"
+            onClick={(e) => e.stopPropagation()}
           >
-            <motion.div 
-              initial={{ scale: 0.95, y: 15 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 15 }}
-              className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl relative overflow-hidden text-right"
-              onClick={(e) => e.stopPropagation()}
-            >
               <h3 className="text-base md:text-lg font-black text-amber-300 border-b border-slate-800/80 pb-3 mb-5">إضافة عميل جديد للنظام</h3>
               
               <form onSubmit={handleAddSubmit} className="space-y-4">
@@ -417,33 +417,30 @@ export default function Clients({
                     whileTap={{ scale: 0.98 }}
                     type="button" 
                     className="flex-1 py-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl font-bold text-xs transition-all duration-200"
-                    onClick={() => setModalMode(null)}
+                    onClick={closeModal}
                   >
                     إلغاء
                   </motion.button>
                 </div>
               </form>
             </motion.div>
-          </motion.div>,
-          document.body
-        )}
+        </motion.div>
+      )}
 
         {/* EDIT CLIENT MODAL */}
-        {modalMode === 'edit' && createPortal(
+      {modalMode === 'edit' && activeClient && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={closeModal}
+        >
           <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4"
-            onClick={() => setModalMode(null)}
+            initial={{ scale: 0.95, y: 15 }}
+            animate={{ scale: 1, y: 0 }}
+            className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl relative overflow-hidden text-right"
+            onClick={(e) => e.stopPropagation()}
           >
-            <motion.div 
-              initial={{ scale: 0.95, y: 15 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 15 }}
-              className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl relative overflow-hidden text-right"
-              onClick={(e) => e.stopPropagation()}
-            >
               <h3 className="text-base md:text-lg font-black text-amber-300 border-b border-slate-800/80 pb-3 mb-5">تعديل بيانات الحريف</h3>
               
               <form onSubmit={handleEditSubmit} className="space-y-4">
@@ -538,33 +535,30 @@ export default function Clients({
                     whileTap={{ scale: 0.98 }}
                     type="button" 
                     className="flex-1 py-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl font-bold text-xs transition-all duration-200"
-                    onClick={() => setModalMode(null)}
+                    onClick={closeModal}
                   >
                     إلغاء
                   </motion.button>
                 </div>
               </form>
             </motion.div>
-          </motion.div>,
-          document.body
-        )}
+        </motion.div>
+      )}
 
         {/* DELETE CLIENT CONFIRMATION MODAL */}
-        {modalMode === 'delete' && createPortal(
+      {modalMode === 'delete' && activeClient && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={closeModal}
+        >
           <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4"
-            onClick={() => setModalMode(null)}
+            initial={{ scale: 0.95, y: 15 }}
+            animate={{ scale: 1, y: 0 }}
+            className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl relative overflow-hidden text-right"
+            onClick={(e) => e.stopPropagation()}
           >
-            <motion.div 
-              initial={{ scale: 0.95, y: 15 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 15 }}
-              className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl relative overflow-hidden text-right"
-              onClick={(e) => e.stopPropagation()}
-            >
               <h3 className="text-base md:text-lg font-black text-red-400 border-b border-slate-800/80 pb-3 mb-4">تأكيد حذف الحساب نهائيًا</h3>
               
               <p className="text-xs md:text-sm text-slate-300 leading-relaxed mb-6">
@@ -585,16 +579,14 @@ export default function Clients({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="flex-1 py-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl font-bold text-xs transition-all duration-200"
-                  onClick={() => setModalMode(null)}
+                  onClick={closeModal}
                 >
                   إلغاء التراجع
                 </motion.button>
               </div>
             </motion.div>
-          </motion.div>,
-          document.body
-        )}
-      </AnimatePresence>
+        </motion.div>
+      )}
     </motion.div>
   );
 }
