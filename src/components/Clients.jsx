@@ -48,8 +48,8 @@ export default function Clients({
   const handleOpenEdit = (cl) => {
     setActiveClient(cl);
     setFormName(cl.name);
-    setFormAddress(cl.address === '—' ? '' : cl.address);
-    setFormPhone(cl.phone === '—' ? '' : cl.phone);
+    setFormAddress(cl.address === '—' ? '' : cl.address || '');
+    setFormPhone(cl.phone === '—' ? '' : cl.phone || '');
     setFormColor(cl.color);
     setFormTaxId(cl.taxId === '—' ? '' : cl.taxId || '');
     setFormNotes(cl.notes === '—' ? '' : cl.notes || '');
