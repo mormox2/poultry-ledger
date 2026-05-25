@@ -6,6 +6,20 @@ Featuring an **offline-first database architecture**, interactive **3D glassmorp
 
 ---
 
+## 📸 App Previews & Interface
+
+### 🔐 Authentication Portal
+| Desktop View | Mobile View |
+| :---: | :---: |
+| ![Login Desktop](public/screenshots/login_desktop.png) | ![Login Mobile](public/screenshots/login_mobile.png) |
+
+### 📊 Management Dashboard
+| Desktop View | Mobile View |
+| :---: | :---: |
+| ![Dashboard Desktop](public/screenshots/dashboard_desktop.png) | ![Dashboard Mobile](public/screenshots/dashboard_mobile.png) |
+
+---
+
 ## 🎨 Premium Visual Experience
 
 The application is meticulously designed to provide an elite user experience combining modern digital design trends with seamless functionality:
