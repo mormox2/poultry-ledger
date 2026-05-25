@@ -234,7 +234,7 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
                   {loading ? (
                     <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    "تسجيل الدخول السحابي"
+                    "تسجيل الدخول"
                   )}
                 </motion.button>
               </form>
