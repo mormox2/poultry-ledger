@@ -78,7 +78,7 @@ export default function Dashboard({
     const mMargin = mSales - mPurchases;
     
     chartData.push({
-      monthLabel: `${MONTHS[targetM - 1]} ${targetY}`,
+      monthLabel: `${MONTHS.at(targetM - 1)} ${targetY}`,
       sales: mSales,
       purchases: mPurchases,
       margin: mMargin
