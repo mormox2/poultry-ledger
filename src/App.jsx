@@ -1910,16 +1910,28 @@ export default function App() {
               </div>
             </div>
 
-            {/* HAMBURGER MENU TOGGLE BUTTON (Mobile only) */}
-            <button 
-              className={`menu-toggle md:hidden no-print flex items-center justify-center font-bold transition-all duration-200 ${
-                mobileMenuOpen ? 'open' : ''
-              }`}
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              title="القائمة"
-            >
-              {mobileMenuOpen ? '✕' : '☰'}
-            </button>
+            {/* MOBILE QUICK NAVIGATION BUTTONS */}
+            <div className="md:hidden flex items-center gap-2.5 no-print">
+              {/* Quick Home/Dashboard Button */}
+              <button 
+                className="flex items-center justify-center w-11 h-11 rounded-xl border-2 border-[var(--gold)] bg-[var(--bg2)] text-[var(--gold)] active:scale-90 transition-all duration-200 text-lg shadow-md shadow-black/20"
+                onClick={() => handleViewChange('dashboard')}
+                title="الرئيسية"
+              >
+                🏠
+              </button>
+
+              {/* Hamburger Menu Toggle Button */}
+              <button 
+                className={`menu-toggle flex items-center justify-center font-bold transition-all duration-200 ${
+                  mobileMenuOpen ? 'open' : ''
+                }`}
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                title="القائمة"
+              >
+                {mobileMenuOpen ? '✕' : '☰'}
+              </button>
+            </div>
           </div>
           
           {/* DYNAMIC NETWORK & CLOUD SYNC STATUS BADGE */}
