@@ -570,6 +570,139 @@ export default function App() {
         if (refLedger) finalLedger = refLedger;
       }
 
+      // --- OFFLINE-TO-ONLINE SYNC BRIDGE FOR SUPPLIERS & PURCHASES ---
+      let currentSuppliers = [...(currentState.suppliers || [])];
+      let currentPurchases = { ...(currentState.purchases || {}) };
+      let hasSupplierSyncChanges = false;
+      const supplierSyncPromises = [];
+
+      if (currentSuppliers.length > 0) {
+        for (const localSup of currentSuppliers) {
+          const isInCloud = dbSuppliers && dbSuppliers.some(ds => ds.id === localSup.id || ds.name === localSup.name);
+          if (typeof localSup.id === 'number' || !isInCloud) {
+            try {
+              const { data: newSup, error: insErr } = await supabase
+                .from('suppliers')
+                .insert({
+                  profile_id: userUuid,
+                  name: localSup.name,
+                  address: localSup.address || "—",
+                  phone: localSup.phone || "—",
+                  tax_id: localSup.taxId || "—",
+                  color: localSup.color || 0
+                })
+                .select()
+                .single();
+
+              if (!insErr && newSup) {
+                hasSupplierSyncChanges = true;
+                const oldId = localSup.id;
+                const newId = newSup.id;
+
+                localSup.id = newId;
+
+                // Migrate all purchases keys from oldId to newId
+                Object.keys(currentPurchases).forEach(k => {
+                  if (k.startsWith(`${oldId}-`)) {
+                    const parts = k.split('-');
+                    const newKey = ledgerKey(newId, parseInt(parts.at(1)), parseInt(parts.at(2)));
+                    Reflect.set(currentPurchases, newKey, Reflect.get(currentPurchases, k));
+                    Reflect.deleteProperty(currentPurchases, k);
+                  }
+                });
+              }
+            } catch (err) {
+              console.warn("Could not sync supplier offline:", err);
+            }
+          }
+        }
+      }
+
+      // Sync purchases entries
+      Object.keys(currentPurchases).forEach(k => {
+        const parts = k.split('-');
+        if (parts.length === 3) {
+          const supplierUuid = parts.at(0);
+          const year = parseInt(parts.at(1));
+          const month = parseInt(parts.at(2));
+          
+          if (supplierUuid && isNaN(Number(supplierUuid))) {
+            const activeRows = Reflect.get(currentPurchases, k);
+            if (activeRows) {
+              activeRows.forEach((row, idx) => {
+                const day = idx + 1;
+                
+                const dbEntry = dbPurchases && dbPurchases.find(e => 
+                  e.supplier_id === supplierUuid && 
+                  e.year === year && 
+                  e.month === month && 
+                  e.day === day
+                );
+
+                const hasLocalData = row.nw || row.paid || row.holiday || row.tw || row.notes;
+
+                if (dbEntry) {
+                  const localTw = row.tw !== "" && row.tw !== null ? parseFloat(row.tw) : null;
+                  const localNw = row.nw !== "" && row.nw !== null ? parseFloat(row.nw) : null;
+                  const localPrice = row.price !== "" && row.price !== null ? parseFloat(row.price) : null;
+                  const localAmt = row.amt !== "" && row.amt !== null ? parseFloat(row.amt) : null;
+                  const localPaid = row.paid !== "" && row.paid !== null ? parseFloat(row.paid) : null;
+                  const localHoliday = !!row.holiday;
+                  const localNotes = row.notes ? String(row.notes).trim() : null;
+
+                  const dbTw = dbEntry.total_weight !== null ? parseFloat(dbEntry.total_weight) : null;
+                  const dbNw = dbEntry.net_weight !== null ? parseFloat(dbEntry.net_weight) : null;
+                  const dbPrice = dbEntry.price !== null ? parseFloat(dbEntry.price) : null;
+                  const dbAmt = dbEntry.amount !== null ? parseFloat(dbEntry.amount) : null;
+                  const dbPaid = dbEntry.paid !== null ? parseFloat(dbEntry.paid) : null;
+                  const dbHoliday = !!dbEntry.holiday;
+                  const dbNotes = dbEntry.notes ? String(dbEntry.notes).trim() : null;
+
+                  const isMatch = 
+                    localTw === dbTw &&
+                    localNw === dbNw &&
+                    localPrice === dbPrice &&
+                    localAmt === dbAmt &&
+                    localPaid === dbPaid &&
+                    localHoliday === dbHoliday &&
+                    localNotes === dbNotes;
+
+                  if (!isMatch) {
+                    hasSupplierSyncChanges = true;
+                    supplierSyncPromises.push(
+                      syncPurchaseEntryToCloud(supplierUuid, year, month, idx, row)
+                    );
+                  }
+                } else if (hasLocalData) {
+                  hasSupplierSyncChanges = true;
+                  supplierSyncPromises.push(
+                    syncPurchaseEntryToCloud(supplierUuid, year, month, idx, row)
+                  );
+                }
+              });
+            }
+          }
+        }
+      });
+
+      if (supplierSyncPromises.length > 0) {
+        await Promise.all(supplierSyncPromises);
+      }
+
+      let finalSuppliers = dbSuppliers || [];
+      let finalPurchases = dbPurchases || [];
+
+      if (hasSupplierSyncChanges) {
+        try {
+          const { data: refSuppliers } = await supabase.from('suppliers').select('*').order('name');
+          const { data: refPurchases } = await supabase.from('purchases').select('*');
+          if (refSuppliers) finalSuppliers = refSuppliers;
+          if (refPurchases) finalPurchases = refPurchases;
+        } catch (err) {
+          console.warn("Could not refetch synced suppliers:", err);
+        }
+      }
+
       // Reconstruct state using final synced values
       const formattedClients = finalClients.map(c => ({
         id: c.id,
@@ -607,7 +740,7 @@ export default function App() {
         }
       });
 
-      const formattedSuppliers = dbSuppliers.map(s => ({
+      const formattedSuppliers = finalSuppliers.map(s => ({
         id: s.id,
         name: s.name,
         address: s.address,
@@ -617,7 +750,7 @@ export default function App() {
       }));
 
       const formattedPurchases = {};
-      dbPurchases.forEach(e => {
+      finalPurchases.forEach(e => {
         const k = ledgerKey(e.supplier_id, e.year, e.month);
         if (!Reflect.has(formattedPurchases, k)) {
           const days = daysInMonth(e.year, e.month);

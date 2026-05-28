@@ -37,7 +37,7 @@ export function getTotals(ledger, cid, y, m) {
     nw: a.nw + (parseFloat(r.nw)||0),
     amt: a.amt + (parseFloat(r.amt)||0),
     paid: a.paid + (parseFloat(r.paid)||0),
-    days: a.amt ? a.days + 1 : a.days,
+    days: r.amt ? a.days + 1 : a.days,
   }), { tw:0, nw:0, amt:0, paid:0, days:0 });
 }
 
