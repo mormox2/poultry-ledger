@@ -142,3 +142,103 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- =====================================================================
+-- 5. Create Suppliers Table
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS public.suppliers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    profile_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    address TEXT DEFAULT '—',
+    phone TEXT DEFAULT '—',
+    tax_id TEXT DEFAULT '-',
+    notes TEXT DEFAULT NULL,
+    color INTEGER DEFAULT 0 NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS on suppliers
+ALTER TABLE public.suppliers ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own suppliers."
+    ON public.suppliers FOR SELECT
+    USING (auth.uid() = profile_id);
+
+CREATE POLICY "Users can insert their own suppliers."
+    ON public.suppliers FOR INSERT
+    WITH CHECK (auth.uid() = profile_id);
+
+CREATE POLICY "Users can update their own suppliers."
+    ON public.suppliers FOR UPDATE
+    USING (auth.uid() = profile_id);
+
+CREATE POLICY "Users can delete their own suppliers."
+    ON public.suppliers FOR DELETE
+    USING (auth.uid() = profile_id);
+
+-- =====================================================================
+-- 6. Create Purchases Table (Daily purchases registry)
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS public.purchases (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    supplier_id UUID NOT NULL REFERENCES public.suppliers(id) ON DELETE CASCADE,
+    year INTEGER NOT NULL,
+    month INTEGER NOT NULL,
+    day INTEGER NOT NULL,
+    total_weight NUMERIC(8,3) DEFAULT NULL,
+    net_weight NUMERIC(8,3) DEFAULT NULL,
+    price NUMERIC(6,3) DEFAULT NULL,
+    amount NUMERIC(10,3) DEFAULT NULL,
+    paid NUMERIC(10,3) DEFAULT NULL,
+    holiday BOOLEAN DEFAULT false NOT NULL,
+    notes TEXT DEFAULT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    
+    -- Ensure unique daily record per supplier
+    CONSTRAINT unique_daily_purchase_per_supplier UNIQUE(supplier_id, year, month, day)
+);
+
+-- Enable RLS on purchases
+ALTER TABLE public.purchases ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view purchases of their own suppliers."
+    ON public.purchases FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.suppliers 
+            WHERE public.suppliers.id = public.purchases.supplier_id 
+            AND public.suppliers.profile_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can insert purchases of their own suppliers."
+    ON public.purchases FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.suppliers 
+            WHERE public.suppliers.id = public.purchases.supplier_id 
+            AND public.suppliers.profile_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can update purchases of their own suppliers."
+    ON public.purchases FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.suppliers 
+            WHERE public.suppliers.id = public.purchases.supplier_id 
+            AND public.suppliers.profile_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can delete purchases of their own suppliers."
+    ON public.purchases FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.suppliers 
+            WHERE public.suppliers.id = public.purchases.supplier_id 
+            AND public.suppliers.profile_id = auth.uid()
+        )
+    );
+

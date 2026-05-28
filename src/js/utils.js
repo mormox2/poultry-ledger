@@ -85,3 +85,44 @@ export function exportToCSV(state) {
   link.click();
   document.body.removeChild(link);
 }
+
+export function exportPurchasesToCSV(state) {
+  const y = state.year;
+  const m = state.month;
+  const sup = (state.suppliers || []).find(x => x.id === state.selectedSupplier) || (state.suppliers || [])[0];
+  if (!sup) return;
+  
+  const rows = getRows(state.purchases || {}, sup.id, y, m);
+  const totals = getTotals(state.purchases || {}, sup.id, y, m);
+  
+  let csvContent = "\uFEFF"; // UTF-8 BOM for Excel
+  csvContent += "سجل المشتريات اليومي - الودرني للدواجن\n";
+  csvContent += `المورد: ${sup.name}, العنوان: ${sup.address}, الهاتف: ${sup.phone}\n`;
+  csvContent += `الشهر: ${MONTHS.at(m - 1)} ${y}\n\n`;
+  
+  csvContent += "التاريخ,الوزن الكامل (كغ),الوزن الصافي (كغ),السعر (د.ت),المبلغ الجملي,المدفوع له,الباقي,ملاحظات\n";
+  
+  rows.forEach(r => {
+    const dateStr = `${y}/${String(m).padStart(2,"0")}/${String(r.d).padStart(2,"0")}`;
+    if (r.holiday) {
+      csvContent += `${dateStr},عطلة,عطلة,عطلة,عطلة,عطلة,عطلة,${r.notes || ""}\n`;
+    } else {
+      const bal = calcBalance(r);
+      csvContent += `${dateStr},${r.tw || 0},${r.nw || 0},${r.price || state.defaultPurchasePricePerKg || 5.200},${r.amt || 0},${r.paid || 0},${r.amt ? bal : 0},${r.notes || ""}\n`;
+    }
+  });
+  
+  const remaining = totals.amt - totals.paid;
+  csvContent += `الإجمالي,${Math.round(totals.tw)},${Math.round(totals.nw)},-,${totals.amt},${totals.paid},${remaining},-\n`;
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute("download", `ouderni_purchases_${sup.name.replace(/\s+/g, '_')}_${y}_${m}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+

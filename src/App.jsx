@@ -9,6 +9,8 @@ import LoginScreen from './components/LoginScreen';
 // Secondary Components (Lazy Loaded for Code Splitting)
 const Ledger = lazy(() => import('./components/Ledger'));
 const Clients = lazy(() => import('./components/Clients'));
+const Suppliers = lazy(() => import('./components/Suppliers'));
+const PurchasesLedger = lazy(() => import('./components/PurchasesLedger'));
 const Analytics = lazy(() => import('./components/Analytics'));
 const Summary = lazy(() => import('./components/Summary'));
 const InvoicePrint = lazy(() => import('./components/InvoicePrint'));
@@ -22,7 +24,8 @@ import {
   getTotals, 
   daysInMonth, 
   calcBalance, 
-  exportToCSV 
+  exportToCSV,
+  exportPurchasesToCSV
 } from './js/utils';
 
 // --- Offline Sync Queue (IndexedDB) Setup ---
@@ -59,8 +62,12 @@ export default function App() {
       clients: [],
       ledger: {},
       selectedClient: null,
-      view: "dashboard",
+      suppliers: [],
+      purchases: {},
+      selectedSupplier: null,
       pricePerKg: 5.800,
+      defaultPurchasePricePerKg: 5.200,
+      view: "dashboard",
       theme: "dark",
       month: currentMonth,
       year: currentYear,
@@ -81,7 +88,11 @@ export default function App() {
           companyInfo: parsed.companyInfo || defaultState.companyInfo,
           month: parsed.month || currentMonth,
           year: parsed.year || currentYear,
-          view: parsed.view || "dashboard"
+          view: parsed.view || "dashboard",
+          suppliers: parsed.suppliers || defaultState.suppliers,
+          purchases: parsed.purchases || defaultState.purchases,
+          selectedSupplier: parsed.selectedSupplier || defaultState.selectedSupplier,
+          defaultPurchasePricePerKg: parsed.defaultPurchasePricePerKg || defaultState.defaultPurchasePricePerKg
         };
       }
     } catch (e) {
@@ -352,8 +363,12 @@ export default function App() {
         clients: state.clients,
         ledger: state.ledger,
         selectedClient: state.selectedClient,
+        suppliers: state.suppliers,
+        purchases: state.purchases,
+        selectedSupplier: state.selectedSupplier,
         view: state.view,
         pricePerKg: state.pricePerKg,
+        defaultPurchasePricePerKg: state.defaultPurchasePricePerKg,
         theme: state.theme,
         month: state.month,
         year: state.year,
@@ -400,6 +415,29 @@ export default function App() {
         .select('*');
         
       if (ledError) throw ledError;
+
+      // 3b. Fetch Suppliers from Supabase (Graceful fallback if table doesn't exist)
+      let dbSuppliers = [];
+      try {
+        const { data: sups, error: supErr } = await supabase
+          .from('suppliers')
+          .select('*')
+          .order('name');
+        if (!supErr) dbSuppliers = sups || [];
+      } catch (err) {
+        console.warn("Suppliers table might not exist yet:", err);
+      }
+
+      // 3c. Fetch Purchases from Supabase (Graceful fallback if table doesn't exist)
+      let dbPurchases = [];
+      try {
+        const { data: purs, error: purErr } = await supabase
+          .from('purchases')
+          .select('*');
+        if (!purErr) dbPurchases = purs || [];
+      } catch (err) {
+        console.warn("Purchases table might not exist yet:", err);
+      }
 
       // --- OFFLINE-TO-ONLINE SYNC BRIDGE ---
       // Migrate any clients and daily rows created offline to the cloud database
@@ -569,11 +607,50 @@ export default function App() {
         }
       });
 
+      const formattedSuppliers = dbSuppliers.map(s => ({
+        id: s.id,
+        name: s.name,
+        address: s.address,
+        phone: s.phone,
+        color: s.color,
+        taxId: s.tax_id
+      }));
+
+      const formattedPurchases = {};
+      dbPurchases.forEach(e => {
+        const k = ledgerKey(e.supplier_id, e.year, e.month);
+        if (!Reflect.has(formattedPurchases, k)) {
+          const days = daysInMonth(e.year, e.month);
+          Reflect.set(formattedPurchases, k, Array.from({ length: days }, (_, i) => ({
+            d: i + 1,
+            tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
+          })));
+        }
+        
+        const idx = e.day - 1;
+        const targetDays = Reflect.get(formattedPurchases, k);
+        if (targetDays && targetDays.at(idx)) {
+          targetDays.splice(idx, 1, {
+            d: e.day,
+            tw: e.total_weight !== null ? String(e.total_weight) : "",
+            nw: e.net_weight !== null ? String(e.net_weight) : "",
+            price: e.price !== null ? String(e.price) : "",
+            amt: e.amount !== null ? parseFloat(e.amount) : "",
+            paid: e.paid !== null ? String(e.paid) : "",
+            holiday: e.holiday,
+            notes: e.notes || ""
+          });
+        }
+      });
+
       setState(prev => ({
         ...prev,
         clients: formattedClients,
         ledger: formattedLedger,
         selectedClient: formattedClients.length ? (formattedClients.some(c => c.id === prev.selectedClient) ? prev.selectedClient : formattedClients.at(0).id) : null,
+        suppliers: formattedSuppliers,
+        purchases: formattedPurchases,
+        selectedSupplier: formattedSuppliers.length ? (formattedSuppliers.some(s => s.id === prev.selectedSupplier) ? prev.selectedSupplier : formattedSuppliers.at(0).id) : null,
         pricePerKg: profile ? parseFloat(profile.price_per_kg) : prev.pricePerKg,
         companyInfo: profile ? {
           name: profile.company_name,
@@ -900,6 +977,233 @@ export default function App() {
     }
   };
 
+  // --- Purchase Row Manipulation ---
+  const handleUpdatePurchaseRow = (idx, field, val) => {
+    setState(prev => {
+      const updatedPurchases = { ...prev.purchases };
+      const k = ledgerKey(prev.selectedSupplier, prev.year, prev.month);
+      
+      if (!updatedPurchases[k]) {
+        const days = daysInMonth(prev.year, prev.month);
+        updatedPurchases[k] = Array.from({ length: days }, (_, i) => ({
+          d: i + 1,
+          tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
+        }));
+      }
+
+      const rows = [...updatedPurchases[k]];
+      const row = { ...rows.at(idx) };
+      
+      if (field === 'tw') {
+        row.tw = val;
+        if (val && !row.price) {
+          row.price = prev.defaultPurchasePricePerKg || 5.200;
+        }
+      }
+      else if (field === 'nw') {
+        row.nw = val;
+        if (val && !row.price) {
+          row.price = prev.defaultPurchasePricePerKg || 5.200;
+        }
+      }
+      else if (field === 'price') row.price = val;
+      else if (field === 'amt') row.amt = val;
+      else if (field === 'paid') row.paid = val;
+      else if (field === 'holiday') row.holiday = val;
+      else if (field === 'notes') row.notes = val;
+
+      // Autocalculate values
+      if (field === 'nw') {
+        const nwFloat = parseFloat(val);
+        if (!nwFloat) {
+          row.amt = "";
+        } else {
+          const activePrice = parseFloat(row.price) || prev.defaultPurchasePricePerKg || 5.200;
+          row.amt = parseFloat((nwFloat * activePrice).toFixed(3));
+        }
+      } else if (field === 'price') {
+        const customPrice = parseFloat(val);
+        const nwFloat = parseFloat(row.nw) || 0;
+        if (!nwFloat) {
+          row.amt = "";
+        } else {
+          const activePrice = customPrice || prev.defaultPurchasePricePerKg || 5.200;
+          row.amt = parseFloat((nwFloat * activePrice).toFixed(3));
+        }
+      }
+
+      rows.splice(idx, 1, row);
+      updatedPurchases[k] = rows;
+
+      return {
+        ...prev,
+        purchases: updatedPurchases
+      };
+    });
+  };
+
+  const handleSyncPurchaseRow = (idx) => {
+    if (!isSupabaseConfigured || !user) return;
+    setTimeout(() => {
+      const currentState = stateRef.current;
+      const k = ledgerKey(currentState.selectedSupplier, currentState.year, currentState.month);
+      const rows = Reflect.get(currentState.purchases || {}, k);
+      if (rows && rows.at(idx)) {
+        const row = rows.at(idx);
+        syncPurchaseEntryToCloud(currentState.selectedSupplier, currentState.year, currentState.month, idx, row);
+      }
+    }, 100);
+  };
+
+  const handleTogglePurchaseHoliday = async (idx) => {
+    let updatedRow = null;
+    let targetSupplier = null;
+    let targetYear = null;
+    let targetMonth = null;
+
+    setState(prev => {
+      const updatedPurchases = { ...prev.purchases };
+      targetSupplier = prev.selectedSupplier;
+      targetYear = prev.year;
+      targetMonth = prev.month;
+      const k = ledgerKey(targetSupplier, targetYear, targetMonth);
+      
+      if (!updatedPurchases[k]) {
+        const days = daysInMonth(targetYear, targetMonth);
+        updatedPurchases[k] = Array.from({ length: days }, (_, i) => ({
+          d: i + 1,
+          tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
+        }));
+      }
+
+      const rows = [...updatedPurchases[k]];
+      const targetRow = rows.at(idx);
+      const currentHoliday = targetRow.holiday;
+      
+      updatedRow = {
+        ...targetRow,
+        holiday: !currentHoliday,
+        tw: !currentHoliday ? "" : targetRow.tw,
+        nw: !currentHoliday ? "" : targetRow.nw,
+        price: !currentHoliday ? "" : targetRow.price,
+        amt: !currentHoliday ? "" : targetRow.amt,
+        paid: !currentHoliday ? "" : targetRow.paid
+      };
+
+      rows.splice(idx, 1, updatedRow);
+      updatedPurchases[k] = rows;
+
+      return {
+        ...prev,
+        purchases: updatedPurchases
+      };
+    });
+
+    if (isSupabaseConfigured && user && updatedRow && targetSupplier) {
+      await syncPurchaseEntryToCloud(targetSupplier, targetYear, targetMonth, idx, updatedRow);
+    }
+  };
+
+  const syncPurchaseEntryToCloud = async (supplierUuid, year, month, idx, row) => {
+    if (!isSupabaseConfigured || !user) return false;
+    const day = idx + 1;
+
+    try {
+      const { error } = await supabase
+        .from('purchases')
+        .upsert({
+          supplier_id: supplierUuid,
+          year: year,
+          month: month,
+          day: day,
+          total_weight: row.tw !== "" ? parseFloat(row.tw) : null,
+          net_weight: row.nw !== "" ? parseFloat(row.nw) : null,
+          price: row.price !== "" ? parseFloat(row.price) : null,
+          amount: row.amt !== "" ? parseFloat(row.amt) : null,
+          paid: row.paid !== "" ? parseFloat(row.paid) : null,
+          holiday: row.holiday,
+          notes: row.notes || null,
+          updated_at: new Date()
+        }, {
+          onConflict: 'supplier_id,year,month,day'
+        });
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error("Cloud purchase row upsert error:", err);
+      return false;
+    }
+  };
+
+  const handleQuickPurchaseSettle = async (sid, amount) => {
+    let updatedRows = [];
+    let targetYear = null;
+    let targetMonth = null;
+
+    setState(prev => {
+      const updatedPurchases = { ...prev.purchases };
+      targetYear = prev.year;
+      targetMonth = prev.month;
+      const k = ledgerKey(sid, targetYear, targetMonth);
+      
+      if (!updatedPurchases[k]) {
+        const days = daysInMonth(targetYear, targetMonth);
+        updatedPurchases[k] = Array.from({ length: days }, (_, i) => ({
+          d: i + 1,
+          tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
+        }));
+      }
+
+      const rows = updatedPurchases[k].map(r => ({ ...r }));
+      let remaining = amount;
+
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows.at(i);
+        if (r.holiday || !r.amt) continue;
+        const amt = parseFloat(r.amt) || 0;
+        const paid = parseFloat(r.paid) || 0;
+        const due = amt - paid;
+        if (due <= 0) continue;
+
+        const oldPaid = r.paid;
+        if (remaining >= due) {
+          r.paid = amt;
+          remaining -= due;
+        } else {
+          r.paid = parseFloat((paid + remaining).toFixed(3));
+          remaining = 0;
+        }
+
+        if (r.paid !== oldPaid) {
+          updatedRows.push({ idx: i, row: r });
+        }
+        if (remaining <= 0) break;
+      }
+
+      updatedPurchases[k] = rows;
+
+      return {
+        ...prev,
+        purchases: updatedPurchases
+      };
+    });
+
+    if (isSupabaseConfigured && user && updatedRows.length > 0) {
+      try {
+        const syncPromises = updatedRows.map(({ idx, row }) => 
+          syncPurchaseEntryToCloud(sid, targetYear, targetMonth, idx, row)
+        );
+        await Promise.all(syncPromises);
+      } catch (err) {
+        console.error("Cloud quick purchase settle sync error:", err);
+      }
+    }
+    
+    toastMessage("✓ تم تسوية وتوزيع المدفوعات للمورد بنجاح");
+  };
+
+
   const handleQuickSettle = async (cid, amount) => {
     let updatedRows = [];
     let targetYear = null;
@@ -1085,6 +1389,124 @@ export default function App() {
     toastMessage("✓ تم حذف العميل بنجاح");
   };
 
+  // --- Supplier Management Handlers ---
+  const handleSelectSupplier = (sid) => {
+    setState(prev => ({
+      ...prev,
+      selectedSupplier: sid,
+      view: sid === null ? "suppliers" : "purchases_ledger"
+    }));
+  };
+
+  const handleAddSupplier = async (supplierData) => {
+    const tempId = Date.now();
+
+    if (isSupabaseConfigured && user) {
+      try {
+        const { data, error } = await supabase
+          .from('suppliers')
+          .insert({
+            profile_id: user.id,
+            name: supplierData.name,
+            address: supplierData.address,
+            phone: supplierData.phone,
+            tax_id: supplierData.taxId,
+            color: supplierData.color
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        
+        if (data) {
+          setState(prev => ({
+            ...prev,
+            suppliers: [...(prev.suppliers || []), {
+              id: data.id,
+              name: data.name,
+              address: data.address,
+              phone: data.phone,
+              color: data.color,
+              taxId: data.tax_id
+            }],
+            selectedSupplier: data.id
+          }));
+          toastMessage("✓ تم إضافة المورد الجديد بنجاح");
+        }
+      } catch (err) {
+        console.error("Cloud insert supplier error:", err);
+        toastMessage("❌ فشل إضافة المورد في السحابة", "error");
+      }
+    } else {
+      // Local Fallback
+      const newSupplier = {
+        id: tempId,
+        ...supplierData
+      };
+      setState(prev => ({
+        ...prev,
+        suppliers: [...(prev.suppliers || []), newSupplier],
+        selectedSupplier: newSupplier.id
+      }));
+      toastMessage("✓ تم إضافة المورد الجديد بنجاح");
+    }
+  };
+
+  const handleEditSupplier = async (updatedSupplier) => {
+    // Optimistic state update
+    setState(prev => ({
+      ...prev,
+      suppliers: (prev.suppliers || []).map(s => s.id === updatedSupplier.id ? updatedSupplier : s)
+    }));
+
+    if (isSupabaseConfigured && user) {
+      try {
+        const { error } = await supabase
+          .from('suppliers')
+          .update({
+            name: updatedSupplier.name,
+            address: updatedSupplier.address,
+            phone: updatedSupplier.phone,
+            tax_id: updatedSupplier.taxId,
+            color: updatedSupplier.color
+          })
+          .eq('id', updatedSupplier.id);
+
+        if (error) throw error;
+      } catch (err) {
+        console.error("Cloud edit supplier error:", err);
+      }
+    }
+    toastMessage("✓ تم تعديل بيانات المورد بنجاح");
+  };
+
+  const handleDeleteSupplier = async (sid) => {
+    setState(prev => {
+      const filteredSuppliers = (prev.suppliers || []).filter(s => s.id !== sid);
+      const isSelectedDeleted = prev.selectedSupplier === sid;
+      return {
+        ...prev,
+        suppliers: filteredSuppliers,
+        selectedSupplier: isSelectedDeleted ? (filteredSuppliers.length ? filteredSuppliers[0].id : null) : prev.selectedSupplier
+      };
+    });
+
+    if (isSupabaseConfigured && user) {
+      try {
+        const { error } = await supabase
+          .from('suppliers')
+          .delete()
+          .eq('id', sid);
+
+        if (error) throw error;
+      } catch (err) {
+        console.error("Cloud delete supplier error:", err);
+      }
+    }
+    toastMessage("✓ تم حذف المورد بنجاح");
+  };
+
+
   // --- Backup & Import ---
   const handleBackupExport = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
@@ -1231,6 +1653,28 @@ export default function App() {
             onDeleteClient={handleDeleteClient}
           />
         );
+      case "suppliers":
+        return (
+          <Suppliers 
+            state={state}
+            onSelectSupplier={handleSelectSupplier}
+            onAddSupplier={handleAddSupplier}
+            onEditSupplier={handleEditSupplier}
+            onDeleteSupplier={handleDeleteSupplier}
+          />
+        );
+      case "purchases_ledger":
+        return (
+          <PurchasesLedger 
+            state={state}
+            onSelectSupplier={handleSelectSupplier}
+            onUpdatePurchaseRow={handleUpdatePurchaseRow}
+            onSyncPurchaseRow={handleSyncPurchaseRow}
+            onTogglePurchaseHoliday={handleTogglePurchaseHoliday}
+            onQuickPurchaseSettle={handleQuickPurchaseSettle}
+            onExportPurchaseCSV={() => exportPurchasesToCSV(state)}
+          />
+        );
       case "analytics":
         return (
           <Analytics state={state} />
@@ -1240,6 +1684,7 @@ export default function App() {
           <Summary 
             state={state}
             onSelectClient={handleSelectClient}
+            onSelectSupplier={handleSelectSupplier}
           />
         );
       default:
@@ -1318,6 +1763,8 @@ export default function App() {
               { id: 'dashboard', label: 'الرئيسية', icon: '🏠' },
               { id: 'ledger', label: 'السجل اليومي', icon: '📋' },
               { id: 'clients', label: 'العملاء', icon: '👥' },
+              { id: 'purchases_ledger', label: 'سجل المشتريات', icon: '📦' },
+              { id: 'suppliers', label: 'الموردين', icon: '🤝' },
               { id: 'analytics', label: 'التحليلات', icon: '📊' },
               { id: 'summary', label: 'الملخص المالي', icon: '📈' }
             ].map(tab => (

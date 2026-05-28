@@ -32,6 +32,19 @@ export default function Dashboard({
   const grandNw = allTotals.reduce((a, x) => a + x.nw, 0);
   const grandTw = allTotals.reduce((a, x) => a + x.tw, 0);
 
+  const allPurchaseTotals = (state.suppliers || []).map(sup => ({
+    ...sup,
+    ...getTotals(state.purchases || {}, sup.id, y, m)
+  }));
+
+  const grandPurchaseAmt = allPurchaseTotals.reduce((a, x) => a + x.amt, 0);
+  const grandPurchasePaid = allPurchaseTotals.reduce((a, x) => a + x.paid, 0);
+  const grandPurchaseRem = grandPurchaseAmt - grandPurchasePaid;
+  const grandPurchaseNw = allPurchaseTotals.reduce((a, x) => a + x.nw, 0);
+  const grandPurchaseTw = allPurchaseTotals.reduce((a, x) => a + x.tw, 0);
+
+  const netMargin = grandAmt - grandPurchaseAmt;
+
   const topClients = [...allTotals].sort((a, b) => b.amt - a.amt).slice(0, 5);
   const debtors = allTotals.filter(x => x.amt - x.paid > 0).sort((a, b) => (b.amt - b.paid) - (a.amt - a.paid));
 
@@ -94,14 +107,23 @@ export default function Dashboard({
       </motion.div>
 
       {/* STAT CARDS */}
-      <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
         {[
           { label: "إجمالي المبيعات", val: fmt(grandAmt) || "—", sub: "لجميع العملاء", color: "border-t-amber-400/80 text-amber-400 bg-gradient-to-br from-amber-500/5 to-transparent" },
-          { label: "إجمالي المدفوع", val: fmt(grandPaid) || "—", sub: "النقد المستلم للشركة", color: "border-t-emerald-400/80 text-emerald-400 bg-gradient-to-br from-emerald-500/5 to-transparent" },
-          { label: "إجمالي الديون المعلقة", val: fmt(grandRem) || "—", sub: `${debtors.length} عملاء متبقين`, color: grandRem > 0 ? "border-t-red-500/80 text-red-400 bg-gradient-to-br from-red-500/5 to-transparent" : "border-t-sky-400/80 text-sky-400 bg-gradient-to-br from-sky-500/5 to-transparent" },
-          { label: "إجمالي الوزن الصافي", val: `${Math.round(grandNw)} كغ`, sub: `الكامل: ${Math.round(grandTw)} كغ`, color: "border-t-sky-400/80 text-sky-400 bg-gradient-to-br from-sky-500/5 to-transparent" },
-          { label: "نسبة تحصيل الديون", val: `${collectionRate}%`, sub: "كفاءة تحصيل المبيعات", color: "border-t-emerald-400/80 text-emerald-400 bg-gradient-to-br from-emerald-500/5 to-transparent" },
-          { label: "نسبة الوزن الصافي المردودية", val: `${yieldRatio}%`, sub: "صافي الوزن / كامل الوزن", color: "border-t-amber-400/80 text-amber-400 bg-gradient-to-br from-amber-500/5 to-transparent" }
+          { label: "إجمالي المشتريات", val: fmt(grandPurchaseAmt) || "—", sub: "من جميع الموردين", color: "border-t-sky-400/80 text-sky-400 bg-gradient-to-br from-sky-500/5 to-transparent" },
+          { 
+            label: "صافي الأرباح (الهامش)", 
+            val: fmt(netMargin) || "—", 
+            sub: "الأرباح المتوقعة", 
+            color: netMargin >= 0 
+              ? "border-t-emerald-400/80 text-emerald-400 bg-gradient-to-br from-emerald-500/5 to-transparent" 
+              : "border-t-red-500/80 text-red-400 bg-gradient-to-br from-red-500/5 to-transparent" 
+          },
+          { label: "ديون العملاء المعلقة", val: fmt(grandRem) || "—", sub: `${debtors.length} عملاء عليهم ديون`, color: grandRem > 0 ? "border-t-red-400/80 text-red-400 bg-gradient-to-br from-red-500/5 to-transparent" : "border-t-emerald-400/80 text-emerald-400 bg-gradient-to-br from-emerald-500/5 to-transparent" },
+          { label: "مستحقات الموردين", val: fmt(grandPurchaseRem) || "—", sub: "ديون المشتريات المتبقية علينا", color: grandPurchaseRem > 0 ? "border-t-orange-400/80 text-orange-400 bg-gradient-to-br from-orange-500/5 to-transparent" : "border-t-emerald-400/80 text-emerald-400 bg-gradient-to-br from-emerald-500/5 to-transparent" },
+          { label: "الوزن الصافي المبيع", val: `${Math.round(grandNw)} كغ`, sub: `الكامل: ${Math.round(grandTw)} كغ`, color: "border-t-amber-400/80 text-amber-400 bg-gradient-to-br from-amber-500/5 to-transparent" },
+          { label: "الوزن الصافي المشتري", val: `${Math.round(grandPurchaseNw)} كغ`, sub: `الكامل: ${Math.round(grandPurchaseTw)} كغ`, color: "border-t-sky-400/80 text-sky-400 bg-gradient-to-br from-sky-500/5 to-transparent" },
+          { label: "نسبة تحصيل الديون", val: `${collectionRate}%`, sub: "كفاءة تحصيل المبيعات", color: "border-t-emerald-400/80 text-emerald-400 bg-gradient-to-br from-emerald-500/5 to-transparent" }
         ].map((st, i) => (
           <Atropos key={i} rotateXMax={10} rotateYMax={10} shadow={false} className="w-full">
             <div className={`h-full border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden transition-all duration-300 hover:border-slate-700/80 border-t-[4px] bg-slate-900/30 backdrop-blur-sm ${st.color}`}>
