@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { MONTHS, getTotals, fmt, getClientColor } from '../js/utils';
 
 export default function Summary({ state, onSelectClient, onSelectSupplier }) {
+  const [pdfLoading, setPdfLoading] = useState(false);
   const y = state.year;
   const m = state.month;
 
@@ -32,18 +33,62 @@ export default function Summary({ state, onSelectClient, onSelectSupplier }) {
     tw: a.tw + x.tw
   }), { amt: 0, paid: 0, nw: 0, tw: 0 });
 
+  const handleExportPDF = async () => {
+    setPdfLoading(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const html2canvas = (await import('html2canvas')).default;
+
+      const element = document.getElementById("summary-print-area");
+      if (!element) throw new Error("Target print area not found");
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#0a0f1d'
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      
+      const fileName = `dawajin_bilan_${y}_${m}.pdf`;
+      pdf.save(fileName);
+    } catch (err) {
+      console.error("Failed to generate summary PDF:", err);
+      alert("فشل في توليد ملف PDF. يرجى المحاولة لاحقاً.");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-8"
+      id="summary-print-area"
     >
       {/* HEADER ROW */}
-      <div className="bg-slate-900/40 border border-slate-800/60 backdrop-blur-md rounded-2xl p-4 md:p-6 shadow-sm text-right">
-        <h2 className="text-xl md:text-2xl font-black bg-gradient-to-r from-amber-200 via-amber-300 to-amber-500 bg-clip-text text-transparent">
-          الملخص المالي الشامل — {MONTHS.at(m - 1)} {y}
-        </h2>
-        <p className="text-xs text-slate-400 font-medium mt-1">كشف عام مجمع بمدفوعات ومبيعات وحسابات العملاء والموردين للشهر الحالي</p>
+      <div className="bg-slate-900/40 border border-slate-800/60 backdrop-blur-md rounded-2xl p-4 md:p-6 shadow-sm text-right flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="text-right">
+          <h2 className="text-xl md:text-2xl font-black bg-gradient-to-r from-amber-200 via-amber-300 to-amber-500 bg-clip-text text-transparent">
+            الملخص المالي الشامل — {MONTHS.at(m - 1)} {y}
+          </h2>
+          <p className="text-xs text-slate-400 font-medium mt-1">كشف عام مجمع بمدفوعات ومبيعات وحسابات العملاء والموردين للشهر الحالي</p>
+        </div>
+        
+        <button 
+          className="btn btn-gold no-print w-full sm:w-auto px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-amber-500/30 hover:border-amber-500 transition-all duration-200 shadow-md shadow-amber-500/5"
+          onClick={handleExportPDF}
+          disabled={pdfLoading}
+        >
+          {pdfLoading ? "⏳ جاري التصدير..." : "📥 تصدير التقرير (PDF)"}
+        </button>
       </div>
 
       {/* SECTION 1: CLIENTS SALES SUMMARY */}
