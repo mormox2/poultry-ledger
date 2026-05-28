@@ -240,7 +240,7 @@ export default function Ledger({
               <th className="py-4 px-3 text-slate-400 font-bold text-[10px] tracking-wider select-none">التاريخ</th>
               <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none">الوزن الكامل (كغ)</th>
               <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none">الوزن الصافي (كغ)</th>
-              <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none">السعر الافتراضي (د.ت)</th>
+              <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none">سعر 1 كغ (د.ت)</th>
               <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none">المبلغ الجملي</th>
               <th className="py-4 px-3 text-emerald-400/90 font-black text-[10px] tracking-wider select-none">المدفوع الكلي</th>
               <th className="py-4 px-3 text-slate-400 font-bold text-[10px] tracking-wider select-none">الباقي الفردي</th>
