@@ -18,6 +18,8 @@ export default function Dashboard({
   onShowInstallGuide
 }) {
   const [showSettings, setShowSettings] = useState(false);
+  const [chartType, setChartType] = useState('line'); // 'line' or 'bar'
+  const [hoveredIdx, setHoveredIdx] = useState(null); // active month inspect index
   const y = state.year;
   const m = state.month;
   
@@ -50,6 +52,61 @@ export default function Dashboard({
 
   const collectionRate = grandAmt ? Math.round((grandPaid / grandAmt) * 100) : 0;
   const yieldRatio = grandTw ? Math.round((grandNw / grandTw) * 100) : 0;
+
+  // Generate 6 months of historical data for the chart
+  const chartData = [];
+  for (let i = 5; i >= 0; i--) {
+    let targetM = m - i;
+    let targetY = y;
+    if (targetM <= 0) {
+      targetM += 12;
+      targetY -= 1;
+    }
+    
+    // Calculate sales total for this target month
+    const mSales = state.clients.reduce((sum, cl) => {
+      const totals = getTotals(state.ledger, cl.id, targetY, targetM);
+      return sum + totals.amt;
+    }, 0);
+    
+    // Calculate purchases total for this target month
+    const mPurchases = (state.suppliers || []).reduce((sum, sup) => {
+      const totals = getTotals(state.purchases || {}, sup.id, targetY, targetM);
+      return sum + totals.amt;
+    }, 0);
+    
+    const mMargin = mSales - mPurchases;
+    
+    chartData.push({
+      monthLabel: `${MONTHS[targetM - 1]} ${targetY}`,
+      sales: mSales,
+      purchases: mPurchases,
+      margin: mMargin
+    });
+  }
+
+  // Finding maximum value to scale SVG elements beautifully
+  const maxSales = Math.max(...chartData.map(d => d.sales), 0);
+  const maxPurchases = Math.max(...chartData.map(d => d.purchases), 0);
+  const maxVal = Math.max(maxSales, maxPurchases, 1000); // safety fallback of 1000 DT
+
+  // Generate plotting points for pure SVG path rendering
+  const points = chartData.map((d, idx) => {
+    const cx = 60 + idx * 104;
+    const ySales = 205 - ((d.sales / maxVal) * 180);
+    const yPurchases = 205 - ((d.purchases / maxVal) * 180);
+    const yMargin = 205 - ((Math.max(d.margin, 0) / maxVal) * 180);
+    return { cx, ySales, yPurchases, yMargin };
+  });
+
+  const salesLinePath = "M " + points.map(p => `${p.cx} ${p.ySales}`).join(" L ");
+  const salesAreaPath = `M ${points[0].cx} 205 L ` + points.map(p => `${p.cx} ${p.ySales}`).join(" L ") + ` L ${points[5].cx} 205 Z`;
+
+  const purchasesLinePath = "M " + points.map(p => `${p.cx} ${p.yPurchases}`).join(" L ");
+  const purchasesAreaPath = `M ${points[0].cx} 205 L ` + points.map(p => `${p.cx} ${p.yPurchases}`).join(" L ") + ` L ${points[5].cx} 205 Z`;
+
+  const marginLinePath = "M " + points.map(p => `${p.cx} ${p.yMargin}`).join(" L ");
+  const marginAreaPath = `M ${points[0].cx} 205 L ` + points.map(p => `${p.cx} ${p.yMargin}`).join(" L ") + ` L ${points[5].cx} 205 Z`;
 
   const handleFileImport = (event) => {
     const file = event.target.files[0];
@@ -133,6 +190,306 @@ export default function Dashboard({
             </div>
           </Atropos>
         ))}
+      </motion.div>
+
+      {/* FINANCIAL TRENDS CHART PANEL */}
+      <motion.div 
+        variants={itemVariants} 
+        className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-lg relative overflow-hidden"
+      >
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 justify-start text-right w-full sm:w-auto">
+            <span>📈</span>
+            <span>مؤشرات التطور المالي (الـ 6 أشهر الأخيرة)</span>
+          </h3>
+          
+          {/* Chart Type Toggle Pill */}
+          <div className="flex bg-slate-950/80 p-1 border border-slate-850 rounded-xl self-end">
+            <button 
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-extrabold transition-all duration-200 ${
+                chartType === 'line' 
+                  ? 'bg-amber-500 text-slate-950 shadow-md' 
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              onClick={() => setChartType('line')}
+            >
+              📈 منحنى بياني
+            </button>
+            <button 
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-extrabold transition-all duration-200 ${
+                chartType === 'bar' 
+                  ? 'bg-amber-500 text-slate-950 shadow-md' 
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              onClick={() => setChartType('bar')}
+            >
+              📊 أعمدة متقاربة
+            </button>
+          </div>
+        </div>
+
+        {/* Real-time Glowing Inspector (Detail Bar) */}
+        {(() => {
+          const inspectIndex = hoveredIdx !== null ? hoveredIdx : 5;
+          const inspectItem = chartData[inspectIndex];
+          return (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 mb-6 bg-slate-950/50 border border-slate-850/60 rounded-xl text-right transition-all duration-300">
+              <div>
+                <span className="text-[10px] text-slate-500 block font-semibold">الشهر المحدد</span>
+                <span className="text-xs font-black text-amber-300 mt-1 block">{inspectItem.monthLabel}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 block font-semibold">المبيعات الإجمالية</span>
+                <span className="text-xs font-black text-amber-400 mt-1 block font-mono">{fmt(inspectItem.sales)} د.ت</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 block font-semibold">المشتريات الإجمالية</span>
+                <span className="text-xs font-black text-sky-400 mt-1 block font-mono">{fmt(inspectItem.purchases)} د.ت</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 block font-semibold text-slate-500">الصافي (الهامش)</span>
+                <span className={`text-xs font-black mt-1 block font-mono ${
+                  inspectItem.margin >= 0 ? 'text-emerald-400' : 'text-red-400'
+                }`}>
+                  {inspectItem.margin >= 0 ? '+' : ''}{fmt(inspectItem.margin)} د.ت
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* SVG PLOTTING VIEWPORT */}
+        <div className="w-full overflow-x-auto pr-1 scrollbar-none">
+          <div className="min-w-[560px]">
+            <svg 
+              viewBox="0 0 600 240" 
+              className="w-full h-auto text-slate-300"
+              style={{ direction: 'ltr' }}
+            >
+              <defs>
+                <linearGradient id="sales-area-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#d4a843" stopOpacity="0.25"/>
+                  <stop offset="100%" stopColor="#d4a843" stopOpacity="0.00"/>
+                </linearGradient>
+                <linearGradient id="purchases-area-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25"/>
+                  <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.00"/>
+                </linearGradient>
+                <linearGradient id="margin-area-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#22c55e" stopOpacity="0.25"/>
+                  <stop offset="100%" stopColor="#22c55e" stopOpacity="0.00"/>
+                </linearGradient>
+              </defs>
+
+              {/* Reference Grid lines */}
+              {[25, 70, 115, 160, 205].map((yVal, idx) => (
+                <line 
+                  key={idx}
+                  x1="60" 
+                  y1={yVal} 
+                  x2="580" 
+                  y2={yVal} 
+                  stroke="var(--border)" 
+                  strokeWidth="1" 
+                  strokeDasharray={yVal === 205 ? "0" : "4,4"} 
+                  opacity={yVal === 205 ? "0.6" : "0.3"} 
+                />
+              ))}
+
+              {/* Y Axis Reference Labels */}
+              {[
+                { y: 25, val: maxVal },
+                { y: 115, val: maxVal / 2 },
+                { y: 205, val: 0 }
+              ].map((lbl, idx) => (
+                <text 
+                  key={idx}
+                  x="50" 
+                  y={lbl.y} 
+                  textAnchor="end" 
+                  dominantBaseline="middle" 
+                  className="text-[9px] fill-slate-500 font-mono font-bold"
+                >
+                  {lbl.val >= 1000 ? `${Math.round(lbl.val / 1000)}k` : Math.round(lbl.val)}
+                </text>
+              ))}
+
+              {/* Month Labels X Axis */}
+              {chartData.map((d, idx) => {
+                const cx = 60 + idx * 104;
+                return (
+                  <text 
+                    key={idx} 
+                    x={cx} 
+                    y="225" 
+                    textAnchor="middle" 
+                    className="text-[9px] fill-slate-400 font-bold"
+                  >
+                    {d.monthLabel.split(' ')[0]}
+                  </text>
+                );
+              })}
+
+              {/* RENDER LINE CHART */}
+              {chartType === 'line' && (
+                <>
+                  {/* Volumetric Gradient Areas */}
+                  <motion.path 
+                    d={salesAreaPath} 
+                    fill="url(#sales-area-grad)" 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.6 }}
+                  />
+                  <motion.path 
+                    d={purchasesAreaPath} 
+                    fill="url(#purchases-area-grad)" 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.6 }}
+                  />
+
+                  {/* Main Glowing Curved Paths */}
+                  <motion.path 
+                    d={salesLinePath} 
+                    fill="none" 
+                    stroke="#d4a843" 
+                    strokeWidth="3.5" 
+                    strokeLinecap="round"
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 1.0, ease: "easeOut" }}
+                  />
+                  <motion.path 
+                    d={purchasesLinePath} 
+                    fill="none" 
+                    stroke="#3b82f6" 
+                    strokeWidth="3.5" 
+                    strokeLinecap="round"
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 1.0, ease: "easeOut" }}
+                  />
+
+                  {/* Connecting Nodes (Circles) */}
+                  {points.map((p, idx) => (
+                    <g key={idx}>
+                      {/* Sales Node */}
+                      <circle 
+                        cx={p.cx} 
+                        cy={p.ySales} 
+                        r={hoveredIdx === idx ? "6" : "4"} 
+                        fill="#d4a843" 
+                        stroke="#0f172a" 
+                        strokeWidth="2" 
+                        style={{ transition: 'all 0.2s ease' }}
+                      />
+                      {/* Purchases Node */}
+                      <circle 
+                        cx={p.cx} 
+                        cy={p.yPurchases} 
+                        r={hoveredIdx === idx ? "6" : "4"} 
+                        fill="#3b82f6" 
+                        stroke="#0f172a" 
+                        strokeWidth="2" 
+                        style={{ transition: 'all 0.2s ease' }}
+                      />
+                    </g>
+                  ))}
+                </>
+              )}
+
+              {/* RENDER GROUPED BAR CHART */}
+              {chartType === 'bar' && (
+                <g>
+                  {chartData.map((d, idx) => {
+                    const cx = 60 + idx * 104;
+                    
+                    const hSales = (d.sales / maxVal) * 180;
+                    const ySales = 205 - hSales;
+                    
+                    const hPurchases = (d.purchases / maxVal) * 180;
+                    const yPurchases = 205 - hPurchases;
+
+                    const hMargin = (Math.max(d.margin, 0) / maxVal) * 180;
+                    const yMargin = 205 - hMargin;
+
+                    return (
+                      <g key={idx} opacity={hoveredIdx === null || hoveredIdx === idx ? "1" : "0.5"} style={{ transition: 'opacity 0.2s ease' }}>
+                        {/* Sales Bar (Golden) */}
+                        <motion.rect
+                          x={cx - 24}
+                          y={205}
+                          width="14"
+                          rx="3"
+                          fill="#d4a843"
+                          initial={{ height: 0, y: 205 }}
+                          animate={{ height: hSales, y: ySales }}
+                          transition={{ type: "spring", stiffness: 80, damping: 14, delay: idx * 0.04 }}
+                        />
+                        {/* Purchases Bar (Sky Blue) */}
+                        <motion.rect
+                          x={cx - 7}
+                          y={205}
+                          width="14"
+                          rx="3"
+                          fill="#3b82f6"
+                          initial={{ height: 0, y: 205 }}
+                          animate={{ height: hPurchases, y: yPurchases }}
+                          transition={{ type: "spring", stiffness: 80, damping: 14, delay: idx * 0.04 + 0.02 }}
+                        />
+                        {/* Margin Bar (Emerald) */}
+                        <motion.rect
+                          x={cx + 10}
+                          y={205}
+                          width="14"
+                          rx="3"
+                          fill="#22c55e"
+                          initial={{ height: 0, y: 205 }}
+                          animate={{ height: hMargin, y: yMargin }}
+                          transition={{ type: "spring", stiffness: 80, damping: 14, delay: idx * 0.04 + 0.04 }}
+                        />
+                      </g>
+                    );
+                  })}
+                </g>
+              )}
+
+              {/* Hover Interceptor Overlays (Invisible Vertical Pillars) */}
+              {points.map((p, idx) => (
+                <rect
+                  key={idx}
+                  x={p.cx - 52}
+                  y="20"
+                  width="104"
+                  height="190"
+                  fill="transparent"
+                  style={{ cursor: 'pointer', webkitTapHighlightColor: 'transparent' }}
+                  onMouseEnter={() => setHoveredIdx(idx)}
+                  onMouseLeave={() => setHoveredIdx(null)}
+                  onTouchStart={() => setHoveredIdx(idx)}
+                  onTouchEnd={() => setHoveredIdx(null)}
+                />
+              ))}
+            </svg>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="flex justify-center gap-6 mt-4 text-[10px] font-bold">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#d4a843] block"></span>
+            <span className="text-slate-300">📈 المبيعات (Ventes)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#3b82f6] block"></span>
+            <span className="text-slate-300">📉 المشتريات (Achats)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e] block"></span>
+            <span className="text-slate-300">❇️ صافي المرجعية</span>
+          </div>
+        </div>
       </motion.div>
 
       {/* PWA INSTALLATION BANNER */}
