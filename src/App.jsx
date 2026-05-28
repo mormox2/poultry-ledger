@@ -386,6 +386,65 @@ export default function App() {
     document.documentElement.classList.toggle("dark", !isLight);
   }, [state.theme]);
 
+  // Prevent accidental reload or close of tab in browser
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (!isLoggedIn) return;
+      e.preventDefault();
+      const msg = "⚠️ هل تريد حقًا مغادرة التطبيق؟ قد تفقد التغييرات غير المحفوظة.";
+      e.returnValue = msg;
+      return msg;
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isLoggedIn]);
+
+  // Push a state to prevent immediate exit on Android/PWA back button
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    if (state.view === "dashboard" && window.history.state?.view !== "dashboard-prevent") {
+      window.history.pushState({ view: "dashboard-prevent" }, "");
+    }
+  }, [state.view, isLoggedIn]);
+
+  // Handle native back button navigation and PWA quit confirmation
+  useEffect(() => {
+    const handlePopState = (e) => {
+      if (!isLoggedIn) return;
+
+      let poppedView = e.state?.view;
+
+      // If back button clicked on home screen (Dashboard)
+      if (state.view === "dashboard") {
+        const confirmQuit = window.confirm("⚠️ هل تريد حقًا إغلاق ومغادرة التطبيق؟");
+        if (!confirmQuit) {
+          // Push dashboard-prevent back to intercept next back click
+          window.history.pushState({ view: "dashboard-prevent" }, "");
+        } else {
+          // Navigate back to exit
+          window.history.go(-1);
+        }
+      } else {
+        // Back button clicked on a sub-view (Clients, Ledger, etc.) -> return to Dashboard
+        const targetView = poppedView === "dashboard-prevent" ? "dashboard" : (poppedView || "dashboard");
+        setState(prev => {
+          let updates = { ...prev, view: targetView };
+          if (targetView === "clients" || targetView === "dashboard") {
+            updates.selectedClient = null;
+          }
+          if (targetView === "suppliers" || targetView === "dashboard") {
+            updates.selectedSupplier = null;
+          }
+          return updates;
+        });
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [state.view, isLoggedIn]);
+
   // --- Cloud Database Fetch Loader ---
   const fetchCloudData = async (userUuid) => {
     setIsCloudLoading(true);
