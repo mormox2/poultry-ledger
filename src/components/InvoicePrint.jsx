@@ -104,6 +104,81 @@ export default function InvoicePrint({ state, clientId, onClose }) {
     window.open(url, '_blank');
   };
 
+  const showLocalToast = (msg, type = "success") => {
+    const el = document.getElementById("toast");
+    if (!el) return;
+    let icon = "✓";
+    if (type === "error") icon = "❌";
+    else if (type === "warning") icon = "⚠️";
+    else if (type === "info") icon = "ℹ️";
+    
+    el.className = `no-print show ${type}`;
+    el.textContent = "";
+    
+    const iconSpan = document.createElement("span");
+    iconSpan.style.fontSize = "16px";
+    iconSpan.textContent = icon;
+    
+    const msgSpan = document.createElement("span");
+    msgSpan.textContent = msg;
+    
+    el.appendChild(iconSpan);
+    el.appendChild(msgSpan);
+    
+    if (window.toastTimeout) clearTimeout(window.toastTimeout);
+    window.toastTimeout = setTimeout(() => {
+      el.classList.remove("show");
+    }, 2500);
+  };
+
+  const handleWebShare = async () => {
+    const monthName = MONTHS.at(m - 1);
+    const messageText = `🐔 الودرني للدواجن — خلاصة الفاتورة
+----------------------------------------
+👤 الحريف: ${cl.name}
+📄 رقم الفاتورة: ${invoiceNumber}
+📅 الفترة: ${monthName} ${y}
+----------------------------------------
+⚖️ إجمالي الوزن الصافي: ${Math.round(totals.nw)} كغ
+💰 المجموع الصافي (HT): ${fmt(totals.amt)} د.ت
+💸 معلوم الطابع الجبائي: ${fmt(timbreFiscal)} د.ت
+💳 المجموع الإجمالي (TTC): ${fmt(totalTTC)} د.ت
+----------------------------------------
+✅ إجمالي المدفوعات: ${fmt(totals.paid)} د.ت
+⚠️ الصافي المتبقي للدفع: ${fmt(remainingTTC)} د.ت
+----------------------------------------
+🤝 شكراً لتعاملكم معنا، ثقتكم سر نجاح مبيعاتنا!`;
+
+    if (navigator.share && navigator.canShare && navigator.canShare({ text: messageText })) {
+      try {
+        await navigator.share({
+          title: `فاتورة الودرني للدواجن - ${invoiceNumber}`,
+          text: messageText
+        });
+        showLocalToast("✓ تم مشاركة الفاتورة بنجاح");
+      } catch (err) {
+        if (err.name !== 'AbortError' && err.name !== 'NotAllowedError') {
+          console.error("Web Share failed:", err);
+          fallbackCopyToClipboard(messageText);
+        }
+      }
+    } else {
+      fallbackCopyToClipboard(messageText);
+    }
+  };
+
+  const fallbackCopyToClipboard = (text) => {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        showLocalToast("✓ تم نسخ خلاصة الفاتورة إلى الحافظة!");
+      })
+      .catch((err) => {
+        console.error("Clipboard copy failed:", err);
+        alert("فشل نسخ الفاتورة. يرجى نسخها يدوياً.");
+      });
+  };
+
+
   return (
     <div id="print-invoice-area" style={{ 
       display: 'block', 
@@ -653,6 +728,20 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           }}
         >
           🟢 مشاركة WhatsApp
+        </button>
+        <button 
+          className="btn btn-outline" 
+          onClick={handleWebShare} 
+          style={{ 
+            minWidth: '130px', 
+            height: '40px', 
+            fontWeight: '700', 
+            color: '#3b82f6', 
+            borderColor: '#3b82f6', 
+            background: 'transparent' 
+          }}
+        >
+          📲 مشاركة سريعة
         </button>
         <button className="btn btn-outline" onClick={onClose} style={{ minWidth: '130px', height: '40px', fontWeight: '700', color: '#475569', borderColor: '#cbd5e1', background: '#ffffff' }}>
           إلغاء وإغلاق

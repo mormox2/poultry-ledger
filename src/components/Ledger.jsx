@@ -274,6 +274,7 @@ export default function Ledger({
                       <td className="py-1 px-1.5">
                         <input 
                           type="number" 
+                          inputMode="decimal"
                           className="w-16 bg-slate-950/60 border border-transparent focus:border-amber-500/50 hover:bg-slate-950 focus:bg-slate-950 rounded-lg py-1.5 px-2 text-center text-slate-200 outline-none transition-all font-mono font-bold" 
                           value={r.tw} 
                           placeholder="0"
@@ -289,6 +290,7 @@ export default function Ledger({
                       <td className="py-1 px-1.5">
                         <input 
                           type="number" 
+                          inputMode="decimal"
                           id={`nw-${idx}`} 
                           className="w-16 bg-slate-950/60 border border-transparent focus:border-amber-500/50 hover:bg-slate-950 focus:bg-slate-950 rounded-lg py-1.5 px-2 text-center text-slate-200 outline-none transition-all font-mono font-bold" 
                           value={r.nw} 
@@ -305,6 +307,7 @@ export default function Ledger({
                       <td className="py-1 px-1.5">
                         <input 
                           type="number" 
+                          inputMode="decimal"
                           id={`price-${idx}`} 
                           className="w-16 bg-slate-950/60 border border-transparent focus:border-amber-500/50 hover:bg-slate-950 focus:bg-slate-950 rounded-lg py-1.5 px-2 text-center text-amber-400 outline-none transition-all font-mono font-bold" 
                           value={r.price || ''} 
@@ -321,6 +324,7 @@ export default function Ledger({
                       <td className="py-1 px-1.5">
                         <input 
                           type="number" 
+                          inputMode="decimal"
                           id={`amt-${idx}`} 
                           className="w-20 bg-slate-950/60 border border-transparent focus:border-amber-500/50 hover:bg-slate-950 focus:bg-slate-950 rounded-lg py-1.5 px-2 text-center text-slate-200 outline-none transition-all font-mono font-bold" 
                           value={r.amt} 
@@ -337,6 +341,7 @@ export default function Ledger({
                       <td className="py-1 px-1.5">
                         <input 
                           type="number" 
+                          inputMode="decimal"
                           className="w-20 bg-slate-950/60 border border-transparent focus:border-amber-500/50 hover:bg-slate-950 focus:bg-slate-950 rounded-lg py-1.5 px-2 text-center text-emerald-400 outline-none transition-all font-mono font-bold" 
                           value={r.paid} 
                           placeholder="—"

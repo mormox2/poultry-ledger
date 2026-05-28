@@ -404,6 +404,31 @@ export default function App() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isLoggedIn]);
 
+  // --- Network Connection Listeners for Offline/Online Toasts ---
+  useEffect(() => {
+    const handleOnlineStatus = () => {
+      setIsOnline(true);
+      toastMessage("⚡ تم استعادة الاتصال بالإنترنت بنجاح ! جاري مزامنة البيانات...", "success");
+      // Trigger background bridge sync
+      if (isLoggedIn && user) {
+        fetchCloudData(user.id);
+      }
+    };
+
+    const handleOfflineStatus = () => {
+      setIsOnline(false);
+      toastMessage("⚠️ أنت غير متصل بالإنترنت حالياً. تم تفعيل وضع العمل المحلي الآمن.", "warning");
+    };
+
+    window.addEventListener('online', handleOnlineStatus);
+    window.addEventListener('offline', handleOfflineStatus);
+
+    return () => {
+      window.removeEventListener('online', handleOnlineStatus);
+      window.removeEventListener('offline', handleOfflineStatus);
+    };
+  }, [isLoggedIn, user]);
+
   // Push a state to prevent immediate exit on Android/PWA back button
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -866,23 +891,37 @@ export default function App() {
     }
   };
 
+  const triggerHaptic = (ms = 12) => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(ms);
+      } catch (e) {
+        // ignore
+      }
+    }
+  };
+
   // --- Global Handlers ---
   const handleViewChange = (viewName) => {
+    triggerHaptic(12);
     setState(prev => ({ ...prev, view: viewName }));
     setMobileMenuOpen(false);
   };
 
   const handleMonthChange = (e) => {
+    triggerHaptic(8);
     const val = parseInt(e.target.value) || 5;
     setState(prev => ({ ...prev, month: val }));
   };
 
   const handleYearChange = (e) => {
+    triggerHaptic(8);
     const val = parseInt(e.target.value) || 2026;
     setState(prev => ({ ...prev, year: val }));
   };
 
   const handleThemeToggle = () => {
+    triggerHaptic(15);
     setState(prev => ({
       ...prev,
       theme: prev.theme === 'light' ? 'dark' : 'light'
@@ -1086,6 +1125,7 @@ export default function App() {
   };
 
   const handleToggleHoliday = async (idx) => {
+    triggerHaptic(15);
     let updatedRow = null;
     let targetClient = null;
     let targetYear = null;
@@ -1253,6 +1293,7 @@ export default function App() {
   };
 
   const handleTogglePurchaseHoliday = async (idx) => {
+    triggerHaptic(15);
     let updatedRow = null;
     let targetSupplier = null;
     let targetYear = null;
@@ -1471,6 +1512,7 @@ export default function App() {
 
   // --- Client Management Handlers ---
   const handleSelectClient = (cid) => {
+    triggerHaptic(12);
     setState(prev => ({
       ...prev,
       selectedClient: cid,
@@ -1588,6 +1630,7 @@ export default function App() {
 
   // --- Supplier Management Handlers ---
   const handleSelectSupplier = (sid) => {
+    triggerHaptic(12);
     setState(prev => ({
       ...prev,
       selectedSupplier: sid,
@@ -2092,6 +2135,28 @@ export default function App() {
             <span>📥</span>
             <span>تثبيت التطبيق</span>
           </button>
+        </div>
+      )}
+
+      {/* MOBILE BOTTOM NAVIGATION TAB BAR */}
+      {isLoggedIn && (
+        <div className="bottom-nav no-print">
+          {[
+            { id: 'dashboard', label: 'الرئيسية', icon: '🏠' },
+            { id: 'ledger', label: 'اليومي', icon: '📋' },
+            { id: 'clients', label: 'العملاء', icon: '👥' },
+            { id: 'purchases_ledger', label: 'المشتريات', icon: '📦' },
+            { id: 'summary', label: 'الملخص', icon: '📈' }
+          ].map(tab => (
+            <button 
+              key={tab.id} 
+              className={`bottom-nav-item ${state.view === tab.id ? 'active' : ''}`}
+              onClick={() => handleViewChange(tab.id)}
+            >
+              <span className="bottom-nav-icon">{tab.icon}</span>
+              <span>{tab.label}</span>
+            </button>
+          ))}
         </div>
       )}
     </>
