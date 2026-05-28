@@ -129,6 +129,7 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
           shadow={false} // Custom Tailwind shadow instead
           rotateXMax={12}
           rotateYMax={12}
+          rotateTouch={false}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}

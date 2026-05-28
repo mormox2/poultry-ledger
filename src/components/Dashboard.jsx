@@ -125,7 +125,7 @@ export default function Dashboard({
           { label: "الوزن الصافي المشتري", val: `${Math.round(grandPurchaseNw)} كغ`, sub: `الكامل: ${Math.round(grandPurchaseTw)} كغ`, color: "border-t-sky-400/80 text-sky-400 bg-gradient-to-br from-sky-500/5 to-transparent" },
           { label: "نسبة تحصيل الديون", val: `${collectionRate}%`, sub: "كفاءة تحصيل المبيعات", color: "border-t-emerald-400/80 text-emerald-400 bg-gradient-to-br from-emerald-500/5 to-transparent" }
         ].map((st, i) => (
-          <Atropos key={i} rotateXMax={10} rotateYMax={10} shadow={false} className="w-full">
+          <Atropos key={i} rotateXMax={10} rotateYMax={10} shadow={false} className="w-full" rotateTouch={false}>
             <div className={`h-full border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden transition-all duration-300 hover:border-slate-700/80 border-t-[4px] bg-slate-900/30 backdrop-blur-sm ${st.color}`}>
               <div className="text-xs text-slate-400 font-semibold mb-2">{st.label}</div>
               <div className="text-xl md:text-2xl font-black tracking-tight font-mono">{st.val}</div>
