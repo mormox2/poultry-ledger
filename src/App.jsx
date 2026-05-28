@@ -51,7 +51,9 @@ export default function App() {
 
   // --- Authentication States ---
   const [password, setPassword] = useState(() => localStorage.getItem("dawajin_password") || "");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem("dawajin_logged_in") === "true";
+  });
 
   // Initialize state from localStorage (standalone fallback)
   const getInitialState = () => {
@@ -334,6 +336,7 @@ export default function App() {
       if (session) {
         setSession(session);
         setUser(session.user);
+        localStorage.setItem("dawajin_logged_in", "true");
         setIsLoggedIn(true);
         fetchCloudData(session.user.id);
       }
@@ -344,11 +347,13 @@ export default function App() {
       if (newSession) {
         setSession(newSession);
         setUser(newSession.user);
+        localStorage.setItem("dawajin_logged_in", "true");
         setIsLoggedIn(true);
         fetchCloudData(newSession.user.id);
       } else {
         setSession(null);
         setUser(null);
+        localStorage.removeItem("dawajin_logged_in");
         setIsLoggedIn(false);
       }
     });
@@ -1740,6 +1745,7 @@ export default function App() {
   const handleCloudLogin = (newSession, newUser) => {
     setSession(newSession);
     setUser(newUser);
+    localStorage.setItem("dawajin_logged_in", "true");
     setIsLoggedIn(true);
     fetchCloudData(newUser.id);
   };
@@ -1750,6 +1756,7 @@ export default function App() {
     }
     // Clear localStorage offline cache completely to prevent data leak
     localStorage.removeItem("dawajin_state");
+    localStorage.removeItem("dawajin_logged_in");
 
     // Clear IndexedDB offline sync queue to prevent data leak across users
     const db = syncDBRef.current;
@@ -1793,9 +1800,13 @@ export default function App() {
     return (
       <LoginScreen 
         savedPassword={password}
-        onLogin={() => setIsLoggedIn(true)}
+        onLogin={() => {
+          localStorage.setItem("dawajin_logged_in", "true");
+          setIsLoggedIn(true);
+        }}
         onSetPassword={async (newPass) => {
           await handleChangePassword(newPass);
+          localStorage.setItem("dawajin_logged_in", "true");
           setIsLoggedIn(true);
         }}
         onCloudLogin={handleCloudLogin}
