@@ -263,6 +263,7 @@ CREATE TABLE IF NOT EXISTS public.deadlines (
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'cancelled')),
     notes TEXT DEFAULT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     
     -- Ensure either client_id or supplier_id is filled, but not both
     CONSTRAINT deadline_target_check CHECK (
@@ -280,5 +281,38 @@ CREATE POLICY "Users can manage their own deadlines"
     TO authenticated 
     USING (profile_id = auth.uid()) 
     WITH CHECK (profile_id = auth.uid());
+
+-- =====================================================================
+-- 8. Server-Side Automated Trigger Functions & Performance Indexes
+-- =====================================================================
+
+-- Trigger Function for updated_at
+CREATE OR REPLACE FUNCTION public.update_modified_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = timezone('utc'::text, now());
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Attach BEFORE UPDATE triggers
+CREATE TRIGGER set_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
+CREATE TRIGGER set_ledger_entries_updated_at BEFORE UPDATE ON public.ledger_entries FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
+CREATE TRIGGER set_purchases_updated_at BEFORE UPDATE ON public.purchases FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
+CREATE TRIGGER set_deadlines_updated_at BEFORE UPDATE ON public.deadlines FOR EACH ROW EXECUTE FUNCTION public.update_modified_column();
+
+-- Foreign Key (FK) Indexes
+CREATE INDEX IF NOT EXISTS idx_clients_profile_id ON public.clients(profile_id);
+CREATE INDEX IF NOT EXISTS idx_suppliers_profile_id ON public.suppliers(profile_id);
+CREATE INDEX IF NOT EXISTS idx_ledger_entries_client_id ON public.ledger_entries(client_id);
+CREATE INDEX IF NOT EXISTS idx_purchases_supplier_id ON public.purchases(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_deadlines_profile_id ON public.deadlines(profile_id);
+
+-- Deadlines Indexes
+CREATE INDEX IF NOT EXISTS idx_deadlines_due_date ON public.deadlines(due_date);
+CREATE INDEX IF NOT EXISTS idx_deadlines_status ON public.deadlines(status);
+CREATE INDEX IF NOT EXISTS idx_deadlines_client_id ON public.deadlines(client_id) WHERE client_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_deadlines_supplier_id ON public.deadlines(supplier_id) WHERE supplier_id IS NOT NULL;
+
 
 

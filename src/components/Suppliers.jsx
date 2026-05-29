@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { COLORS, getTotals, fmt, getClientColor } from '../js/utils';
 
@@ -24,15 +24,19 @@ export default function Suppliers({
   const [formTaxId, setFormTaxId] = useState('');
   const [formNotes, setFormNotes] = useState('');
 
-  const filtered = (state.suppliers || []).filter(x => 
-    !search || 
-    x.name.toLowerCase().includes(search.toLowerCase()) || 
-    (x.phone && x.phone.includes(search))
-  );
+  const filtered = useMemo(() => {
+    return (state.suppliers || []).filter(x => 
+      !search || 
+      x.name.toLowerCase().includes(search.toLowerCase()) || 
+      (x.phone && x.phone.includes(search))
+    );
+  }, [state.suppliers, search]);
 
   // Compute major supplier threshold
-  const allAmts = (state.suppliers || []).map(x => getTotals(state.purchases || {}, x.id, y, m).amt);
-  const maxAmt = Math.max(...allAmts, 0);
+  const maxAmt = useMemo(() => {
+    const allAmts = (state.suppliers || []).map(x => getTotals(state.purchases || {}, x.id, y, m).amt);
+    return Math.max(...allAmts, 0);
+  }, [state.suppliers, state.purchases, y, m]);
 
   const handleOpenAdd = () => {
     setFormName('');

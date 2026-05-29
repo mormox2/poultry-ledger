@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
 import './styles/main.css';
 import { supabase } from './js/supabaseClient';
 
 // Critical Components (Statically Imported for Instant Load)
 import Dashboard from './components/Dashboard';
 import LoginScreen from './components/LoginScreen';
+import SkeletonLoader from './components/SkeletonLoader';
 
 // Secondary Components (Lazy Loaded for Code Splitting)
 const Ledger = lazy(() => import('./components/Ledger'));
@@ -229,6 +230,9 @@ export default function App() {
           const { clientUuid, year, month, idx, row } = item.value.payload;
           // syncLedgerEntryToCloud now returns true on success, false on failure
           success = await syncLedgerEntryToCloud(clientUuid, year, month, idx, row);
+        } else if (item.value.action === 'purchase') {
+          const { supplierUuid, year, month, idx, row } = item.value.payload;
+          success = await syncPurchaseEntryToCloud(supplierUuid, year, month, idx, row);
         } else if (item.value.action === 'deadline_add') {
           const { tempId, ...payload } = item.value.payload;
           try {
@@ -998,11 +1002,11 @@ export default function App() {
   };
 
   // --- Global Handlers ---
-  const handleViewChange = (viewName) => {
+  const handleViewChange = useCallback((viewName) => {
     triggerHaptic(12);
     setState(prev => ({ ...prev, view: viewName }));
     setMobileMenuOpen(false);
-  };
+  }, []);
 
   const handleMonthChange = (e) => {
     triggerHaptic(8);
@@ -1024,7 +1028,7 @@ export default function App() {
     }));
   };
 
-  const handleDefaultPriceChange = async (newPrice) => {
+  const handleDefaultPriceChange = useCallback(async (newPrice) => {
     // 1. Update state locally
     let updatedRows = [];
     let targetClient = null;
@@ -1080,16 +1084,16 @@ export default function App() {
     }
     
     toastMessage("✓ تم تحديث السعر الافتراضي وتحديث الحسابات");
-  };
+  }, [isSupabaseConfigured, user, syncLedgerEntryToCloud]);
 
-  const handleChangePassword = async (newPass) => {
+  const handleChangePassword = useCallback(async (newPass) => {
     const hashed = await hashPassword(newPass);
     localStorage.setItem("dawajin_password", hashed);
     setPassword(hashed);
     toastMessage("✓ تم تحديث كلمة المرور بنجاح");
-  };
+  }, []);
 
-  const handleUpdateCompanyInfo = async (newInfo) => {
+  const handleUpdateCompanyInfo = useCallback(async (newInfo) => {
     // Instant local state update
     setState(prev => ({
       ...prev,
@@ -1113,7 +1117,7 @@ export default function App() {
       }
     }
     toastMessage("✓ تم تحديث بيانات الشركة بنجاح");
-  };
+  }, [isSupabaseConfigured, user]);
 
   const toastMessage = (msg, type = "success") => {
     const el = document.getElementById("toast");
@@ -1143,7 +1147,8 @@ export default function App() {
   };
 
   // --- Row Manipulation ---
-  const handleUpdateRow = (idx, field, val) => {
+  // --- Row Manipulation ---
+  const handleUpdateRow = useCallback((idx, field, val) => {
     setState(prev => {
       const updatedLedger = { ...prev.ledger };
       const k = ledgerKey(prev.selectedClient, prev.year, prev.month);
@@ -1158,6 +1163,7 @@ export default function App() {
 
       const rows = [...updatedLedger[k]];
       const row = { ...rows.at(idx) };
+      row.local_updated_at = new Date().toISOString();
       if (field === 'tw') {
         row.tw = val;
         if (val && !row.price) {
@@ -1204,9 +1210,9 @@ export default function App() {
         ledger: updatedLedger
       };
     });
-  };
+  }, []);
 
-  const handleSyncRow = (idx) => {
+  const handleSyncRow = useCallback((idx) => {
     if (!isSupabaseConfigured || !user) return;
     // Delay slightly to ensure React state updates are flushed and rendered
     setTimeout(() => {
@@ -1218,9 +1224,9 @@ export default function App() {
         syncLedgerEntryToCloud(currentState.selectedClient, currentState.year, currentState.month, idx, row);
       }
     }, 100);
-  };
+  }, [isSupabaseConfigured, user]);
 
-  const handleToggleHoliday = async (idx) => {
+  const handleToggleHoliday = useCallback(async (idx) => {
     triggerHaptic(15);
     let updatedRow = null;
     let targetClient = null;
@@ -1253,7 +1259,8 @@ export default function App() {
         nw: !currentHoliday ? "" : targetRow.nw,
         price: !currentHoliday ? "" : targetRow.price,
         amt: !currentHoliday ? "" : targetRow.amt,
-        paid: !currentHoliday ? "" : targetRow.paid
+        paid: !currentHoliday ? "" : targetRow.paid,
+        local_updated_at: new Date().toISOString()
       };
 
       rows.splice(idx, 1, updatedRow);
@@ -1269,7 +1276,7 @@ export default function App() {
     if (isSupabaseConfigured && user && updatedRow && targetClient) {
       await syncLedgerEntryToCloud(targetClient, targetYear, targetMonth, idx, updatedRow);
     }
-  };
+  }, [isSupabaseConfigured, user]);
 
   // Sync a single daily ledger entry to Supabase (returns true on success, false on failure)
   const syncLedgerEntryToCloud = async (clientUuid, year, month, idx, row) => {
@@ -1283,6 +1290,49 @@ export default function App() {
     }
 
     try {
+      // 1. Fetch remote row for LWW conflict comparison
+      const { data: remoteRow, error: fetchErr } = await supabase
+        .from('ledger_entries')
+        .select('updated_at, total_weight, net_weight, price, amount, paid, holiday, notes')
+        .eq('client_id', clientUuid)
+        .eq('year', year)
+        .eq('month', month)
+        .eq('day', day)
+        .maybeSingle();
+
+      if (!fetchErr && remoteRow && remoteRow.updated_at) {
+        const remoteTime = new Date(remoteRow.updated_at).getTime();
+        const localTime = row.local_updated_at ? new Date(row.local_updated_at).getTime() : 0;
+        
+        if (remoteTime > localTime) {
+          // Server wins! Update local React state to match remote row
+          setState(prev => {
+            const updatedLedger = { ...prev.ledger };
+            const k = ledgerKey(clientUuid, year, month);
+            if (updatedLedger[k]) {
+              const rows = [...updatedLedger[k]];
+              if (rows[idx]) {
+                rows[idx] = {
+                  ...rows[idx],
+                  tw: remoteRow.total_weight !== null ? String(remoteRow.total_weight) : "",
+                  nw: remoteRow.net_weight !== null ? String(remoteRow.net_weight) : "",
+                  price: remoteRow.price !== null ? String(remoteRow.price) : "",
+                  amt: remoteRow.amount !== null ? parseFloat(remoteRow.amount) : "",
+                  paid: remoteRow.paid !== null ? String(remoteRow.paid) : "",
+                  holiday: remoteRow.holiday,
+                  notes: remoteRow.notes || "",
+                  local_updated_at: remoteRow.updated_at
+                };
+                updatedLedger[k] = rows;
+              }
+            }
+            return { ...prev, ledger: updatedLedger };
+          });
+          return true; // Skip upsert and return success
+        }
+      }
+
+      // 2. Perform regular upsert if local is newer (or no remote row found)
       const { error } = await supabase
         .from('ledger_entries')
         .upsert({
@@ -1311,7 +1361,7 @@ export default function App() {
   };
 
   // --- Purchase Row Manipulation ---
-  const handleUpdatePurchaseRow = (idx, field, val) => {
+  const handleUpdatePurchaseRow = useCallback((idx, field, val) => {
     setState(prev => {
       const updatedPurchases = { ...prev.purchases };
       const k = ledgerKey(prev.selectedSupplier, prev.year, prev.month);
@@ -1326,6 +1376,7 @@ export default function App() {
 
       const rows = [...updatedPurchases[k]];
       const row = { ...rows.at(idx) };
+      row.local_updated_at = new Date().toISOString();
       
       if (field === 'tw') {
         row.tw = val;
@@ -1373,9 +1424,9 @@ export default function App() {
         purchases: updatedPurchases
       };
     });
-  };
+  }, []);
 
-  const handleSyncPurchaseRow = (idx) => {
+  const handleSyncPurchaseRow = useCallback((idx) => {
     if (!isSupabaseConfigured || !user) return;
     setTimeout(() => {
       const currentState = stateRef.current;
@@ -1386,9 +1437,9 @@ export default function App() {
         syncPurchaseEntryToCloud(currentState.selectedSupplier, currentState.year, currentState.month, idx, row);
       }
     }, 100);
-  };
+  }, [isSupabaseConfigured, user]);
 
-  const handleTogglePurchaseHoliday = async (idx) => {
+  const handleTogglePurchaseHoliday = useCallback(async (idx) => {
     triggerHaptic(15);
     let updatedRow = null;
     let targetSupplier = null;
@@ -1421,7 +1472,8 @@ export default function App() {
         nw: !currentHoliday ? "" : targetRow.nw,
         price: !currentHoliday ? "" : targetRow.price,
         amt: !currentHoliday ? "" : targetRow.amt,
-        paid: !currentHoliday ? "" : targetRow.paid
+        paid: !currentHoliday ? "" : targetRow.paid,
+        local_updated_at: new Date().toISOString()
       };
 
       rows.splice(idx, 1, updatedRow);
@@ -1436,13 +1488,62 @@ export default function App() {
     if (isSupabaseConfigured && user && updatedRow && targetSupplier) {
       await syncPurchaseEntryToCloud(targetSupplier, targetYear, targetMonth, idx, updatedRow);
     }
-  };
+  }, [isSupabaseConfigured, user]);
 
   const syncPurchaseEntryToCloud = async (supplierUuid, year, month, idx, row) => {
     if (!isSupabaseConfigured || !user) return false;
     const day = idx + 1;
 
+    // If offline, enqueue the action and exit
+    if (!navigator.onLine) {
+      await enqueueSync('purchase', { supplierUuid, year, month, idx, row });
+      return false;
+    }
+
     try {
+      // 1. Fetch remote row for LWW conflict comparison
+      const { data: remoteRow, error: fetchErr } = await supabase
+        .from('purchases')
+        .select('updated_at, total_weight, net_weight, price, amount, paid, holiday, notes')
+        .eq('supplier_id', supplierUuid)
+        .eq('year', year)
+        .eq('month', month)
+        .eq('day', day)
+        .maybeSingle();
+
+      if (!fetchErr && remoteRow && remoteRow.updated_at) {
+        const remoteTime = new Date(remoteRow.updated_at).getTime();
+        const localTime = row.local_updated_at ? new Date(row.local_updated_at).getTime() : 0;
+        
+        if (remoteTime > localTime) {
+          // Server wins! Update local React state to match remote row
+          setState(prev => {
+            const updatedPurchases = { ...prev.purchases };
+            const k = ledgerKey(supplierUuid, year, month);
+            if (updatedPurchases[k]) {
+              const rows = [...updatedPurchases[k]];
+              if (rows[idx]) {
+                rows[idx] = {
+                  ...rows[idx],
+                  tw: remoteRow.total_weight !== null ? String(remoteRow.total_weight) : "",
+                  nw: remoteRow.net_weight !== null ? String(remoteRow.net_weight) : "",
+                  price: remoteRow.price !== null ? String(remoteRow.price) : "",
+                  amt: remoteRow.amount !== null ? parseFloat(remoteRow.amount) : "",
+                  paid: remoteRow.paid !== null ? String(remoteRow.paid) : "",
+                  holiday: remoteRow.holiday,
+                  notes: remoteRow.notes || "",
+                  local_updated_at: remoteRow.updated_at
+                };
+                updatedPurchases[k] = rows;
+              }
+            }
+            return { ...prev, purchases: updatedPurchases };
+          });
+          return true; // Skip upsert and return success
+        }
+      }
+
+      // 2. Perform regular upsert if local is newer (or no remote row found)
       const { error } = await supabase
         .from('purchases')
         .upsert({
@@ -1470,7 +1571,7 @@ export default function App() {
     }
   };
 
-  const handleQuickPurchaseSettle = async (sid, amount) => {
+  const handleQuickPurchaseSettle = useCallback(async (sid, amount) => {
     let updatedRows = [];
     let targetYear = null;
     let targetMonth = null;
@@ -1508,6 +1609,7 @@ export default function App() {
           r.paid = parseFloat((paid + remaining).toFixed(3));
           remaining = 0;
         }
+        r.local_updated_at = new Date().toISOString();
 
         if (r.paid !== oldPaid) {
           updatedRows.push({ idx: i, row: r });
@@ -1535,10 +1637,10 @@ export default function App() {
     }
     
     toastMessage("✓ تم تسوية وتوزيع المدفوعات للمورد بنجاح");
-  };
+  }, [isSupabaseConfigured, user, syncPurchaseEntryToCloud]);
 
 
-  const handleQuickSettle = async (cid, amount) => {
+  const handleQuickSettle = useCallback(async (cid, amount) => {
     let updatedRows = [];
     let targetYear = null;
     let targetMonth = null;
@@ -1576,6 +1678,7 @@ export default function App() {
           r.paid = parseFloat((paid + remaining).toFixed(3));
           remaining = 0;
         }
+        r.local_updated_at = new Date().toISOString();
 
         if (r.paid !== oldPaid) {
           updatedRows.push({ idx: i, row: r });
@@ -1604,19 +1707,19 @@ export default function App() {
     }
     
     toastMessage("✓ تم تسوية وتوزيع الدفعات بنجاح");
-  };
+  }, [isSupabaseConfigured, user, syncLedgerEntryToCloud]);
 
   // --- Client Management Handlers ---
-  const handleSelectClient = (cid) => {
+  const handleSelectClient = useCallback((cid) => {
     triggerHaptic(12);
     setState(prev => ({
       ...prev,
       selectedClient: cid,
       view: cid === null ? "clients" : "ledger"
     }));
-  };
+  }, []);
 
-  const handleAddClient = async (clientData) => {
+  const handleAddClient = useCallback(async (clientData) => {
     const tempId = Date.now();
 
     if (isSupabaseConfigured && user) {
@@ -1668,9 +1771,9 @@ export default function App() {
       }));
       toastMessage("✓ تم إضافة العميل الجديد بنجاح");
     }
-  };
+  }, [isSupabaseConfigured, user]);
 
-  const handleEditClient = async (updatedClient) => {
+  const handleEditClient = useCallback(async (updatedClient) => {
     // Optimistic state update
     setState(prev => ({
       ...prev,
@@ -1696,9 +1799,9 @@ export default function App() {
       }
     }
     toastMessage("✓ تم تعديل بيانات العميل بنجاح");
-  };
+  }, [isSupabaseConfigured, user]);
 
-  const handleDeleteClient = async (cid) => {
+  const handleDeleteClient = useCallback(async (cid) => {
     setState(prev => {
       const filteredClients = prev.clients.filter(c => c.id !== cid);
       const isSelectedDeleted = prev.selectedClient === cid;
@@ -1722,19 +1825,19 @@ export default function App() {
       }
     }
     toastMessage("✓ تم حذف العميل بنجاح");
-  };
+  }, [isSupabaseConfigured, user]);
 
   // --- Supplier Management Handlers ---
-  const handleSelectSupplier = (sid) => {
+  const handleSelectSupplier = useCallback((sid) => {
     triggerHaptic(12);
     setState(prev => ({
       ...prev,
       selectedSupplier: sid,
       view: sid === null ? "suppliers" : "purchases_ledger"
     }));
-  };
+  }, []);
 
-  const handleAddSupplier = async (supplierData) => {
+  const handleAddSupplier = useCallback(async (supplierData) => {
     const tempId = Date.now();
 
     if (isSupabaseConfigured && user) {
@@ -1786,9 +1889,9 @@ export default function App() {
       }));
       toastMessage("✓ تم إضافة المورد الجديد بنجاح");
     }
-  };
+  }, [isSupabaseConfigured, user]);
 
-  const handleEditSupplier = async (updatedSupplier) => {
+  const handleEditSupplier = useCallback(async (updatedSupplier) => {
     // Optimistic state update
     setState(prev => ({
       ...prev,
@@ -1814,9 +1917,9 @@ export default function App() {
       }
     }
     toastMessage("✓ تم تعديل بيانات المورد بنجاح");
-  };
+  }, [isSupabaseConfigured, user]);
 
-  const handleDeleteSupplier = async (sid) => {
+  const handleDeleteSupplier = useCallback(async (sid) => {
     setState(prev => {
       const filteredSuppliers = (prev.suppliers || []).filter(s => s.id !== sid);
       const isSelectedDeleted = prev.selectedSupplier === sid;
@@ -1840,10 +1943,10 @@ export default function App() {
       }
     }
     toastMessage("✓ تم حذف المورد بنجاح");
-  };
+  }, [isSupabaseConfigured, user]);
 
   // --- Deadlines Handlers ---
-  const handleAddDeadline = async (newDl) => {
+  const handleAddDeadline = useCallback(async (newDl) => {
     triggerHaptic(15);
     const tempId = 'temp_' + Date.now();
     const localDl = { id: tempId, profile_id: user?.id, ...newDl };
@@ -1887,9 +1990,9 @@ export default function App() {
       await enqueueSync('deadline_add', { tempId, ...newDl });
       toastMessage("⚠️ تم حفظ الأجل محلياً (وضع أوفلاين)", "warning");
     }
-  };
+  }, [isSupabaseConfigured, user]);
 
-  const handleEditDeadline = async (updatedDl) => {
+  const handleEditDeadline = useCallback(async (updatedDl) => {
     triggerHaptic(15);
     
     // Update locally
@@ -1922,9 +2025,9 @@ export default function App() {
       await enqueueSync('deadline_edit', updatedDl);
       toastMessage("⚠️ تم تعديل الأجل محلياً (وضع أوفلاين)", "warning");
     }
-  };
+  }, [isSupabaseConfigured, user]);
 
-  const handleDeleteDeadline = async (id) => {
+  const handleDeleteDeadline = useCallback(async (id) => {
     triggerHaptic(20);
     
     // Delete locally
@@ -1950,9 +2053,9 @@ export default function App() {
       await enqueueSync('deadline_delete', { id });
       toastMessage("⚠️ تم الحذف محلياً (وضع أوفلاين)", "warning");
     }
-  };
+  }, [isSupabaseConfigured, user]);
 
-  const handleMarkAsPaid = async (deadline) => {
+  const handleMarkAsPaid = useCallback(async (deadline) => {
     triggerHaptic(20);
     
     // 1. Mark deadline as paid locally
@@ -2053,7 +2156,7 @@ export default function App() {
       });
       toastMessage("✓ تم تسجيل الدفعة للمورد تلقائياً في سجل المدفوعات !");
     }
-  };
+  }, [isSupabaseConfigured, user, syncLedgerEntryToCloud, syncPurchaseEntryToCloud]);
 
 
   // --- Backup & Import ---
@@ -2412,12 +2515,7 @@ export default function App() {
       </header>
 
       <main id="main-content" className="max-w-[1600px] mx-auto px-4 md:px-8 py-6">
-        <Suspense fallback={
-          <div className="flex flex-col items-center justify-center py-32 gap-4">
-            <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
-            <div className="text-xs text-slate-400 font-bold select-none">جاري تحميل الصفحة...</div>
-          </div>
-        }>
+        <Suspense fallback={<SkeletonLoader />}>
           {renderActiveView()}
         </Suspense>
       </main>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { COLORS, getTotals, fmt, getClientColor } from '../js/utils';
 
@@ -24,15 +24,19 @@ export default function Clients({
   const [formTaxId, setFormTaxId] = useState('');
   const [formNotes, setFormNotes] = useState('');
 
-  const filtered = state.clients.filter(x => 
-    !search || 
-    x.name.toLowerCase().includes(search.toLowerCase()) || 
-    (x.phone && x.phone.includes(search))
-  );
+  const filtered = useMemo(() => {
+    return state.clients.filter(x => 
+      !search || 
+      x.name.toLowerCase().includes(search.toLowerCase()) || 
+      (x.phone && x.phone.includes(search))
+    );
+  }, [state.clients, search]);
 
   // Compute VIP threshold
-  const allAmts = state.clients.map(x => getTotals(state.ledger, x.id, y, m).amt);
-  const maxAmt = Math.max(...allAmts, 0);
+  const maxAmt = useMemo(() => {
+    const allAmts = state.clients.map(x => getTotals(state.ledger, x.id, y, m).amt);
+    return Math.max(...allAmts, 0);
+  }, [state.clients, state.ledger, y, m]);
 
   const handleOpenAdd = () => {
     setFormName('');
