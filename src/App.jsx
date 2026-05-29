@@ -36,6 +36,11 @@ import {
 
 import { logActivity, getActivityLog, clearActivityLog } from './js/activityLog';
 
+// Custom Hooks Import
+import useLedger from './hooks/useLedger';
+import usePurchases from './hooks/usePurchases';
+import useBackup from './hooks/useBackup';
+
 // --- Offline Sync Queue (IndexedDB) Setup ---
 const syncDBName = 'PoultryLedgerDB';
 const syncStoreName = 'sync_queue';
@@ -435,6 +440,64 @@ export default function App() {
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  // Initialize modular custom hooks
+  const {
+    handleSelectClient,
+    handleUpdateRow,
+    handleSyncRow,
+    handleToggleHoliday,
+    handleAddClient,
+    handleEditClient,
+    handleDeleteClient,
+    handleQuickSettle
+  } = useLedger({
+    state,
+    setState,
+    stateRef,
+    user,
+    isSupabaseConfigured,
+    syncLedgerEntryToCloud,
+    toastMessage,
+    triggerHaptic
+  });
+
+  const {
+    handleSelectSupplier,
+    handleUpdatePurchaseRow,
+    handleSyncPurchaseRow,
+    handleTogglePurchaseHoliday,
+    handleAddSupplier,
+    handleEditSupplier,
+    handleDeleteSupplier,
+    handleQuickPurchaseSettle
+  } = usePurchases({
+    state,
+    setState,
+    stateRef,
+    user,
+    isSupabaseConfigured,
+    syncPurchaseEntryToCloud,
+    toastMessage,
+    triggerHaptic
+  });
+
+  const {
+    handleBackupCloudExport,
+    handleBackupCloudRestore,
+    handleBackupExport,
+    handleBackupImport
+  } = useBackup({
+    state,
+    setState,
+    stateRef,
+    user,
+    plainPassword,
+    isSupabaseConfigured,
+    setIsCloudLoading,
+    setLastBackupTime,
+    toastMessage
+  });
 
   // --- Supabase Session Hook & Listeners ---
   useEffect(() => {
@@ -1326,150 +1389,7 @@ export default function App() {
     }, 2500);
   };
 
-  // --- Row Manipulation ---
-  // --- Row Manipulation ---
-  const handleUpdateRow = useCallback((idx, field, val) => {
-    setState(prev => {
-      const updatedLedger = { ...prev.ledger };
-      const k = ledgerKey(prev.selectedClient, prev.year, prev.month);
-      
-      if (!updatedLedger[k]) {
-        const days = daysInMonth(prev.year, prev.month);
-        updatedLedger[k] = Array.from({ length: days }, (_, i) => ({
-          d: i + 1,
-          tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
-        }));
-      }
 
-      const rows = [...updatedLedger[k]];
-      const row = { ...rows.at(idx) };
-      row.local_updated_at = new Date().toISOString();
-      if (field === 'tw') {
-        row.tw = val;
-        if (val && !row.price) {
-          row.price = prev.pricePerKg;
-        }
-      }
-      else if (field === 'nw') {
-        row.nw = val;
-        if (val && !row.price) {
-          row.price = prev.pricePerKg;
-        }
-      }
-      else if (field === 'price') row.price = val;
-      else if (field === 'amt') row.amt = val;
-      else if (field === 'paid') row.paid = val;
-      else if (field === 'holiday') row.holiday = val;
-      else if (field === 'notes') row.notes = val;
-
-      // Autocalculate values
-      if (field === 'nw') {
-        const nwFloat = parseFloat(val);
-        if (!nwFloat) {
-          row.amt = "";
-        } else {
-          const activePrice = parseFloat(row.price) || prev.pricePerKg || 0;
-          row.amt = parseFloat((nwFloat * activePrice).toFixed(3));
-        }
-      } else if (field === 'price') {
-        const customPrice = parseFloat(val);
-        const nwFloat = parseFloat(row.nw) || 0;
-        if (!nwFloat) {
-          row.amt = "";
-        } else {
-          const activePrice = customPrice || prev.pricePerKg || 0;
-          row.amt = parseFloat((nwFloat * activePrice).toFixed(3));
-        }
-      }
-
-      rows.splice(idx, 1, row);
-      updatedLedger[k] = rows;
-
-      return {
-        ...prev,
-        ledger: updatedLedger
-      };
-    });
-  }, []);
-
-  const handleSyncRow = useCallback((idx) => {
-    // Delay slightly to ensure React state updates are flushed and rendered
-    setTimeout(() => {
-      const currentState = stateRef.current;
-      const k = ledgerKey(currentState.selectedClient, currentState.year, currentState.month);
-      const rows = Reflect.get(currentState.ledger, k);
-      if (rows && rows.at(idx)) {
-        const row = rows.at(idx);
-        
-        // Log this edit!
-        const clientName = currentState.clients.find(c => c.id === currentState.selectedClient)?.name || "عميل";
-        const dateStr = `${currentState.year}/${currentState.month}/${row.d}`;
-        let details = [];
-        if (row.nw) details.push(`وزن صافي: ${row.nw} كغ`);
-        if (row.price) details.push(`سعر: ${row.price} د.ت`);
-        if (row.paid) details.push(`دفعة: ${row.paid} د.ت`);
-        if (row.notes) details.push(`ملاحظة: ${row.notes}`);
-        
-        logActivity(user?.id, "تحديث سجل يومي", `العميل: ${clientName} — التاريخ: ${dateStr} — التفاصيل: [${details.join(' ، ') || 'سجل فارغ'}]`);
-        
-        if (isSupabaseConfigured && user) {
-          syncLedgerEntryToCloud(currentState.selectedClient, currentState.year, currentState.month, idx, row);
-        }
-      }
-    }, 100);
-  }, [isSupabaseConfigured, user]);
-
-  const handleToggleHoliday = useCallback(async (idx) => {
-    triggerHaptic(15);
-    let updatedRow = null;
-    let targetClient = null;
-    let targetYear = null;
-    let targetMonth = null;
-
-    setState(prev => {
-      const updatedLedger = { ...prev.ledger };
-      targetClient = prev.selectedClient;
-      targetYear = prev.year;
-      targetMonth = prev.month;
-      const k = ledgerKey(targetClient, targetYear, targetMonth);
-      
-      if (!updatedLedger[k]) {
-        const days = daysInMonth(targetYear, targetMonth);
-        updatedLedger[k] = Array.from({ length: days }, (_, i) => ({
-          d: i + 1,
-          tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
-        }));
-      }
-
-      const rows = [...updatedLedger[k]];
-      const targetRow = rows.at(idx);
-      const currentHoliday = targetRow.holiday;
-      
-      updatedRow = {
-        ...targetRow,
-        holiday: !currentHoliday,
-        tw: !currentHoliday ? "" : targetRow.tw,
-        nw: !currentHoliday ? "" : targetRow.nw,
-        price: !currentHoliday ? "" : targetRow.price,
-        amt: !currentHoliday ? "" : targetRow.amt,
-        paid: !currentHoliday ? "" : targetRow.paid,
-        local_updated_at: new Date().toISOString()
-      };
-
-      rows.splice(idx, 1, updatedRow);
-      updatedLedger[k] = rows;
-
-      return {
-        ...prev,
-        ledger: updatedLedger
-      };
-    });
-
-    // Trigger Cloud sync outside setState
-    if (isSupabaseConfigured && user && updatedRow && targetClient) {
-      await syncLedgerEntryToCloud(targetClient, targetYear, targetMonth, idx, updatedRow);
-    }
-  }, [isSupabaseConfigured, user]);
 
   // Sync a single daily ledger entry to Supabase (returns true on success, false on failure)
   const syncLedgerEntryToCloud = async (clientUuid, year, month, idx, row) => {
@@ -1553,151 +1473,7 @@ export default function App() {
     }
   };
 
-  // --- Purchase Row Manipulation ---
-  const handleUpdatePurchaseRow = useCallback((idx, field, val) => {
-    setState(prev => {
-      const updatedPurchases = { ...prev.purchases };
-      const k = ledgerKey(prev.selectedSupplier, prev.year, prev.month);
-      
-      if (!updatedPurchases[k]) {
-        const days = daysInMonth(prev.year, prev.month);
-        updatedPurchases[k] = Array.from({ length: days }, (_, i) => ({
-          d: i + 1,
-          tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
-        }));
-      }
 
-      const rows = [...updatedPurchases[k]];
-      const row = { ...rows.at(idx) };
-      row.local_updated_at = new Date().toISOString();
-      
-      const activeSup = (prev.suppliers || []).find(s => s.id === prev.selectedSupplier);
-      const supplierDefaultPrice = (activeSup && activeSup.defaultPrice) ? activeSup.defaultPrice : (prev.defaultPurchasePricePerKg || 5.200);
-
-      if (field === 'tw') {
-        row.tw = val;
-        if (val && !row.price) {
-          row.price = supplierDefaultPrice;
-        }
-      }
-      else if (field === 'nw') {
-        row.nw = val;
-        if (val && !row.price) {
-          row.price = supplierDefaultPrice;
-        }
-      }
-      else if (field === 'price') row.price = val;
-      else if (field === 'amt') row.amt = val;
-      else if (field === 'paid') row.paid = val;
-      else if (field === 'holiday') row.holiday = val;
-      else if (field === 'notes') row.notes = val;
-
-      // Autocalculate values
-      if (field === 'nw') {
-        const nwFloat = parseFloat(val);
-        if (!nwFloat) {
-          row.amt = "";
-        } else {
-          const activePrice = parseFloat(row.price) || supplierDefaultPrice;
-          row.amt = parseFloat((nwFloat * activePrice).toFixed(3));
-        }
-      } else if (field === 'price') {
-        const customPrice = parseFloat(val);
-        const nwFloat = parseFloat(row.nw) || 0;
-        if (!nwFloat) {
-          row.amt = "";
-        } else {
-          const activePrice = customPrice || supplierDefaultPrice;
-          row.amt = parseFloat((nwFloat * activePrice).toFixed(3));
-        }
-      }
-
-      rows.splice(idx, 1, row);
-      updatedPurchases[k] = rows;
-
-      return {
-        ...prev,
-        purchases: updatedPurchases
-      };
-    });
-  }, []);
-
-  const handleSyncPurchaseRow = useCallback((idx) => {
-    setTimeout(() => {
-      const currentState = stateRef.current;
-      const k = ledgerKey(currentState.selectedSupplier, currentState.year, currentState.month);
-      const rows = Reflect.get(currentState.purchases || {}, k);
-      if (rows && rows.at(idx)) {
-        const row = rows.at(idx);
-        
-        // Log this edit!
-        const supplierName = (currentState.suppliers || []).find(s => s.id === currentState.selectedSupplier)?.name || "مورد";
-        const dateStr = `${currentState.year}/${currentState.month}/${row.d}`;
-        let details = [];
-        if (row.nw) details.push(`وزن صافي: ${row.nw} كغ`);
-        if (row.price) details.push(`سعر الشراء: ${row.price} د.ت`);
-        if (row.paid) details.push(`المدفوع له: ${row.paid} د.ت`);
-        if (row.notes) details.push(`ملاحظة: ${row.notes}`);
-        
-        logActivity(user?.id, "تحديث سجل المشتريات", `المورد: ${supplierName} — التاريخ: ${dateStr} — التفاصيل: [${details.join(' ، ') || 'سجل فارغ'}]`);
-        
-        if (isSupabaseConfigured && user) {
-          syncPurchaseEntryToCloud(currentState.selectedSupplier, currentState.year, currentState.month, idx, row);
-        }
-      }
-    }, 100);
-  }, [isSupabaseConfigured, user]);
-
-  const handleTogglePurchaseHoliday = useCallback(async (idx) => {
-    triggerHaptic(15);
-    let updatedRow = null;
-    let targetSupplier = null;
-    let targetYear = null;
-    let targetMonth = null;
-
-    setState(prev => {
-      const updatedPurchases = { ...prev.purchases };
-      targetSupplier = prev.selectedSupplier;
-      targetYear = prev.year;
-      targetMonth = prev.month;
-      const k = ledgerKey(targetSupplier, targetYear, targetMonth);
-      
-      if (!updatedPurchases[k]) {
-        const days = daysInMonth(targetYear, targetMonth);
-        updatedPurchases[k] = Array.from({ length: days }, (_, i) => ({
-          d: i + 1,
-          tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
-        }));
-      }
-
-      const rows = [...updatedPurchases[k]];
-      const targetRow = rows.at(idx);
-      const currentHoliday = targetRow.holiday;
-      
-      updatedRow = {
-        ...targetRow,
-        holiday: !currentHoliday,
-        tw: !currentHoliday ? "" : targetRow.tw,
-        nw: !currentHoliday ? "" : targetRow.nw,
-        price: !currentHoliday ? "" : targetRow.price,
-        amt: !currentHoliday ? "" : targetRow.amt,
-        paid: !currentHoliday ? "" : targetRow.paid,
-        local_updated_at: new Date().toISOString()
-      };
-
-      rows.splice(idx, 1, updatedRow);
-      updatedPurchases[k] = rows;
-
-      return {
-        ...prev,
-        purchases: updatedPurchases
-      };
-    });
-
-    if (isSupabaseConfigured && user && updatedRow && targetSupplier) {
-      await syncPurchaseEntryToCloud(targetSupplier, targetYear, targetMonth, idx, updatedRow);
-    }
-  }, [isSupabaseConfigured, user]);
 
   const syncPurchaseEntryToCloud = async (supplierUuid, year, month, idx, row) => {
     if (!isSupabaseConfigured || !user) return false;
@@ -1780,388 +1556,7 @@ export default function App() {
     }
   };
 
-  const handleQuickPurchaseSettle = useCallback(async (sid, amount) => {
-    let updatedRows = [];
-    let targetYear = null;
-    let targetMonth = null;
 
-    setState(prev => {
-      const updatedPurchases = { ...prev.purchases };
-      targetYear = prev.year;
-      targetMonth = prev.month;
-      const k = ledgerKey(sid, targetYear, targetMonth);
-      
-      if (!updatedPurchases[k]) {
-        const days = daysInMonth(targetYear, targetMonth);
-        updatedPurchases[k] = Array.from({ length: days }, (_, i) => ({
-          d: i + 1,
-          tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
-        }));
-      }
-
-      const rows = updatedPurchases[k].map(r => ({ ...r }));
-      let remaining = amount;
-
-      for (let i = 0; i < rows.length; i++) {
-        const r = rows.at(i);
-        if (r.holiday || !r.amt) continue;
-        const amt = parseFloat(r.amt) || 0;
-        const paid = parseFloat(r.paid) || 0;
-        const due = amt - paid;
-        if (due <= 0) continue;
-
-        const oldPaid = r.paid;
-        if (remaining >= due) {
-          r.paid = amt;
-          remaining -= due;
-        } else {
-          r.paid = parseFloat((paid + remaining).toFixed(3));
-          remaining = 0;
-        }
-        r.local_updated_at = new Date().toISOString();
-
-        if (r.paid !== oldPaid) {
-          updatedRows.push({ idx: i, row: r });
-        }
-        if (remaining <= 0) break;
-      }
-
-      updatedPurchases[k] = rows;
-
-      return {
-        ...prev,
-        purchases: updatedPurchases
-      };
-    });
-
-    if (isSupabaseConfigured && user && updatedRows.length > 0) {
-      try {
-        const syncPromises = updatedRows.map(({ idx, row }) => 
-          syncPurchaseEntryToCloud(sid, targetYear, targetMonth, idx, row)
-        );
-        await Promise.all(syncPromises);
-      } catch (err) {
-        console.error("Cloud quick purchase settle sync error:", err);
-      }
-    }
-    
-    toastMessage("✓ تم تسوية وتوزيع المدفوعات للمورد بنجاح");
-  }, [isSupabaseConfigured, user, syncPurchaseEntryToCloud]);
-
-
-  const handleQuickSettle = useCallback(async (cid, amount) => {
-    let updatedRows = [];
-    let targetYear = null;
-    let targetMonth = null;
-
-    setState(prev => {
-      const updatedLedger = { ...prev.ledger };
-      targetYear = prev.year;
-      targetMonth = prev.month;
-      const k = ledgerKey(cid, targetYear, targetMonth);
-      
-      if (!updatedLedger[k]) {
-        const days = daysInMonth(targetYear, targetMonth);
-        updatedLedger[k] = Array.from({ length: days }, (_, i) => ({
-          d: i + 1,
-          tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
-        }));
-      }
-
-      const rows = updatedLedger[k].map(r => ({ ...r }));
-      let remaining = amount;
-
-      for (let i = 0; i < rows.length; i++) {
-        const r = rows.at(i);
-        if (r.holiday || !r.amt) continue;
-        const amt = parseFloat(r.amt) || 0;
-        const paid = parseFloat(r.paid) || 0;
-        const due = amt - paid;
-        if (due <= 0) continue;
-
-        const oldPaid = r.paid;
-        if (remaining >= due) {
-          r.paid = amt;
-          remaining -= due;
-        } else {
-          r.paid = parseFloat((paid + remaining).toFixed(3));
-          remaining = 0;
-        }
-        r.local_updated_at = new Date().toISOString();
-
-        if (r.paid !== oldPaid) {
-          updatedRows.push({ idx: i, row: r });
-        }
-        if (remaining <= 0) break;
-      }
-
-      updatedLedger[k] = rows;
-
-      return {
-        ...prev,
-        ledger: updatedLedger
-      };
-    });
-
-    // Trigger Cloud sync outside setState!
-    if (isSupabaseConfigured && user && updatedRows.length > 0) {
-      try {
-        const syncPromises = updatedRows.map(({ idx, row }) => 
-          syncLedgerEntryToCloud(cid, targetYear, targetMonth, idx, row)
-        );
-        await Promise.all(syncPromises);
-      } catch (err) {
-        console.error("Cloud quick settle sync error:", err);
-      }
-    }
-    
-    toastMessage("✓ تم تسوية وتوزيع الدفعات بنجاح");
-  }, [isSupabaseConfigured, user, syncLedgerEntryToCloud]);
-
-  // --- Client Management Handlers ---
-  const handleSelectClient = useCallback((cid) => {
-    triggerHaptic(12);
-    setState(prev => ({
-      ...prev,
-      selectedClient: cid,
-      view: cid === null ? "clients" : "ledger"
-    }));
-  }, []);
-
-  const handleAddClient = useCallback(async (clientData) => {
-    logActivity(user?.id, "إضافة عميل", `تم إضافة العميل الجديد: "${clientData.name}"`);
-    const tempId = Date.now();
-
-    if (isSupabaseConfigured && user) {
-      try {
-        const { data, error } = await supabase
-          .from('clients')
-          .insert({
-            profile_id: user.id,
-            name: clientData.name,
-            address: clientData.address,
-            phone: clientData.phone,
-            tax_id: clientData.taxId,
-            color: clientData.color
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-        
-        if (data) {
-          setState(prev => ({
-            ...prev,
-            clients: [...prev.clients, {
-              id: data.id,
-              name: data.name,
-              address: data.address,
-              phone: data.phone,
-              color: data.color,
-              taxId: data.tax_id
-            }],
-            selectedClient: data.id
-          }));
-          toastMessage("✓ تم إضافة العميل الجديد بنجاح");
-        }
-      } catch (err) {
-        console.error("Cloud insert client error:", err);
-        toastMessage("❌ فشل إضافة العميل في السحابة", "error");
-      }
-    } else {
-      // Local Fallback
-      const newClient = {
-        id: tempId,
-        ...clientData
-      };
-      setState(prev => ({
-        ...prev,
-        clients: [...prev.clients, newClient],
-        selectedClient: newClient.id
-      }));
-      toastMessage("✓ تم إضافة العميل الجديد بنجاح");
-    }
-  }, [isSupabaseConfigured, user]);
-
-  const handleEditClient = useCallback(async (updatedClient) => {
-    logActivity(user?.id, "تعديل بيانات عميل", `تعديل بيانات العميل: "${updatedClient.name}"`);
-    // Optimistic state update
-    setState(prev => ({
-      ...prev,
-      clients: prev.clients.map(c => c.id === updatedClient.id ? updatedClient : c)
-    }));
-
-    if (isSupabaseConfigured && user) {
-      try {
-        const { error } = await supabase
-          .from('clients')
-          .update({
-            name: updatedClient.name,
-            address: updatedClient.address,
-            phone: updatedClient.phone,
-            tax_id: updatedClient.taxId,
-            color: updatedClient.color
-          })
-          .eq('id', updatedClient.id);
-
-        if (error) throw error;
-      } catch (err) {
-        console.error("Cloud edit client error:", err);
-      }
-    }
-    toastMessage("✓ تم تعديل بيانات العميل بنجاح");
-  }, [isSupabaseConfigured, user]);
-
-  const handleDeleteClient = useCallback(async (cid) => {
-    const clientName = stateRef.current.clients.find(c => c.id === cid)?.name || cid;
-    logActivity(user?.id, "حذف عميل", `تم حذف العميل نهائياً: "${clientName}"`);
-    setState(prev => {
-      const filteredClients = prev.clients.filter(c => c.id !== cid);
-      const isSelectedDeleted = prev.selectedClient === cid;
-      return {
-        ...prev,
-        clients: filteredClients,
-        selectedClient: isSelectedDeleted ? (filteredClients.length ? filteredClients[0].id : null) : prev.selectedClient
-      };
-    });
-
-    if (isSupabaseConfigured && user) {
-      try {
-        const { error } = await supabase
-          .from('clients')
-          .delete()
-          .eq('id', cid);
-
-        if (error) throw error;
-      } catch (err) {
-        console.error("Cloud delete client error:", err);
-      }
-    }
-    toastMessage("✓ تم حذف العميل بنجاح");
-  }, [isSupabaseConfigured, user]);
-
-  // --- Supplier Management Handlers ---
-  const handleSelectSupplier = useCallback((sid) => {
-    triggerHaptic(12);
-    setState(prev => ({
-      ...prev,
-      selectedSupplier: sid,
-      view: sid === null ? "suppliers" : "purchases_ledger"
-    }));
-  }, []);
-
-  const handleAddSupplier = useCallback(async (supplierData) => {
-    logActivity(user?.id, "إضافة مورد", `تم إضافة المورد الجديد: "${supplierData.name}"`);
-    const tempId = Date.now();
-
-    if (isSupabaseConfigured && user) {
-      try {
-        const { data, error } = await supabase
-          .from('suppliers')
-          .insert({
-            profile_id: user.id,
-            name: supplierData.name,
-            address: supplierData.address,
-            phone: supplierData.phone,
-            tax_id: supplierData.taxId,
-            color: supplierData.color
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-        
-        if (data) {
-          setState(prev => ({
-            ...prev,
-            suppliers: [...(prev.suppliers || []), {
-              id: data.id,
-              name: data.name,
-              address: data.address,
-              phone: data.phone,
-              color: data.color,
-              taxId: data.tax_id,
-              defaultPrice: supplierData.defaultPrice
-            }],
-            selectedSupplier: data.id
-          }));
-          toastMessage("✓ تم إضافة المورد الجديد بنجاح");
-        }
-      } catch (err) {
-        console.error("Cloud insert supplier error:", err);
-        toastMessage("❌ فشل إضافة المورد في السحابة", "error");
-      }
-    } else {
-      // Local Fallback
-      const newSupplier = {
-        id: tempId,
-        ...supplierData
-      };
-      setState(prev => ({
-        ...prev,
-        suppliers: [...(prev.suppliers || []), newSupplier],
-        selectedSupplier: newSupplier.id
-      }));
-      toastMessage("✓ تم إضافة المورد الجديد بنجاح");
-    }
-  }, [isSupabaseConfigured, user]);
-
-  const handleEditSupplier = useCallback(async (updatedSupplier) => {
-    logActivity(user?.id, "تعديل بيانات مورد", `تعديل بيانات المورد: "${updatedSupplier.name}"`);
-    // Optimistic state update
-    setState(prev => ({
-      ...prev,
-      suppliers: (prev.suppliers || []).map(s => s.id === updatedSupplier.id ? updatedSupplier : s)
-    }));
-
-    if (isSupabaseConfigured && user) {
-      try {
-        const { error } = await supabase
-          .from('suppliers')
-          .update({
-            name: updatedSupplier.name,
-            address: updatedSupplier.address,
-            phone: updatedSupplier.phone,
-            tax_id: updatedSupplier.taxId,
-            color: updatedSupplier.color
-          })
-          .eq('id', updatedSupplier.id);
-
-        if (error) throw error;
-      } catch (err) {
-        console.error("Cloud edit supplier error:", err);
-      }
-    }
-    toastMessage("✓ تم تعديل بيانات المورد بنجاح");
-  }, [isSupabaseConfigured, user]);
-
-  const handleDeleteSupplier = useCallback(async (sid) => {
-    const supplierName = (stateRef.current.suppliers || []).find(s => s.id === sid)?.name || sid;
-    logActivity(user?.id, "حذف مورد", `تم حذف المورد نهائياً: "${supplierName}"`);
-    setState(prev => {
-      const filteredSuppliers = (prev.suppliers || []).filter(s => s.id !== sid);
-      const isSelectedDeleted = prev.selectedSupplier === sid;
-      return {
-        ...prev,
-        suppliers: filteredSuppliers,
-        selectedSupplier: isSelectedDeleted ? (filteredSuppliers.length ? filteredSuppliers[0].id : null) : prev.selectedSupplier
-      };
-    });
-
-    if (isSupabaseConfigured && user) {
-      try {
-        const { error } = await supabase
-          .from('suppliers')
-          .delete()
-          .eq('id', sid);
-
-        if (error) throw error;
-      } catch (err) {
-        console.error("Cloud delete supplier error:", err);
-      }
-    }
-    toastMessage("✓ تم حذف المورد بنجاح");
-  }, [isSupabaseConfigured, user]);
 
   // --- Deadlines Handlers ---
   const handleAddDeadline = useCallback(async (newDl) => {
@@ -2427,143 +1822,7 @@ export default function App() {
     toastMessage("✓ تم حذف الحركة المالية من الصندوق بنجاح", "success");
   }, [user]);
 
-  // --- Standard Web Crypto AES-GCM Encrypted Backups ---
-  const getEncryptionKey = async (pass) => {
-    const enc = new TextEncoder();
-    const bytes = enc.encode(pass + "dawajin_pro_backup_salt_92837492");
-    const hash = await window.crypto.subtle.digest("SHA-256", bytes);
-    return await window.crypto.subtle.importKey(
-      "raw",
-      hash,
-      { name: "AES-GCM" },
-      false,
-      ["encrypt", "decrypt"]
-    );
-  };
 
-  const encryptBackup = async (dataStr, pass) => {
-    const key = await getEncryptionKey(pass);
-    const enc = new TextEncoder();
-    const encoded = enc.encode(dataStr);
-    const iv = window.crypto.getRandomValues(new Uint8Array(12));
-    const encrypted = await window.crypto.subtle.encrypt(
-      { name: "AES-GCM", iv },
-      key,
-      encoded
-    );
-    const combined = new Uint8Array(iv.length + encrypted.byteLength);
-    combined.set(iv, 0);
-    combined.set(new Uint8Array(encrypted), iv.length);
-    return combined;
-  };
-
-  const decryptBackup = async (combinedBytes, pass) => {
-    const key = await getEncryptionKey(pass);
-    const iv = combinedBytes.slice(0, 12);
-    const ciphertext = combinedBytes.slice(12);
-    const decrypted = await window.crypto.subtle.decrypt(
-      { name: "AES-GCM", iv },
-      key,
-      ciphertext
-    );
-    const dec = new TextDecoder();
-    return dec.decode(decrypted);
-  };
-
-  // Upload encrypted backup to Supabase Storage
-  const handleBackupCloudExport = async (customPass = null) => {
-    const keyPass = customPass || plainPassword;
-    if (!keyPass) {
-      toastMessage("⚠️ الرجاء تسجيل الدخول أو توفير كلمة مرور لتشفير النسخة الاحتياطية", "warning");
-      return false;
-    }
-    if (!isSupabaseConfigured || !user) {
-      toastMessage("⚠️ لم يتم تهيئة المزامنة السحابية للنسخ الاحتياطي", "warning");
-      return false;
-    }
-    setIsCloudLoading(true);
-    try {
-      const currentState = stateRef.current;
-      const dataStr = JSON.stringify(currentState);
-      const encryptedBytes = await encryptBackup(dataStr, keyPass);
-      const blob = new Blob([encryptedBytes], { type: "application/octet-stream" });
-      const fileName = `backup_${user.id}.bin`;
-
-      const { error } = await supabase.storage
-        .from('backups')
-        .upload(fileName, blob, {
-          upsert: true,
-          contentType: 'application/octet-stream'
-        });
-
-      const nowStr = Date.now().toString();
-      localStorage.setItem(`dawajin_last_backup_time_${user.id}`, nowStr);
-      setLastBackupTime(parseInt(nowStr, 10));
-      toastMessage("⚡ تم رفع النسخة الاحتياطية المشفرة بنجاح إلى السحابة !");
-      return true;
-    } catch (err) {
-      console.error("Cloud backup failed:", err);
-      toastMessage("❌ فشل رفع النسخة الاحتياطية. يرجى التحقق من وجود الحاوية (backups)", "error");
-      return false;
-    } finally {
-      setIsCloudLoading(false);
-    }
-  };
-
-  // Restore encrypted backup from Supabase Storage
-  const handleBackupCloudRestore = async (customPass = null) => {
-    const keyPass = customPass || plainPassword;
-    if (!keyPass) {
-      const promptPass = prompt("الرجاء إدخال كلمة مرور فك التشفير للنسخة الاحتياطية:");
-      if (!promptPass) return;
-      return handleBackupCloudRestore(promptPass);
-    }
-    if (!isSupabaseConfigured || !user) {
-      toastMessage("⚠️ لم يتم تهيئة المزامنة السحابية للاسترجاع", "warning");
-      return false;
-    }
-    setIsCloudLoading(true);
-    try {
-      const fileName = `backup_${user.id}.bin`;
-      const { data, error } = await supabase.storage
-        .from('backups')
-        .download(fileName);
-
-      if (error) {
-        if (error.message?.includes("Object not found")) {
-          alert("لم يتم العثور على أي نسخة احتياطية سحابية لهذا الحساب.");
-          return false;
-        }
-        throw error;
-      }
-
-      const buffer = await data.arrayBuffer();
-      const combinedBytes = new Uint8Array(buffer);
-      const decryptedStr = await decryptBackup(combinedBytes, keyPass);
-      const importedState = JSON.parse(decryptedStr);
-
-      if (importedState.clients && importedState.ledger) {
-        setState(prev => ({
-          ...prev,
-          ...importedState,
-          month: importedState.month || prev.month,
-          year: importedState.year || prev.year,
-          view: "dashboard"
-        }));
-        toastMessage("⚡ تم استعادة البيانات المشفرة السحابية بنجاح !");
-        return true;
-      } else {
-        alert("ملف النسخة الاحتياطية غير صالح.");
-        return false;
-      }
-    } catch (err) {
-      console.error("Cloud restore failed:", err);
-      alert("فشل فك تشفير النسخة الاحتياطية السحابية. يرجى التحقق من كلمة المرور.");
-      return false;
-    } finally {
-      setIsCloudLoading(false);
-    }
-  };
 
   // 6-Hour Active Auto Cloud Backup routine
   useEffect(() => {
@@ -2596,39 +1855,7 @@ export default function App() {
   }, [isLoggedIn, user, isSupabaseConfigured, plainPassword]);
 
 
-  // --- Backup & Import ---
-  const handleBackupExport = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
-    const dlAnchorElem = document.createElement('a');
-    dlAnchorElem.setAttribute("href", dataStr);
-    dlAnchorElem.setAttribute("download", `dawajin_pro_backup_${Date.now()}.json`);
-    dlAnchorElem.click();
-    toastMessage("✓ تم تحميل ملف النسخة الاحتياطية");
-  };
 
-  const handleBackupImport = (file) => {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      try {
-        const importedState = JSON.parse(e.target.result);
-        if (importedState.clients && importedState.ledger) {
-          setState(prev => ({
-            ...prev,
-            ...importedState,
-            month: importedState.month || prev.month,
-            year: importedState.year || prev.year,
-            view: "dashboard"
-          }));
-          toastMessage("✓ تم استيراد البيانات بنجاح !");
-        } else {
-          alert("ملف غير صالح.");
-        }
-      } catch (err) {
-        alert("فشل قراءة الملف.");
-      }
-    };
-    reader.readAsText(file);
-  };
 
   const handleCSVExport = () => {
     exportToCSV(state);
