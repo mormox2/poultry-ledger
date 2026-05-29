@@ -15,6 +15,7 @@ const Analytics = lazy(() => import('./components/Analytics'));
 const Summary = lazy(() => import('./components/Summary'));
 const InvoicePrint = lazy(() => import('./components/InvoicePrint'));
 const InstallModal = lazy(() => import('./components/InstallModal'));
+const Deadlines = lazy(() => import('./components/Deadlines'));
 
 // Utilities Import
 import { 
@@ -67,6 +68,7 @@ export default function App() {
       suppliers: [],
       purchases: {},
       selectedSupplier: null,
+      deadlines: [],
       pricePerKg: 5.800,
       defaultPurchasePricePerKg: 5.200,
       view: "dashboard",
@@ -94,6 +96,7 @@ export default function App() {
           suppliers: parsed.suppliers || defaultState.suppliers,
           purchases: parsed.purchases || defaultState.purchases,
           selectedSupplier: parsed.selectedSupplier || defaultState.selectedSupplier,
+          deadlines: parsed.deadlines || defaultState.deadlines,
           defaultPurchasePricePerKg: parsed.defaultPurchasePricePerKg || defaultState.defaultPurchasePricePerKg
         };
       }
@@ -226,6 +229,74 @@ export default function App() {
           const { clientUuid, year, month, idx, row } = item.value.payload;
           // syncLedgerEntryToCloud now returns true on success, false on failure
           success = await syncLedgerEntryToCloud(clientUuid, year, month, idx, row);
+        } else if (item.value.action === 'deadline_add') {
+          const { tempId, ...payload } = item.value.payload;
+          try {
+            const { data, error } = await supabase
+              .from('deadlines')
+              .insert({
+                profile_id: user.id,
+                client_id: payload.client_id,
+                supplier_id: payload.supplier_id,
+                amount: payload.amount,
+                due_date: payload.due_date,
+                status: payload.status,
+                notes: payload.notes
+              })
+              .select()
+              .single();
+            if (!error && data) {
+              setState(prev => ({
+                ...prev,
+                deadlines: (prev.deadlines || []).map(d => d.id === tempId ? { ...d, id: data.id } : d)
+              }));
+              success = true;
+            } else {
+              success = false;
+            }
+          } catch (err) {
+            success = false;
+          }
+        } else if (item.value.action === 'deadline_edit') {
+          const payload = item.value.payload;
+          try {
+            const { error } = await supabase
+              .from('deadlines')
+              .update({
+                client_id: payload.client_id,
+                supplier_id: payload.supplier_id,
+                amount: payload.amount,
+                due_date: payload.due_date,
+                status: payload.status,
+                notes: payload.notes
+              })
+              .eq('id', payload.id);
+            success = !error;
+          } catch (err) {
+            success = false;
+          }
+        } else if (item.value.action === 'deadline_delete') {
+          const { id } = item.value.payload;
+          try {
+            const { error } = await supabase
+              .from('deadlines')
+              .delete()
+              .eq('id', id);
+            success = !error;
+          } catch (err) {
+            success = false;
+          }
+        } else if (item.value.action === 'deadline_paid') {
+          const { id } = item.value.payload;
+          try {
+            const { error } = await supabase
+              .from('deadlines')
+              .update({ status: 'paid' })
+              .eq('id', id);
+            success = !error;
+          } catch (err) {
+            success = false;
+          }
         } else {
           // Unknown action, mark as success to clear it
           success = true;
@@ -371,6 +442,7 @@ export default function App() {
         suppliers: state.suppliers,
         purchases: state.purchases,
         selectedSupplier: state.selectedSupplier,
+        deadlines: state.deadlines,
         view: state.view,
         pricePerKg: state.pricePerKg,
         defaultPurchasePricePerKg: state.defaultPurchasePricePerKg,
@@ -526,6 +598,18 @@ export default function App() {
         if (!purErr) dbPurchases = purs || [];
       } catch (err) {
         console.warn("Purchases table might not exist yet:", err);
+      }
+
+      // 3d. Fetch Deadlines from Supabase (Graceful fallback if table doesn't exist)
+      let dbDeadlines = [];
+      try {
+        const { data: dls, error: dlsErr } = await supabase
+          .from('deadlines')
+          .select('*')
+          .order('due_date');
+        if (!dlsErr) dbDeadlines = dls || [];
+      } catch (err) {
+        console.warn("Deadlines table might not exist yet:", err);
       }
 
       // --- OFFLINE-TO-ONLINE SYNC BRIDGE ---
@@ -865,6 +949,17 @@ export default function App() {
         }
       });
 
+      const formattedDeadlines = dbDeadlines.map(d => ({
+        id: d.id,
+        profile_id: d.profile_id,
+        client_id: d.client_id,
+        supplier_id: d.supplier_id,
+        amount: parseFloat(d.amount),
+        due_date: d.due_date,
+        status: d.status,
+        notes: d.notes || ""
+      }));
+
       setState(prev => ({
         ...prev,
         clients: formattedClients,
@@ -873,6 +968,7 @@ export default function App() {
         suppliers: formattedSuppliers,
         purchases: formattedPurchases,
         selectedSupplier: formattedSuppliers.length ? (formattedSuppliers.some(s => s.id === prev.selectedSupplier) ? prev.selectedSupplier : formattedSuppliers.at(0).id) : null,
+        deadlines: formattedDeadlines,
         pricePerKg: profile ? parseFloat(profile.price_per_kg) : prev.pricePerKg,
         companyInfo: profile ? {
           name: profile.company_name,
@@ -1746,6 +1842,219 @@ export default function App() {
     toastMessage("✓ تم حذف المورد بنجاح");
   };
 
+  // --- Deadlines Handlers ---
+  const handleAddDeadline = async (newDl) => {
+    triggerHaptic(15);
+    const tempId = 'temp_' + Date.now();
+    const localDl = { id: tempId, profile_id: user?.id, ...newDl };
+    
+    // Add locally immediately
+    setState(prev => ({
+      ...prev,
+      deadlines: [...(prev.deadlines || []), localDl]
+    }));
+    
+    if (isSupabaseConfigured && user) {
+      try {
+        const { data, error } = await supabase
+          .from('deadlines')
+          .insert({
+            profile_id: user.id,
+            client_id: newDl.client_id,
+            supplier_id: newDl.supplier_id,
+            amount: newDl.amount,
+            due_date: newDl.due_date,
+            status: newDl.status,
+            notes: newDl.notes
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        if (data) {
+          // Replace temp id
+          setState(prev => ({
+            ...prev,
+            deadlines: (prev.deadlines || []).map(d => d.id === tempId ? { ...d, id: data.id } : d)
+          }));
+          toastMessage("✓ تم حفظ الأجل بنجاح سحابياً");
+        }
+      } catch (err) {
+        console.error("Cloud insert deadline failed, queueing offline:", err);
+        await enqueueSync('deadline_add', { tempId, ...newDl });
+        toastMessage("⚠️ تم حفظ الأجل محلياً، سيتم المزامنة لاحقاً", "warning");
+      }
+    } else {
+      await enqueueSync('deadline_add', { tempId, ...newDl });
+      toastMessage("⚠️ تم حفظ الأجل محلياً (وضع أوفلاين)", "warning");
+    }
+  };
+
+  const handleEditDeadline = async (updatedDl) => {
+    triggerHaptic(15);
+    
+    // Update locally
+    setState(prev => ({
+      ...prev,
+      deadlines: (prev.deadlines || []).map(d => d.id === updatedDl.id ? updatedDl : d)
+    }));
+    
+    if (isSupabaseConfigured && user && !String(updatedDl.id).startsWith('temp_')) {
+      try {
+        const { error } = await supabase
+          .from('deadlines')
+          .update({
+            client_id: updatedDl.client_id,
+            supplier_id: updatedDl.supplier_id,
+            amount: updatedDl.amount,
+            due_date: updatedDl.due_date,
+            status: updatedDl.status,
+            notes: updatedDl.notes
+          })
+          .eq('id', updatedDl.id);
+        if (error) throw error;
+        toastMessage("✓ تم تعديل الأجل بنجاح سحابياً");
+      } catch (err) {
+        console.error("Cloud update deadline failed, queueing offline:", err);
+        await enqueueSync('deadline_edit', updatedDl);
+        toastMessage("⚠️ تم تعديل الأجل محلياً، سيتم المزامنة لاحقاً", "warning");
+      }
+    } else {
+      await enqueueSync('deadline_edit', updatedDl);
+      toastMessage("⚠️ تم تعديل الأجل محلياً (وضع أوفلاين)", "warning");
+    }
+  };
+
+  const handleDeleteDeadline = async (id) => {
+    triggerHaptic(20);
+    
+    // Delete locally
+    setState(prev => ({
+      ...prev,
+      deadlines: (prev.deadlines || []).filter(d => d.id !== id)
+    }));
+    
+    if (isSupabaseConfigured && user && !String(id).startsWith('temp_')) {
+      try {
+        const { error } = await supabase
+          .from('deadlines')
+          .delete()
+          .eq('id', id);
+        if (error) throw error;
+        toastMessage("✓ تم حذف الأجل بنجاح");
+      } catch (err) {
+        console.error("Cloud delete deadline failed, queueing offline:", err);
+        await enqueueSync('deadline_delete', { id });
+        toastMessage("⚠️ تم الحذف محلياً، سيتم المزامنة لاحقاً", "warning");
+      }
+    } else {
+      await enqueueSync('deadline_delete', { id });
+      toastMessage("⚠️ تم الحذف محلياً (وضع أوفلاين)", "warning");
+    }
+  };
+
+  const handleMarkAsPaid = async (deadline) => {
+    triggerHaptic(20);
+    
+    // 1. Mark deadline as paid locally
+    setState(prev => ({
+      ...prev,
+      deadlines: (prev.deadlines || []).map(d => d.id === deadline.id ? { ...d, status: 'paid' } : d)
+    }));
+    
+    // 2. Cloud update for deadline status
+    if (isSupabaseConfigured && user && !String(deadline.id).startsWith('temp_')) {
+      try {
+        const { error } = await supabase
+          .from('deadlines')
+          .update({ status: 'paid' })
+          .eq('id', deadline.id);
+        if (error) throw error;
+        toastMessage("✓ تم تغيير حالة الأجل إلى خالص بنجاح");
+      } catch (err) {
+        console.error("Cloud update deadline status failed:", err);
+        await enqueueSync('deadline_paid', { id: deadline.id });
+      }
+    } else {
+      await enqueueSync('deadline_paid', { id: deadline.id });
+    }
+
+    // 3. Automatically insert this payment in the Ledger
+    const [year, month, day] = deadline.due_date.split('-').map(Number);
+    const amountStr = String(deadline.amount);
+    
+    if (deadline.client_id) {
+      const k = ledgerKey(deadline.client_id, year, month);
+      setState(prev => {
+        const updatedLedger = { ...prev.ledger };
+        if (!updatedLedger[k]) {
+          const totalDays = daysInMonth(year, month);
+          updatedLedger[k] = Array.from({ length: totalDays }, (_, i) => ({
+            d: i + 1,
+            tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
+          }));
+        }
+        
+        const idx = day - 1;
+        const targetDays = [...updatedLedger[k]];
+        if (targetDays[idx]) {
+          const existingPaid = parseFloat(targetDays[idx].paid) || 0;
+          const newPaid = existingPaid + parseFloat(amountStr);
+          const updatedRow = {
+            ...targetDays[idx],
+            paid: String(newPaid),
+            notes: targetDays[idx].notes 
+              ? `${targetDays[idx].notes} (دفعة أجل)` 
+              : "دفعة أجل مسددة"
+          };
+          targetDays[idx] = updatedRow;
+          updatedLedger[k] = targetDays;
+          
+          if (isSupabaseConfigured && user) {
+            syncLedgerEntryToCloud(deadline.client_id, year, month, idx, updatedRow);
+          }
+        }
+        
+        return { ...prev, ledger: updatedLedger };
+      });
+      toastMessage("✓ تم تسجيل الدفعة المالية تلقائياً في سجل المقبوضات !");
+    } else if (deadline.supplier_id) {
+      const k = ledgerKey(deadline.supplier_id, year, month);
+      setState(prev => {
+        const updatedPurchases = { ...prev.purchases };
+        if (!updatedPurchases[k]) {
+          const totalDays = daysInMonth(year, month);
+          updatedPurchases[k] = Array.from({ length: totalDays }, (_, i) => ({
+            d: i + 1,
+            tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
+          }));
+        }
+        
+        const idx = day - 1;
+        const targetDays = [...updatedPurchases[k]];
+        if (targetDays[idx]) {
+          const existingPaid = parseFloat(targetDays[idx].paid) || 0;
+          const newPaid = existingPaid + parseFloat(amountStr);
+          const updatedRow = {
+            ...targetDays[idx],
+            paid: String(newPaid),
+            notes: targetDays[idx].notes 
+              ? `${targetDays[idx].notes} (دفعة أجل للمورد)` 
+              : "دفعة أجل مسددة للمورد"
+          };
+          targetDays[idx] = updatedRow;
+          updatedPurchases[k] = targetDays;
+          
+          if (isSupabaseConfigured && user) {
+            syncPurchaseEntryToCloud(deadline.supplier_id, year, month, idx, updatedRow);
+          }
+        }
+        
+        return { ...prev, purchases: updatedPurchases };
+      });
+      toastMessage("✓ تم تسجيل الدفعة للمورد تلقائياً في سجل المدفوعات !");
+    }
+  };
+
 
   // --- Backup & Import ---
   const handleBackupExport = () => {
@@ -1921,6 +2230,16 @@ export default function App() {
             onExportPurchaseCSV={() => exportPurchasesToCSV(state)}
           />
         );
+      case "deadlines":
+        return (
+          <Deadlines 
+            state={state}
+            onAddDeadline={handleAddDeadline}
+            onEditDeadline={handleEditDeadline}
+            onDeleteDeadline={handleDeleteDeadline}
+            onMarkAsPaid={handleMarkAsPaid}
+          />
+        );
       case "analytics":
         return (
           <Analytics state={state} />
@@ -2023,6 +2342,7 @@ export default function App() {
               { id: 'clients', label: 'العملاء', icon: '👥' },
               { id: 'purchases_ledger', label: 'سجل المشتريات', icon: '📦' },
               { id: 'suppliers', label: 'الموردين', icon: '🤝' },
+              { id: 'deadlines', label: 'الآجال والأقساط', icon: '📅' },
               { id: 'analytics', label: 'التحليلات', icon: '📊' },
               { id: 'summary', label: 'الملخص المالي', icon: '📈' }
             ].map(tab => (

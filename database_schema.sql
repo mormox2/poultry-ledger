@@ -250,3 +250,35 @@ CREATE POLICY "Users can delete purchases of their own suppliers."
         )
     );
 
+-- =====================================================================
+-- 7. Create Deadlines Table (Payment deadlines/dues management)
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS public.deadlines (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    profile_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    client_id UUID REFERENCES public.clients(id) ON DELETE CASCADE,
+    supplier_id UUID REFERENCES public.suppliers(id) ON DELETE CASCADE,
+    amount NUMERIC(10,3) NOT NULL CHECK (amount > 0),
+    due_date DATE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'cancelled')),
+    notes TEXT DEFAULT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    
+    -- Ensure either client_id or supplier_id is filled, but not both
+    CONSTRAINT deadline_target_check CHECK (
+        (client_id IS NOT NULL AND supplier_id IS NULL) OR 
+        (client_id IS NULL AND supplier_id IS NOT NULL)
+    )
+);
+
+-- Enable RLS on deadlines
+ALTER TABLE public.deadlines ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage their own deadlines" 
+    ON public.deadlines 
+    FOR ALL 
+    TO authenticated 
+    USING (profile_id = auth.uid()) 
+    WITH CHECK (profile_id = auth.uid());
+
+
