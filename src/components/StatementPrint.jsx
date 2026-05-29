@@ -468,7 +468,7 @@ export default function StatementPrint({ state, clientId, onClose }) {
           <div>
             <p style={{ margin: 0, fontWeight: '700' }}>إمضاء وختم المؤسسة:</p>
             <div style={{ height: '50px' }}></div>
-            <p style={{ margin: 0, fontSize: '9px', color: '#94a3b8' }}>المسؤول القانوني للمزرعة</p>
+            <p style={{ margin: 0, fontSize: '9px', color: '#94a3b8' }}>المسؤول القانوني للشركة</p>
           </div>
           <div style={{ textAlign: 'left', maxWidth: '300px' }}>
             <p style={{ margin: 0, fontWeight: '700' }}>ملاحظات وشروط عامة:</p>

@@ -98,7 +98,7 @@ export default function CommandPalette({
       id: 'action-cashbook',
       type: 'action',
       title: '💵 دفتر الصندوق والسيولة اليومية',
-      description: 'متابعة المقبوضات النقدية، المصاريف التشغيلية ورصيد الصندوق الفعلي للمزرعة',
+      description: 'متابعة المقبوضات النقدية، المصاريف التشغيلية ورصيد الصندوق الفعلي للشركة',
       action: () => setView('cashbook')
     },
     {

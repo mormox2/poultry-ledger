@@ -234,7 +234,7 @@ export default function CashBook({
           <h2 className="text-xl md:text-2xl font-black bg-gradient-to-r from-amber-200 via-amber-300 to-amber-500 bg-clip-text text-transparent">
             💵 دفتر الصندوق اليومي (Cash Book Ledger)
           </h2>
-          <p className="text-xs text-slate-400 font-medium mt-1">المتابعة المالية الفورية للسيولة النقدية والمصاريف التشغيلية للمزرعة</p>
+          <p className="text-xs text-slate-400 font-medium mt-1">المتابعة المالية الفورية للسيولة النقدية والمصاريف التشغيلية للشركة</p>
         </div>
         
         {/* Quick Date Selector Slider */}

@@ -339,7 +339,7 @@ export default function Suppliers({
                     className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200" 
                     value={formName} 
                     onChange={(e) => setFormName(e.target.value)}
-                    placeholder="مثال: شركة مزرعة النور" 
+                    placeholder="مثال: شركة النور للدواجن" 
                     required
                     autoFocus 
                   />
@@ -469,7 +469,7 @@ export default function Suppliers({
                     className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200" 
                     value={formName} 
                     onChange={(e) => setFormName(e.target.value)}
-                    placeholder="مثال: شركة مزرعة النور" 
+                    placeholder="مثال: شركة النور للدواجن" 
                     required
                     autoFocus 
                   />
