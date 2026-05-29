@@ -192,7 +192,8 @@ export default function InvoicePrint({ state, clientId, onClose }) {
     }}>
       {/* TABS SELECTOR (no-print) */}
       <div className="no-print" style={{ 
-        maxWidth: printMode === 'a4' ? '850px' : '58mm', 
+        maxWidth: '850px', 
+        width: '100%',
         margin: '0 auto 15px auto', 
         display: 'flex', 
         justifyContent: 'center', 
@@ -201,8 +202,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
         border: '1.5px solid var(--border)',
         padding: '6px',
         borderRadius: '12px',
-        boxShadow: 'var(--shadow)',
-        transition: 'max-width 0.3s ease'
+        boxShadow: 'var(--shadow)'
       }}>
         <button 
           className={`btn btn-sm ${printMode === 'a4' ? 'btn-gold' : 'btn-outline'}`}
@@ -689,15 +689,21 @@ export default function InvoicePrint({ state, clientId, onClose }) {
 
       {/* GLOBAL ACTION BUTTONS (no-print) */}
       <div className="no-print" style={{ 
-        maxWidth: printMode === 'a4' ? '850px' : '58mm', 
+        maxWidth: '850px', 
+        width: '100%',
         margin: '20px auto 0 auto', 
         textAlign: 'center',
         display: 'flex',
         justifyContent: 'center',
+        flexWrap: 'wrap',
         gap: '10px',
-        transition: 'max-width 0.3s ease'
+        padding: '0 10px'
       }}>
-        <button className="btn btn-gold" onClick={() => window.print()} style={{ minWidth: '130px', height: '40px', fontWeight: '700' }}>
+        <button 
+          className="btn btn-gold" 
+          onClick={() => window.print()} 
+          style={{ flex: '1 1 130px', height: '40px', fontWeight: '700' }}
+        >
           🖨️ طباعة الآن
         </button>
         <button 
@@ -705,7 +711,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           onClick={handleExportPDF} 
           disabled={pdfLoading}
           style={{ 
-            minWidth: '130px', 
+            flex: '1 1 130px', 
             height: '40px', 
             fontWeight: '700', 
             color: 'var(--gold)', 
@@ -719,7 +725,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           className="btn btn-outline" 
           onClick={handleShareWhatsApp} 
           style={{ 
-            minWidth: '130px', 
+            flex: '1 1 130px', 
             height: '40px', 
             fontWeight: '700', 
             color: '#10b981', 
@@ -733,7 +739,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           className="btn btn-outline" 
           onClick={handleWebShare} 
           style={{ 
-            minWidth: '130px', 
+            flex: '1 1 130px', 
             height: '40px', 
             fontWeight: '700', 
             color: '#3b82f6', 
@@ -743,7 +749,18 @@ export default function InvoicePrint({ state, clientId, onClose }) {
         >
           📲 مشاركة سريعة
         </button>
-        <button className="btn btn-outline" onClick={onClose} style={{ minWidth: '130px', height: '40px', fontWeight: '700', color: '#475569', borderColor: '#cbd5e1', background: '#ffffff' }}>
+        <button 
+          className="btn btn-outline" 
+          onClick={onClose} 
+          style={{ 
+            flex: '1 1 130px', 
+            height: '40px', 
+            fontWeight: '700', 
+            color: '#475569', 
+            borderColor: '#cbd5e1', 
+            background: '#ffffff' 
+          }}
+        >
           إلغاء وإغلاق
         </button>
       </div>
