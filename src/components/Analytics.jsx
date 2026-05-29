@@ -56,6 +56,7 @@ export default function Analytics({ state }) {
         marginPct: mMarginPct
       });
     }
+    return data;
   }, [state.clients, state.suppliers, state.ledger, state.purchases, m, y]);
 
   const maxValMargin = useMemo(() => {
