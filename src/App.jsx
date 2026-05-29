@@ -154,6 +154,54 @@ export default function App() {
   const [deviceType, setDeviceType] = useState('other');
   const syncDBRef = useRef(null);
 
+  const triggerHaptic = (ms = 12) => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(ms);
+      } catch (e) {
+        // ignore
+      }
+    }
+  };
+
+  const toastMessage = (msg, type = "success") => {
+    // Add to Notification Center history
+    const newNotif = {
+      id: Date.now() + Math.random().toString(),
+      title: type === 'success' ? 'عملية ناجحة' : type === 'warning' ? 'تنبيه بالنظام' : type === 'error' ? 'حدث خطأ' : 'معلومات النظام',
+      message: msg,
+      type: type,
+      time: new Date().toLocaleTimeString('ar-TN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      read: false
+    };
+    setNotifications(prev => [newNotif, ...prev].slice(0, 30));
+
+    const el = document.getElementById("toast");
+    if (!el) return;
+    let icon = "✓";
+    if (type === "error") icon = "❌";
+    else if (type === "warning") icon = "⚠️";
+    else if (type === "info") icon = "ℹ️";
+    
+    el.className = `no-print show ${type}`;
+    el.textContent = "";
+    
+    const iconSpan = document.createElement("span");
+    iconSpan.style.fontSize = "16px";
+    iconSpan.textContent = icon;
+    
+    const msgSpan = document.createElement("span");
+    msgSpan.textContent = msg;
+    
+    el.appendChild(iconSpan);
+    el.appendChild(msgSpan);
+    
+    if (window.toastTimeout) clearTimeout(window.toastTimeout);
+    window.toastTimeout = setTimeout(() => {
+      el.classList.remove("show");
+    }, 2500);
+  };
+
   // Helper to count pending offline sync actions in IndexedDB
   const updatePendingSyncCount = async () => {
     const db = syncDBRef.current;
@@ -372,6 +420,169 @@ export default function App() {
     }
     // Final counter refresh
     updatePendingSyncCount();
+  };
+
+  // Sync a single daily ledger entry to Supabase (returns true on success, false on failure)
+  const syncLedgerEntryToCloud = async (clientUuid, year, month, idx, row) => {
+    if (!isSupabaseConfigured || !user) return false;
+    const day = idx + 1;
+
+    // If offline, enqueue the action and exit
+    if (!navigator.onLine) {
+      await enqueueSync('ledger', { clientUuid, year, month, idx, row });
+      return false;
+    }
+
+    try {
+      // 1. Fetch remote row for LWW conflict comparison
+      const { data: remoteRow, error: fetchErr } = await supabase
+        .from('ledger_entries')
+        .select('updated_at, total_weight, net_weight, price, amount, paid, holiday, notes')
+        .eq('client_id', clientUuid)
+        .eq('year', year)
+        .eq('month', month)
+        .eq('day', day)
+        .maybeSingle();
+
+      if (!fetchErr && remoteRow && remoteRow.updated_at) {
+        const remoteTime = new Date(remoteRow.updated_at).getTime();
+        const localTime = row.local_updated_at ? new Date(row.local_updated_at).getTime() : 0;
+        
+        if (remoteTime > localTime) {
+          // Server wins! Update local React state to match remote row
+          setState(prev => {
+            const updatedLedger = { ...prev.ledger };
+            const k = ledgerKey(clientUuid, year, month);
+            if (updatedLedger[k]) {
+              const rows = [...updatedLedger[k]];
+              if (rows[idx]) {
+                rows[idx] = {
+                  ...rows[idx],
+                  tw: remoteRow.total_weight !== null ? String(remoteRow.total_weight) : "",
+                  nw: remoteRow.net_weight !== null ? String(remoteRow.net_weight) : "",
+                  price: remoteRow.price !== null ? String(remoteRow.price) : "",
+                  amt: remoteRow.amount !== null ? parseFloat(remoteRow.amount) : "",
+                  paid: remoteRow.paid !== null ? String(remoteRow.paid) : "",
+                  holiday: remoteRow.holiday,
+                  notes: remoteRow.notes || "",
+                  local_updated_at: remoteRow.updated_at
+                };
+                updatedLedger[k] = rows;
+              }
+            }
+            return { ...prev, ledger: updatedLedger };
+          });
+          return true; // Skip upsert and return success
+        }
+      }
+
+      // 2. Perform regular upsert if local is newer (or no remote row found)
+      const { error } = await supabase
+        .from('ledger_entries')
+        .upsert({
+          client_id: clientUuid,
+          year: year,
+          month: month,
+          day: day,
+          total_weight: row.tw !== "" ? parseFloat(row.tw) : null,
+          net_weight: row.nw !== "" ? parseFloat(row.nw) : null,
+          price: row.price !== "" ? parseFloat(row.price) : null,
+          amount: row.amt !== "" ? parseFloat(row.amt) : null,
+          paid: row.paid !== "" ? parseFloat(row.paid) : null,
+          holiday: row.holiday,
+          notes: row.notes || null,
+          updated_at: new Date()
+        }, {
+          onConflict: 'client_id,year,month,day'
+        });
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error("Cloud row upsert error:", err);
+      return false;
+    }
+  };
+
+  const syncPurchaseEntryToCloud = async (supplierUuid, year, month, idx, row) => {
+    if (!isSupabaseConfigured || !user) return false;
+    const day = idx + 1;
+
+    // If offline, enqueue the action and exit
+    if (!navigator.onLine) {
+      await enqueueSync('purchase', { supplierUuid, year, month, idx, row });
+      return false;
+    }
+
+    try {
+      // 1. Fetch remote row for LWW conflict comparison
+      const { data: remoteRow, error: fetchErr } = await supabase
+        .from('purchases')
+        .select('updated_at, total_weight, net_weight, price, amount, paid, holiday, notes')
+        .eq('supplier_id', supplierUuid)
+        .eq('year', year)
+        .eq('month', month)
+        .eq('day', day)
+        .maybeSingle();
+
+      if (!fetchErr && remoteRow && remoteRow.updated_at) {
+        const remoteTime = new Date(remoteRow.updated_at).getTime();
+        const localTime = row.local_updated_at ? new Date(row.local_updated_at).getTime() : 0;
+        
+        if (remoteTime > localTime) {
+          // Server wins! Update local React state to match remote row
+          setState(prev => {
+            const updatedPurchases = { ...prev.purchases };
+            const k = ledgerKey(supplierUuid, year, month);
+            if (updatedPurchases[k]) {
+              const rows = [...updatedPurchases[k]];
+              if (rows[idx]) {
+                rows[idx] = {
+                  ...rows[idx],
+                  tw: remoteRow.total_weight !== null ? String(remoteRow.total_weight) : "",
+                  nw: remoteRow.net_weight !== null ? String(remoteRow.net_weight) : "",
+                  price: remoteRow.price !== null ? String(remoteRow.price) : "",
+                  amt: remoteRow.amount !== null ? parseFloat(remoteRow.amount) : "",
+                  paid: remoteRow.paid !== null ? String(remoteRow.paid) : "",
+                  holiday: remoteRow.holiday,
+                  notes: remoteRow.notes || "",
+                  local_updated_at: remoteRow.updated_at
+                };
+                updatedPurchases[k] = rows;
+              }
+            }
+            return { ...prev, purchases: updatedPurchases };
+          });
+          return true; // Skip upsert and return success
+        }
+      }
+
+      // 2. Perform regular upsert if local is newer (or no remote row found)
+      const { error } = await supabase
+        .from('purchases')
+        .upsert({
+          supplier_id: supplierUuid,
+          year: year,
+          month: month,
+          day: day,
+          total_weight: row.tw !== "" ? parseFloat(row.tw) : null,
+          net_weight: row.nw !== "" ? parseFloat(row.nw) : null,
+          price: row.price !== "" ? parseFloat(row.price) : null,
+          amount: row.amt !== "" ? parseFloat(row.amt) : null,
+          paid: row.paid !== "" ? parseFloat(row.paid) : null,
+          holiday: row.holiday,
+          notes: row.notes || null,
+          updated_at: new Date()
+        }, {
+          onConflict: 'supplier_id,year,month,day'
+        });
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error("Cloud purchase row upsert error:", err);
+      return false;
+    }
   };
 
   // Password hashing utility (SHA-256 with cryptographically secure Salt)
@@ -1220,15 +1431,6 @@ export default function App() {
     }
   };
 
-  const triggerHaptic = (ms = 12) => {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      try {
-        navigator.vibrate(ms);
-      } catch (e) {
-        // ignore
-      }
-    }
-  };
 
   // --- Global Handlers ---
   const handleViewChange = useCallback((viewName) => {
@@ -1350,211 +1552,6 @@ export default function App() {
     }
     toastMessage("✓ تم تحديث بيانات الشركة بنجاح");
   }, [isSupabaseConfigured, user]);
-
-  const toastMessage = (msg, type = "success") => {
-    // Add to Notification Center history
-    const newNotif = {
-      id: Date.now() + Math.random().toString(),
-      title: type === 'success' ? 'عملية ناجحة' : type === 'warning' ? 'تنبيه بالنظام' : type === 'error' ? 'حدث خطأ' : 'معلومات النظام',
-      message: msg,
-      type: type,
-      time: new Date().toLocaleTimeString('ar-TN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      read: false
-    };
-    setNotifications(prev => [newNotif, ...prev].slice(0, 30));
-
-    const el = document.getElementById("toast");
-    if (!el) return;
-    let icon = "✓";
-    if (type === "error") icon = "❌";
-    else if (type === "warning") icon = "⚠️";
-    else if (type === "info") icon = "ℹ️";
-    
-    el.className = `no-print show ${type}`;
-    el.textContent = "";
-    
-    const iconSpan = document.createElement("span");
-    iconSpan.style.fontSize = "16px";
-    iconSpan.textContent = icon;
-    
-    const msgSpan = document.createElement("span");
-    msgSpan.textContent = msg;
-    
-    el.appendChild(iconSpan);
-    el.appendChild(msgSpan);
-    
-    if (window.toastTimeout) clearTimeout(window.toastTimeout);
-    window.toastTimeout = setTimeout(() => {
-      el.classList.remove("show");
-    }, 2500);
-  };
-
-
-
-  // Sync a single daily ledger entry to Supabase (returns true on success, false on failure)
-  const syncLedgerEntryToCloud = async (clientUuid, year, month, idx, row) => {
-    if (!isSupabaseConfigured || !user) return false;
-    const day = idx + 1;
-
-    // If offline, enqueue the action and exit
-    if (!navigator.onLine) {
-      await enqueueSync('ledger', { clientUuid, year, month, idx, row });
-      return false;
-    }
-
-    try {
-      // 1. Fetch remote row for LWW conflict comparison
-      const { data: remoteRow, error: fetchErr } = await supabase
-        .from('ledger_entries')
-        .select('updated_at, total_weight, net_weight, price, amount, paid, holiday, notes')
-        .eq('client_id', clientUuid)
-        .eq('year', year)
-        .eq('month', month)
-        .eq('day', day)
-        .maybeSingle();
-
-      if (!fetchErr && remoteRow && remoteRow.updated_at) {
-        const remoteTime = new Date(remoteRow.updated_at).getTime();
-        const localTime = row.local_updated_at ? new Date(row.local_updated_at).getTime() : 0;
-        
-        if (remoteTime > localTime) {
-          // Server wins! Update local React state to match remote row
-          setState(prev => {
-            const updatedLedger = { ...prev.ledger };
-            const k = ledgerKey(clientUuid, year, month);
-            if (updatedLedger[k]) {
-              const rows = [...updatedLedger[k]];
-              if (rows[idx]) {
-                rows[idx] = {
-                  ...rows[idx],
-                  tw: remoteRow.total_weight !== null ? String(remoteRow.total_weight) : "",
-                  nw: remoteRow.net_weight !== null ? String(remoteRow.net_weight) : "",
-                  price: remoteRow.price !== null ? String(remoteRow.price) : "",
-                  amt: remoteRow.amount !== null ? parseFloat(remoteRow.amount) : "",
-                  paid: remoteRow.paid !== null ? String(remoteRow.paid) : "",
-                  holiday: remoteRow.holiday,
-                  notes: remoteRow.notes || "",
-                  local_updated_at: remoteRow.updated_at
-                };
-                updatedLedger[k] = rows;
-              }
-            }
-            return { ...prev, ledger: updatedLedger };
-          });
-          return true; // Skip upsert and return success
-        }
-      }
-
-      // 2. Perform regular upsert if local is newer (or no remote row found)
-      const { error } = await supabase
-        .from('ledger_entries')
-        .upsert({
-          client_id: clientUuid,
-          year: year,
-          month: month,
-          day: day,
-          total_weight: row.tw !== "" ? parseFloat(row.tw) : null,
-          net_weight: row.nw !== "" ? parseFloat(row.nw) : null,
-          price: row.price !== "" ? parseFloat(row.price) : null,
-          amount: row.amt !== "" ? parseFloat(row.amt) : null,
-          paid: row.paid !== "" ? parseFloat(row.paid) : null,
-          holiday: row.holiday,
-          notes: row.notes || null,
-          updated_at: new Date()
-        }, {
-          onConflict: 'client_id,year,month,day'
-        });
-
-      if (error) throw error;
-      return true;
-    } catch (err) {
-      console.error("Cloud row upsert error:", err);
-      return false;
-    }
-  };
-
-
-
-  const syncPurchaseEntryToCloud = async (supplierUuid, year, month, idx, row) => {
-    if (!isSupabaseConfigured || !user) return false;
-    const day = idx + 1;
-
-    // If offline, enqueue the action and exit
-    if (!navigator.onLine) {
-      await enqueueSync('purchase', { supplierUuid, year, month, idx, row });
-      return false;
-    }
-
-    try {
-      // 1. Fetch remote row for LWW conflict comparison
-      const { data: remoteRow, error: fetchErr } = await supabase
-        .from('purchases')
-        .select('updated_at, total_weight, net_weight, price, amount, paid, holiday, notes')
-        .eq('supplier_id', supplierUuid)
-        .eq('year', year)
-        .eq('month', month)
-        .eq('day', day)
-        .maybeSingle();
-
-      if (!fetchErr && remoteRow && remoteRow.updated_at) {
-        const remoteTime = new Date(remoteRow.updated_at).getTime();
-        const localTime = row.local_updated_at ? new Date(row.local_updated_at).getTime() : 0;
-        
-        if (remoteTime > localTime) {
-          // Server wins! Update local React state to match remote row
-          setState(prev => {
-            const updatedPurchases = { ...prev.purchases };
-            const k = ledgerKey(supplierUuid, year, month);
-            if (updatedPurchases[k]) {
-              const rows = [...updatedPurchases[k]];
-              if (rows[idx]) {
-                rows[idx] = {
-                  ...rows[idx],
-                  tw: remoteRow.total_weight !== null ? String(remoteRow.total_weight) : "",
-                  nw: remoteRow.net_weight !== null ? String(remoteRow.net_weight) : "",
-                  price: remoteRow.price !== null ? String(remoteRow.price) : "",
-                  amt: remoteRow.amount !== null ? parseFloat(remoteRow.amount) : "",
-                  paid: remoteRow.paid !== null ? String(remoteRow.paid) : "",
-                  holiday: remoteRow.holiday,
-                  notes: remoteRow.notes || "",
-                  local_updated_at: remoteRow.updated_at
-                };
-                updatedPurchases[k] = rows;
-              }
-            }
-            return { ...prev, purchases: updatedPurchases };
-          });
-          return true; // Skip upsert and return success
-        }
-      }
-
-      // 2. Perform regular upsert if local is newer (or no remote row found)
-      const { error } = await supabase
-        .from('purchases')
-        .upsert({
-          supplier_id: supplierUuid,
-          year: year,
-          month: month,
-          day: day,
-          total_weight: row.tw !== "" ? parseFloat(row.tw) : null,
-          net_weight: row.nw !== "" ? parseFloat(row.nw) : null,
-          price: row.price !== "" ? parseFloat(row.price) : null,
-          amount: row.amt !== "" ? parseFloat(row.amt) : null,
-          paid: row.paid !== "" ? parseFloat(row.paid) : null,
-          holiday: row.holiday,
-          notes: row.notes || null,
-          updated_at: new Date()
-        }, {
-          onConflict: 'supplier_id,year,month,day'
-        });
-
-      if (error) throw error;
-      return true;
-    } catch (err) {
-      console.error("Cloud purchase row upsert error:", err);
-      return false;
-    }
-  };
 
 
 
