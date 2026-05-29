@@ -20,6 +20,7 @@ const Deadlines = lazy(() => import('./components/Deadlines'));
 const StatementPrint = lazy(() => import('./components/StatementPrint'));
 const CommandPalette = lazy(() => import('./components/CommandPalette'));
 const NotificationCenter = lazy(() => import('./components/NotificationCenter'));
+const CashBook = lazy(() => import('./components/CashBook'));
 
 // Utilities Import
 import { 
@@ -76,6 +77,7 @@ export default function App() {
       purchases: {},
       selectedSupplier: null,
       deadlines: [],
+      cashBook: [],
       pricePerKg: 5.800,
       defaultPurchasePricePerKg: 5.200,
       view: "dashboard",
@@ -111,6 +113,7 @@ export default function App() {
           purchases: parsed.purchases || defaultState.purchases,
           selectedSupplier: parsed.selectedSupplier || defaultState.selectedSupplier,
           deadlines: parsed.deadlines || defaultState.deadlines,
+          cashBook: parsed.cashBook || defaultState.cashBook,
           defaultPurchasePricePerKg: parsed.defaultPurchasePricePerKg || defaultState.defaultPurchasePricePerKg,
           role: parsed.role || "admin"
         };
@@ -478,6 +481,7 @@ export default function App() {
         purchases: state.purchases,
         selectedSupplier: state.selectedSupplier,
         deadlines: state.deadlines,
+        cashBook: state.cashBook,
         view: state.view,
         pricePerKg: state.pricePerKg,
         defaultPurchasePricePerKg: state.defaultPurchasePricePerKg,
@@ -2371,6 +2375,58 @@ export default function App() {
       toastMessage("✓ تم تسجيل الدفعة للمورد تلقائياً في سجل المدفوعات !");
     }
   }, [isSupabaseConfigured, user, syncLedgerEntryToCloud, syncPurchaseEntryToCloud]);
+
+  // --- Daily Cash Book Management Handlers ---
+  const handleAddCashEntry = useCallback(async (entryData) => {
+    triggerHaptic(12);
+    const tempId = 'cash-' + Date.now() + Math.random().toString(36).substring(2, 6);
+    const newEntry = {
+      id: tempId,
+      ...entryData,
+      createdAt: Date.now()
+    };
+
+    // Log the transaction in the activity log
+    logActivity(
+      user?.id,
+      entryData.type === 'in' ? "إضافة إيراد" : "إضافة مصروف",
+      `تم تسجيل حركة صندوق: "${entryData.description}" بمبلغ ${entryData.amount} د.ت`
+    );
+
+    // Save locally
+    setState(prev => ({
+      ...prev,
+      cashBook: [newEntry, ...(prev.cashBook || [])]
+    }));
+
+    toastMessage(
+      entryData.type === 'in' ? "✓ تم تسجيل الإيراد في الصندوق بنجاح" : "✓ تم تسجيل المصروف من الصندوق بنجاح",
+      "success"
+    );
+  }, [user]);
+
+  const handleDeleteCashEntry = useCallback(async (id) => {
+    triggerHaptic(15);
+    
+    // Find entry to log
+    setState(prev => {
+      const entry = (prev.cashBook || []).find(x => x.id === id);
+      if (entry) {
+        logActivity(
+          user?.id,
+          "حذف حركة صندوق",
+          `تم حذف حركة صندوق يدوية: "${entry.description}" بمبلغ ${entry.amount} د.ت`
+        );
+      }
+      return {
+        ...prev,
+        cashBook: (prev.cashBook || []).filter(x => x.id !== id)
+      };
+    });
+
+    toastMessage("✓ تم حذف الحركة المالية من الصندوق بنجاح", "success");
+  }, [user]);
+
   // --- Standard Web Crypto AES-GCM Encrypted Backups ---
   const getEncryptionKey = async (pass) => {
     const enc = new TextEncoder();
@@ -2750,6 +2806,14 @@ export default function App() {
             onSelectSupplier={handleSelectSupplier}
           />
         );
+      case "cashbook":
+        return (
+          <CashBook 
+            state={state}
+            onAddCashEntry={handleAddCashEntry}
+            onDeleteCashEntry={handleDeleteCashEntry}
+          />
+        );
       default:
         return <div>{"View not found"}</div>;
     }
@@ -2914,7 +2978,8 @@ export default function App() {
               { id: 'suppliers', label: 'الموردين', icon: '🤝' },
               { id: 'deadlines', label: 'الآجال والأقساط', icon: '📅' },
               { id: 'analytics', label: 'التحليلات', icon: '📊' },
-              { id: 'summary', label: 'الملخص المالي', icon: '📈' }
+              { id: 'summary', label: 'الملخص المالي', icon: '📈' },
+              { id: 'cashbook', label: 'دفتر الصندوق', icon: '💵' }
             ].filter(tab => state.role !== 'driver' || tab.id === 'ledger' || tab.id === 'clients').map(tab => (
               <button 
                 key={tab.id}
@@ -3041,7 +3106,8 @@ export default function App() {
             { id: 'ledger', label: 'اليومي', icon: '📋' },
             { id: 'clients', label: 'العملاء', icon: '👥' },
             { id: 'purchases_ledger', label: 'المشتريات', icon: '📦' },
-            { id: 'summary', label: 'الملخص', icon: '📈' }
+            { id: 'summary', label: 'الملخص', icon: '📈' },
+            { id: 'cashbook', label: 'الصندوق', icon: '💵' }
           ].filter(tab => state.role !== 'driver' || tab.id === 'ledger' || tab.id === 'clients').map(tab => (
             <button 
               key={tab.id} 

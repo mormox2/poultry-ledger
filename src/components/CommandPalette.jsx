@@ -95,6 +95,13 @@ export default function CommandPalette({
       action: () => setView('summary')
     },
     {
+      id: 'action-cashbook',
+      type: 'action',
+      title: '💵 دفتر الصندوق والسيولة اليومية',
+      description: 'متابعة المقبوضات النقدية، المصاريف التشغيلية ورصيد الصندوق الفعلي للمزرعة',
+      action: () => setView('cashbook')
+    },
+    {
       id: 'action-backup',
       type: 'action',
       title: '☁️ حفظ نسخة احتياطية سحابية فورية',
