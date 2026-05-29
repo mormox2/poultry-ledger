@@ -82,7 +82,10 @@ export default function App() {
         name: "الودرني للدواجن",
         address: "وادي النور الحامة,قابس",
         phone: "96 101 651",
-        taxId: "1895235/E"
+        taxId: "1895235/E",
+        invoiceTemplate: "classic",
+        invoiceFooter: "",
+        invoiceLogoUrl: ""
       }
     };
     try {
@@ -92,7 +95,10 @@ export default function App() {
         return {
           ...defaultState,
           ...parsed,
-          companyInfo: parsed.companyInfo || defaultState.companyInfo,
+          companyInfo: {
+            ...defaultState.companyInfo,
+            ...(parsed.companyInfo || {})
+          },
           month: parsed.month || currentMonth,
           year: parsed.year || currentYear,
           view: parsed.view || "dashboard",
@@ -2846,6 +2852,16 @@ export default function App() {
             <span>📥</span>
             <span>تثبيت التطبيق</span>
           </button>
+        </div>
+      )}
+
+      {/* FLOATING PWA OFFLINE MODE INDICATOR */}
+      {!isOnline && (
+        <div className="no-print fixed bottom-24 md:bottom-6 right-6 z-50 animate-bounce">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-950/80 border border-red-500/35 backdrop-blur-md text-red-400 font-bold text-xs rounded-full shadow-lg shadow-red-500/10 select-none">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+            <span>العمل محلياً (دون إنترنت)</span>
+          </div>
         </div>
       )}
 

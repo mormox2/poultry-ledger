@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { MONTHS, getRows, getTotals, calcBalance, fmt } from '../js/utils';
 
 export default function InvoicePrint({ state, clientId, onClose }) {
-  const [printMode, setPrintMode] = useState('a4'); // 'a4' or 'thermal'
+  const [printMode, setPrintMode] = useState(() => state.companyInfo?.invoiceTemplate === 'receipt' ? 'thermal' : 'a4');
   const [pdfLoading, setPdfLoading] = useState(false);
   const y = state.year;
   const m = state.month;
@@ -148,7 +148,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
     }
 
     const monthName = MONTHS.at(m - 1);
-    const messageText = `*🐔 الودرني للدواجن — خلاصة الفاتورة*
+    const messageText = `*🐔 ${state.companyInfo?.name || "الودرني للدواجن"} — خلاصة الفاتورة*
 ----------------------------------------
 👤 *الحريف:* ${cl.name}
 📄 *رقم الفاتورة:* ${invoiceNumber}
@@ -162,7 +162,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
 ✅ *إجمالي المدفوعات:* ${fmt(totals.paid)} د.ت
 ⚠️ *الصافي المتبقي للدفع:* ${fmt(remainingTTC)} د.ت
 ----------------------------------------
-🤝 شكراً لتعاملكم معنا، ثقتكم سر نجاح مبيعاتنا!`;
+${state.companyInfo?.invoiceFooter || "🤝 شكراً لتعاملكم معنا، ثقتكم سر نجاح مبيعاتنا!"}`;
 
     // Use api.whatsapp.com/send?phone=... which bypasses contact-saving restrictions and opens direct chat
     const url = `https://api.whatsapp.com/send?phone=${phoneDigits}&text=${encodeURIComponent(messageText)}`;
@@ -198,7 +198,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
 
   const handleWebShare = async () => {
     const monthName = MONTHS.at(m - 1);
-    const messageText = `🐔 الودرني للدواجن — خلاصة الفاتورة
+    const messageText = `🐔 ${state.companyInfo?.name || "الودرني للدواجن"} — خلاصة الفاتورة
 ----------------------------------------
 👤 الحريف: ${cl.name}
 📄 رقم الفاتورة: ${invoiceNumber}
@@ -212,7 +212,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
 ✅ إجمالي المدفوعات: ${fmt(totals.paid)} د.ت
 ⚠️ الصافي المتبقي للدفع: ${fmt(remainingTTC)} د.ت
 ----------------------------------------
-🤝 شكراً لتعاملكم معنا، ثقتكم سر نجاح مبيعاتنا!`;
+${state.companyInfo?.invoiceFooter || "🤝 شكراً لتعاملكم معنا، ثقتكم سر نجاح مبيعاتنا!"}`;
 
     if (navigator.share && navigator.canShare && navigator.canShare({ text: messageText })) {
       try {
@@ -323,7 +323,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <img 
-                src="/poultry-ledger/assets/icon.svg" 
+                src={state.companyInfo?.invoiceLogoUrl || "/poultry-ledger/assets/icon.svg"} 
                 alt={state.companyInfo?.name || "الودرني للدواجن"} 
                 style={{ 
                   width: '72px', 
@@ -583,7 +583,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
             color: '#64748b',
             fontWeight: '500'
           }}>
-            🤝 شكراً لتعاملكم مع مؤسستنا — ثقتكم هي سر تميزنا ونجاحنا دائماً
+            {state.companyInfo?.invoiceFooter || "🤝 شكراً لتعاملكم مع مؤسستنا — ثقتكم هي سر تميزنا ونجاحنا دائماً"}
           </div>
         </div>
       ) : (
@@ -604,6 +604,20 @@ export default function InvoicePrint({ state, clientId, onClose }) {
         }}>
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+            {state.companyInfo?.invoiceLogoUrl && (
+              <img 
+                src={state.companyInfo.invoiceLogoUrl} 
+                alt="Logo" 
+                style={{ 
+                  width: '45px', 
+                  height: '45px', 
+                  borderRadius: '8px', 
+                  objectFit: 'contain', 
+                  marginBottom: '6px',
+                  display: 'inline-block' 
+                }} 
+              />
+            )}
             <h1 style={{ fontSize: '14px', fontWeight: '800', color: '#b45309', margin: '0 0 4px 0' }}>
               {state.companyInfo?.name || "الودرني للدواجن"}
             </h1>
@@ -745,7 +759,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
           </div>
 
           <div style={{ textAlign: 'center', fontSize: '8.5px', color: '#64748b', marginTop: '15px', borderTop: '1px dotted #888', paddingTop: '8px' }}>
-            🤝 شكراً لتعاملكم معنا ثقتكم سر نجاح مبيعاتنا
+            {state.companyInfo?.invoiceFooter || "🤝 شكراً لتعاملكم معنا ثقتكم سر نجاح مبيعاتنا"}
           </div>
         </div>
       )}

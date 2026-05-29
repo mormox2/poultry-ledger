@@ -54,6 +54,58 @@ export default function Dashboard({
 
   const collectionRate = grandAmt ? Math.round((grandPaid / grandAmt) * 100) : 0;
   const yieldRatio = grandTw ? Math.round((grandNw / grandTw) * 100) : 0;
+  const shrinkageRate = grandTw ? parseFloat((((grandTw - grandNw) / grandTw) * 100).toFixed(1)) : 0;
+  const isHighShrinkage = shrinkageRate > 5.0;
+
+  // --- DAILY CASH BOOK LEDGER ---
+  const days = new Date(y, m, 0).getDate();
+  const dailyCashFlow = [];
+  let cumulativeCash = 0;
+
+  for (let d = 1; d <= days; d++) {
+    let inflow = 0;
+    let outflow = 0;
+
+    // Compile customer payments (Inflow)
+    state.clients.forEach(cl => {
+      const k = `${cl.id}-${y}-${m}`;
+      const rows = state.ledger[k];
+      if (rows) {
+        const row = rows.find(r => r.d === d);
+        if (row && row.paid) {
+          inflow += parseFloat(row.paid) || 0;
+        }
+      }
+    });
+
+    // Compile supplier payments (Outflow)
+    (state.suppliers || []).forEach(sup => {
+      const k = `${sup.id}-${y}-${m}`;
+      const rows = state.purchases?.[k];
+      if (rows) {
+        const row = rows.find(r => r.d === d);
+        if (row && row.paid) {
+          outflow += parseFloat(row.paid) || 0;
+        }
+      }
+    });
+
+    if (inflow > 0 || outflow > 0) {
+      const net = inflow - outflow;
+      cumulativeCash += net;
+      dailyCashFlow.push({
+        day: d,
+        inflow,
+        outflow,
+        net,
+        cumulative: cumulativeCash
+      });
+    }
+  }
+
+  const totalInflow = dailyCashFlow.reduce((sum, item) => sum + item.inflow, 0);
+  const totalOutflow = dailyCashFlow.reduce((sum, item) => sum + item.outflow, 0);
+  const totalNet = totalInflow - totalOutflow;
 
   // Generate 6 months of historical data for the chart
   const chartData = [];
@@ -166,7 +218,7 @@ export default function Dashboard({
       </motion.div>
 
       {/* STAT CARDS */}
-      <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {[
           { label: "إجمالي المبيعات", val: fmt(grandAmt) || "—", sub: "لجميع العملاء", color: "border-t-amber-400/80 text-amber-400 bg-gradient-to-br from-amber-500/5 to-transparent" },
           { label: "إجمالي المشتريات", val: fmt(grandPurchaseAmt) || "—", sub: "من جميع الموردين", color: "border-t-sky-400/80 text-sky-400 bg-gradient-to-br from-sky-500/5 to-transparent" },
@@ -182,7 +234,28 @@ export default function Dashboard({
           { label: "مستحقات الموردين", val: fmt(grandPurchaseRem) || "—", sub: "ديون المشتريات المتبقية علينا", color: grandPurchaseRem > 0 ? "border-t-orange-400/80 text-orange-400 bg-gradient-to-br from-orange-500/5 to-transparent" : "border-t-emerald-400/80 text-emerald-400 bg-gradient-to-br from-emerald-500/5 to-transparent" },
           { label: "الوزن الصافي المبيع", val: `${Math.round(grandNw)} كغ`, sub: `الكامل: ${Math.round(grandTw)} كغ`, color: "border-t-amber-400/80 text-amber-400 bg-gradient-to-br from-amber-500/5 to-transparent" },
           { label: "الوزن الصافي المشتري", val: `${Math.round(grandPurchaseNw)} كغ`, sub: `الكامل: ${Math.round(grandPurchaseTw)} كغ`, color: "border-t-sky-400/80 text-sky-400 bg-gradient-to-br from-sky-500/5 to-transparent" },
-          { label: "نسبة تحصيل الديون", val: `${collectionRate}%`, sub: "كفاءة تحصيل المبيعات", color: "border-t-emerald-400/80 text-emerald-400 bg-gradient-to-br from-emerald-500/5 to-transparent" }
+          { label: "نسبة تحصيل الديون", val: `${collectionRate}%`, sub: "كفاءة تحصيل المبيعات", color: "border-t-emerald-400/80 text-emerald-400 bg-gradient-to-br from-emerald-500/5 to-transparent" },
+          { 
+            label: "معدل مردودية الوزن والفاقد", 
+            val: `${yieldRatio}%`, 
+            sub: (
+              <div className="flex justify-between items-center w-full mt-2 border-t border-slate-800/40 pt-1.5">
+                <span className="text-[10px] text-slate-500">معدل الفاقد: {shrinkageRate}%</span>
+                {shrinkageRate > 0 && (
+                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full select-none ${
+                    isHighShrinkage 
+                      ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' 
+                      : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                  }`}>
+                    {isHighShrinkage ? '⚠️ فاقد مرتفع' : '✓ مردود طبيعي'}
+                  </span>
+                )}
+              </div>
+            ), 
+            color: isHighShrinkage 
+              ? "border-t-red-400/80 text-red-400 bg-gradient-to-br from-red-500/5 to-transparent" 
+              : "border-t-emerald-400/80 text-emerald-400 bg-gradient-to-br from-emerald-500/5 to-transparent"
+          }
         ].map((st, i) => (
           <Atropos key={i} rotateXMax={10} rotateYMax={10} shadow={false} className="w-full" rotateTouch={false}>
             <div className={`h-full border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden transition-all duration-300 hover:border-slate-700/80 border-t-[4px] bg-slate-900/30 backdrop-blur-sm ${st.color}`}>
@@ -606,6 +679,84 @@ export default function Dashboard({
         </div>
       </motion.div>
 
+      {/* DAILY CASH BOOK LEDGER (Caisse de l'Admin) */}
+      {state.role !== 'driver' && (
+        <motion.div 
+          variants={itemVariants} 
+          className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-lg relative overflow-hidden text-right"
+        >
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div className="text-right">
+              <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 justify-start">
+                <span>💰</span>
+                <span>دفتر حركة النقود اليومي (Caisse)</span>
+              </h3>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">تتبع التدفقات النقدية الداخلة والخارجة بالخزينة بشكل تسلسلي</p>
+            </div>
+            
+            <div className="flex items-center gap-3 select-none flex-wrap">
+              <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl px-3 py-1.5 text-center">
+                <span className="text-[9px] text-slate-500 font-bold block">إجمالي المقبوضات</span>
+                <span className="text-xs font-black text-emerald-400 font-mono">{fmt(totalInflow)} د.ت</span>
+              </div>
+              <div className="bg-sky-500/5 border border-sky-500/10 rounded-xl px-3 py-1.5 text-center">
+                <span className="text-[9px] text-slate-500 font-bold block">إجمالي المدفوعات</span>
+                <span className="text-xs font-black text-sky-400 font-mono">{fmt(totalOutflow)} د.ت</span>
+              </div>
+              <div className={`border rounded-xl px-3 py-1.5 text-center ${
+                totalNet >= 0 ? 'bg-amber-500/5 border-amber-500/10' : 'bg-red-500/5 border-red-500/10'
+              }`}>
+                <span className="text-[9px] text-slate-500 font-bold block">صافي الخزينة</span>
+                <span className={`text-xs font-black font-mono ${totalNet >= 0 ? 'text-amber-400' : 'text-red-400'}`}>
+                  {totalNet >= 0 ? '+' : ''}{fmt(totalNet)} د.ت
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {dailyCashFlow.length === 0 ? (
+            <div className="text-slate-500 text-xs py-12 text-center font-medium">لا توجد حركات مقبوضات أو مدفوعات نقدية مسجلة لهذا الشهر</div>
+          ) : (
+            <div className="overflow-x-auto select-none rounded-xl border border-slate-800/60 max-h-[350px] overflow-y-auto pr-1">
+              <table className="w-full text-right text-xs">
+                <thead>
+                  <tr className="bg-slate-950/40 text-slate-400 font-bold border-b border-slate-800/80">
+                    <th className="py-3 px-4">اليوم</th>
+                    <th className="py-3 px-4">المداخيل (مقبوضات المبيعات)</th>
+                    <th className="py-3 px-4">المصاريف (مدفوعات المشتريات)</th>
+                    <th className="py-3 px-4">صافي التدفق اليومي</th>
+                    <th className="py-3 px-4">الرصيد التراكمي للخزينة</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/40 font-medium">
+                  {dailyCashFlow.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-slate-900/35 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-slate-300">
+                        اليوم {String(item.day).padStart(2, '0')}
+                      </td>
+                      <td className="py-3 px-4 text-emerald-400 font-mono font-bold">
+                        {item.inflow > 0 ? `+${fmt(item.inflow)}` : '—'}
+                      </td>
+                      <td className="py-3 px-4 text-sky-400 font-mono font-bold">
+                        {item.outflow > 0 ? `-${fmt(item.outflow)}` : '—'}
+                      </td>
+                      <td className={`py-3 px-4 font-mono font-bold ${
+                        item.net >= 0 ? 'text-amber-400' : 'text-red-400'
+                      }`}>
+                        {item.net >= 0 ? '+' : ''}{fmt(item.net)}
+                      </td>
+                      <td className="py-3 px-4 font-mono font-black text-slate-200">
+                        {fmt(item.cumulative)} د.ت
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </motion.div>
+      )}
+
       {/* SETTINGS AREA */}
       <AnimatePresence>
         {showSettings && (
@@ -751,13 +902,16 @@ export default function Dashboard({
               </h3>
               
               <form 
-                key={`${state.companyInfo?.name || ""}-${state.companyInfo?.address || ""}-${state.companyInfo?.phone || ""}-${state.companyInfo?.taxId || ""}`}
+                key={`${state.companyInfo?.name || ""}-${state.companyInfo?.address || ""}-${state.companyInfo?.phone || ""}-${state.companyInfo?.taxId || ""}-${state.companyInfo?.invoiceTemplate || ""}-${state.companyInfo?.invoiceFooter || ""}-${state.companyInfo?.invoiceLogoUrl || ""}`}
                 onSubmit={(e) => {
                   e.preventDefault();
                   const newName = e.target.elements.compName.value.trim();
                   const newAddr = e.target.elements.compAddr.value.trim();
                   const newPhone = e.target.elements.compPhone.value.trim();
                   const newTaxId = e.target.elements.compTaxId.value.trim();
+                  const newTemplate = e.target.elements.invoiceTemplate.value;
+                  const newFooter = e.target.elements.invoiceFooter.value.trim();
+                  const newLogoUrl = e.target.elements.invoiceLogoUrl.value.trim();
                   if (!newName) {
                     alert("الرجاء إدخال اسم الشركة");
                     return;
@@ -766,7 +920,10 @@ export default function Dashboard({
                     name: newName,
                     address: newAddr || "—",
                     phone: newPhone || "—",
-                    taxId: newTaxId || "—"
+                    taxId: newTaxId || "—",
+                    invoiceTemplate: newTemplate || "classic",
+                    invoiceFooter: newFooter || "",
+                    invoiceLogoUrl: newLogoUrl || ""
                   });
                 }} 
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-right"
@@ -811,6 +968,39 @@ export default function Dashboard({
                     className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 input-ltr font-mono"
                     defaultValue={state.companyInfo?.taxId || "1895235/E"}
                     placeholder="1895235/E"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">نموذج الفاتورة الافتراضي</label>
+                  <select 
+                    name="invoiceTemplate"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 cursor-pointer"
+                    defaultValue={state.companyInfo?.invoiceTemplate || "classic"}
+                  >
+                    <option value="classic" className="bg-slate-950 text-slate-100">A4 كلاسيكي ذهبي</option>
+                    <option value="receipt" className="bg-slate-950 text-slate-100">وصول حراري (Ticket 80mm)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">رابط شعار المؤسسة (Logo URL)</label>
+                  <input 
+                    type="url"
+                    name="invoiceLogoUrl"
+                    dir="ltr"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-555/40 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 input-ltr"
+                    defaultValue={state.companyInfo?.invoiceLogoUrl || ""}
+                    placeholder="https://example.com/logo.png"
+                  />
+                </div>
+                <div className="col-span-1 sm:col-span-2">
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">ملاحظة أو تذييل أسفل الفاتورة</label>
+                  <input 
+                    type="text"
+                    name="invoiceFooter"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200"
+                    defaultValue={state.companyInfo?.invoiceFooter || ""}
+                    placeholder="مثال: شكراً لثقتكم بنا، الرجاء تسوية الديون في الآجال المتفق عليها."
                   />
                 </div>
                 
