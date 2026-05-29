@@ -75,10 +75,18 @@ export default function InvoicePrint({ state, clientId, onClose }) {
   const handleShareWhatsApp = () => {
     // Format phone number
     let phoneDigits = cl.phone ? cl.phone.replace(/[^0-9+]/g, '') : '';
+    
+    // Strip leading 00 if present
+    if (phoneDigits.startsWith('00')) {
+      phoneDigits = phoneDigits.substring(2);
+    }
+    
+    // If it's a standard local Tunisian number of 8 digits, prepend country code
     if (phoneDigits && !phoneDigits.startsWith('+') && !phoneDigits.startsWith('216') && phoneDigits.length === 8) {
       phoneDigits = '216' + phoneDigits;
     }
-    // Strip starting + for wa.me format
+    
+    // Strip starting + for WhatsApp API format
     if (phoneDigits.startsWith('+')) {
       phoneDigits = phoneDigits.substring(1);
     }
@@ -100,7 +108,8 @@ export default function InvoicePrint({ state, clientId, onClose }) {
 ----------------------------------------
 🤝 شكراً لتعاملكم معنا، ثقتكم سر نجاح مبيعاتنا!`;
 
-    const url = `https://wa.me/${phoneDigits}?text=${encodeURIComponent(messageText)}`;
+    // Use api.whatsapp.com/send?phone=... which bypasses contact-saving restrictions and opens direct chat
+    const url = `https://api.whatsapp.com/send?phone=${phoneDigits}&text=${encodeURIComponent(messageText)}`;
     window.open(url, '_blank');
   };
 
