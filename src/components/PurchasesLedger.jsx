@@ -300,7 +300,7 @@ export default function PurchasesLedger({
                           step="0.001"
                           className="w-18 bg-slate-950/60 border border-transparent focus:border-amber-500/50 hover:bg-slate-950 focus:bg-slate-950 rounded-lg py-1.5 px-2 text-center text-amber-400 outline-none transition-all font-mono font-bold" 
                           value={r.price || ''} 
-                          placeholder={state.defaultPurchasePricePerKg || "5.200"}
+                          placeholder={sup.defaultPrice || state.defaultPurchasePricePerKg || "5.200"}
                           onChange={(e) => onUpdatePurchaseRow(idx, 'price', e.target.value)} 
                           onKeyDown={(e) => handleKeyDown(e, idx, 2)}
                           onBlur={() => onSyncPurchaseRow && onSyncPurchaseRow(idx)}

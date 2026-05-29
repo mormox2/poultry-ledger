@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { COLORS, getRows, getTotals, calcBalance, fmt, getClientColor } from '../js/utils';
+import { COLORS, getRows, getTotals, calcBalance, fmt, getClientColor, getPreviousMonthsBalance, getCumulativeBalance } from '../js/utils';
 
 export default function Ledger({ 
   state, 
@@ -93,6 +93,8 @@ export default function Ledger({
   const rows = getRows(state.ledger, cl.id, y, m);
   const totals = getTotals(state.ledger, cl.id, y, m);
   const remaining = totals.amt - totals.paid;
+  const prevMonthsBal = getPreviousMonthsBalance(state.ledger, cl.id, y, m);
+  const cumulativeBal = getCumulativeBalance(state.ledger, cl.id, y, m);
   const paidPct = totals.amt ? Math.round(totals.paid / totals.amt * 100) : 0;
 
   const handleQuickSettleSubmit = (e) => {
@@ -173,15 +175,21 @@ export default function Ledger({
             {/* Settlement quick actions */}
             <div className="flex flex-col items-center sm:items-end justify-center gap-1 w-full md:w-auto">
               <div className={`text-xl md:text-2xl font-black tracking-tight font-mono ${
-                remaining > 0 ? 'text-red-400' : remaining < 0 ? 'text-orange-400' : 'text-emerald-400'
+                cumulativeBal > 0.005 ? 'text-red-400' : cumulativeBal < -0.005 ? 'text-orange-400' : 'text-emerald-400'
               }`}>
-                {fmt(remaining) || "—"}
+                {fmt(cumulativeBal) || "—"}
               </div>
               <div className="text-[10px] text-slate-500 font-semibold">
-                {remaining > 0 ? 'متبقي بذمته' : remaining < 0 ? 'رصيد زائد للعميل' : 'خالص بالكامل ✓'}
+                {cumulativeBal > 0.005 ? 'الحساب الجملي المتراكم' : cumulativeBal < -0.005 ? 'رصيد زائد متراكم للعميل' : 'خالص بالكامل ✓'}
               </div>
               
-              {remaining > 0 && (
+              {Math.abs(prevMonthsBal) > 0.005 && (
+                <div className="text-[9px] text-slate-400 font-medium mt-0.5">
+                  (الباقي لهذا الشهر: {fmt(remaining)} د.ت)
+                </div>
+              )}
+              
+              {cumulativeBal > 0.005 && (
                 <motion.button 
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
@@ -195,6 +203,37 @@ export default function Ledger({
           </>
         )}
       </div>
+
+      {/* CARRY-FORWARD BANNER */}
+      {state.role !== 'driver' && prevMonthsBal > 0.005 && (
+        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-right">
+          <div className="flex items-center gap-2">
+            <span className="text-base select-none">⚠️</span>
+            <div>
+              <span className="text-xs font-black text-rose-350">تنبيه: يوجد ديون سابقة معلقة!</span>
+              <p className="text-[10px] text-slate-400 mt-0.5">تم ترحيل مبلغ <strong>{fmt(prevMonthsBal)} د.ت</strong> من حسابات الأشهر الماضية لهذا العميل.</p>
+            </div>
+          </div>
+          <div className="text-xs bg-rose-500/20 text-rose-300 px-3 py-1 rounded-lg font-black font-mono">
+            + {fmt(prevMonthsBal)} د.ت
+          </div>
+        </div>
+      )}
+
+      {state.role !== 'driver' && prevMonthsBal < -0.005 && (
+        <div className="bg-emerald-550/10 border border-emerald-500/20 rounded-xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-right">
+          <div className="flex items-center gap-2">
+            <span className="text-base select-none">💰</span>
+            <div>
+              <span className="text-xs font-black text-emerald-350 font-bold">العميل لديه رصيد دائن سابق!</span>
+              <p className="text-[10px] text-slate-400 mt-0.5">العميل دفع مبالغ زائدة في الأشهر السابقة بمقدار <strong>{fmt(Math.abs(prevMonthsBal))} د.ت</strong>.</p>
+            </div>
+          </div>
+          <div className="text-xs bg-emerald-500/20 text-emerald-350 px-3 py-1 rounded-lg font-black font-mono">
+            - {fmt(Math.abs(prevMonthsBal))} د.t
+          </div>
+        </div>
+      )}
 
       {/* QUICK SUB-METRICS BAR */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

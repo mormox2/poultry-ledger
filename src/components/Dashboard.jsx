@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Atropos from 'atropos/react';
 import 'atropos/css';
 import { MONTHS, getTotals, fmt, getClientColor } from '../js/utils';
+import { getActivityLog, clearActivityLog } from '../js/activityLog';
 
 export default function Dashboard({ 
   state, 
@@ -13,13 +14,41 @@ export default function Dashboard({
   onChangePassword,
   onUpdateCompanyInfo,
   installPrompt,
-  onInstallApp,
-  isStandalone,
-  onShowInstallGuide,
+  onAddClient,
+  onAddSupplier,
+  onSelectSupplier,
+  onViewChange,
   onBackupCloudExport,
-  onBackupCloudRestore
+  onBackupCloudRestore,
+  userId
 }) {
   const [showSettings, setShowSettings] = useState(false);
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [logSearch, setLogSearch] = useState('');
+  const [logFilter, setLogFilter] = useState('');
+
+  React.useEffect(() => {
+    if (showSettings) {
+      setActivityLogs(getActivityLog(userId));
+    }
+  }, [showSettings, userId]);
+
+  const filteredLogs = React.useMemo(() => {
+    return activityLogs.filter(log => {
+      const matchesSearch = !logSearch || 
+        log.details.toLowerCase().includes(logSearch.toLowerCase()) || 
+        log.action.toLowerCase().includes(logSearch.toLowerCase());
+      
+      const matchesFilter = !logFilter || 
+        (logFilter === 'إضافة' && log.action.includes('إضافة')) ||
+        (logFilter === 'تعديل' && (log.action.includes('تعديل') || log.action.includes('تحديث'))) ||
+        (logFilter === 'حذف' && log.action.includes('حذف')) ||
+        (logFilter === 'دفعة' && (log.action.includes('دفعة') || log.action.includes('تسديد')));
+        
+      return matchesSearch && matchesFilter;
+    }).slice(0, 50);
+  }, [activityLogs, logSearch, logFilter]);
+
   const [chartType, setChartType] = useState('line'); // 'line' or 'bar'
   const [hoveredIdx, setHoveredIdx] = useState(null); // active month inspect index
   const y = state.year;
@@ -1015,6 +1044,96 @@ export default function Dashboard({
                   </motion.button>
                 </div>
               </form>
+            </div>
+
+            {/* AUDIT ACTIVITY LOG CARD (FULL WIDTH IN DRAWER) */}
+            <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-lg col-span-1 md:col-span-2 lg:col-span-3">
+              <div className="flex justify-between items-center mb-5 border-b border-slate-800/80 pb-3">
+                <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 justify-start">
+                  <span>📜</span>
+                  <span>سجل النشاط وتتبع العمليات (Audit Log)</span>
+                </h3>
+                {state.role === 'admin' && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      if (confirm("هل أنت متأكد من مسح جميع سجلات النشاط؟ لا يمكن التراجع عن هذا!")) {
+                        clearActivityLog(userId);
+                        setActivityLogs([]);
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-red-400 text-[10px] font-black rounded-lg transition-colors"
+                  >
+                    🗑️ مسح السجل بالكامل
+                  </motion.button>
+                )}
+              </div>
+
+              {/* Filtering Controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 text-right">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1">بحث وتصفية</label>
+                  <input
+                    type="text"
+                    placeholder="ابحث عن عميل، مورد، أو عملية..."
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2 px-3 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200"
+                    value={logSearch}
+                    onChange={(e) => setLogSearch(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1">نوع العملية</label>
+                  <select
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2 px-3 text-xs text-slate-100 outline-none cursor-pointer transition-all duration-200"
+                    value={logFilter}
+                    onChange={(e) => setLogFilter(e.target.value)}
+                  >
+                    <option value="" className="bg-slate-950 text-slate-100">جميع العمليات</option>
+                    <option value="إضافة" className="bg-slate-950 text-slate-100">إضافة عميل / مورد</option>
+                    <option value="تعديل" className="bg-slate-950 text-slate-100">تعديلات وسجلات يومية</option>
+                    <option value="حذف" className="bg-slate-950 text-slate-100">حذف نهائي</option>
+                    <option value="دفعة" className="bg-slate-950 text-slate-100">المدفوعات والتسديدات</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Logs Table */}
+              <div className="overflow-x-auto rounded-xl border border-slate-850/80 bg-slate-950/40 max-h-[300px] overflow-y-auto">
+                <table className="w-full text-center border-collapse text-[11px]">
+                  <thead>
+                    <tr className="bg-slate-950 border-b border-slate-850 text-slate-400">
+                      <th className="py-2.5 px-3 font-bold select-none text-[10px] w-24">التاريخ والوقت</th>
+                      <th className="py-2.5 px-3 font-bold select-none text-[10px] w-28 text-amber-400">العملية</th>
+                      <th className="py-2.5 px-3 font-bold select-none text-[10px] text-right">التفاصيل</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-900/50">
+                    {filteredLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan="3" className="py-8 text-slate-500 text-center italic">لم يتم العثور على أي سجل نشاط يطابق شروط التصفية</td>
+                      </tr>
+                    ) : (
+                      filteredLogs.map(log => {
+                        const date = new Date(log.timestamp);
+                        const timeStr = date.toLocaleTimeString('fr-TN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        const dateStr = date.toLocaleDateString('fr-TN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                        
+                        return (
+                          <tr key={log.id} className="hover:bg-slate-900/30 transition-colors">
+                            <td className="py-2 px-3 text-slate-500 font-mono font-semibold text-[10px]">
+                              <div>{dateStr}</div>
+                              <div className="text-[9px] text-slate-600 mt-0.5">{timeStr}</div>
+                            </td>
+                            <td className="py-2 px-3 text-amber-500/95 font-extrabold text-[10px]">{log.action}</td>
+                            <td className="py-2 px-3 text-slate-350 font-medium text-right leading-relaxed">{log.details}</td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </motion.div>
         )}

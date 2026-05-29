@@ -17,6 +17,9 @@ const Summary = lazy(() => import('./components/Summary'));
 const InvoicePrint = lazy(() => import('./components/InvoicePrint'));
 const InstallModal = lazy(() => import('./components/InstallModal'));
 const Deadlines = lazy(() => import('./components/Deadlines'));
+const StatementPrint = lazy(() => import('./components/StatementPrint'));
+const CommandPalette = lazy(() => import('./components/CommandPalette'));
+const NotificationCenter = lazy(() => import('./components/NotificationCenter'));
 
 // Utilities Import
 import { 
@@ -29,6 +32,8 @@ import {
   exportToCSV,
   exportPurchasesToCSV
 } from './js/utils';
+
+import { logActivity, getActivityLog, clearActivityLog } from './js/activityLog';
 
 // --- Offline Sync Queue (IndexedDB) Setup ---
 const syncDBName = 'PoultryLedgerDB';
@@ -117,7 +122,24 @@ export default function App() {
   };
 
   const [state, setState] = useState(getInitialState);
+  const [lastBackupTime, setLastBackupTime] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    const updateTime = () => {
+      const saved = localStorage.getItem(`dawajin_last_backup_time_${user.id}`);
+      setLastBackupTime(saved ? parseInt(saved, 10) : 0);
+    };
+    updateTime();
+    window.addEventListener('storage', updateTime);
+    return () => window.removeEventListener('storage', updateTime);
+  }, [user]);
+
   const [activeInvoiceClientId, setActiveInvoiceClientId] = useState(null);
+  const [activeStatementClientId, setActiveStatementClientId] = useState(null);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallModal, setShowInstallModal] = useState(false);
@@ -514,6 +536,18 @@ export default function App() {
       window.removeEventListener('offline', handleOfflineStatus);
     };
   }, [isLoggedIn, user]);
+
+  // Keyboard Shortcut Listener for Command Palette (Ctrl+K / ⌘K)
+  useEffect(() => {
+    const handleShortcut = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, []);
 
   // --- Supabase Realtime Listeners ---
   useEffect(() => {
@@ -1032,14 +1066,18 @@ export default function App() {
         }
       });
 
-      const formattedSuppliers = finalSuppliers.map(s => ({
-        id: s.id,
-        name: s.name,
-        address: s.address,
-        phone: s.phone,
-        color: s.color,
-        taxId: s.tax_id
-      }));
+      const formattedSuppliers = finalSuppliers.map(s => {
+        const existing = (stateRef.current?.suppliers || []).find(x => x.id === s.id);
+        return {
+          id: s.id,
+          name: s.name,
+          address: s.address,
+          phone: s.phone,
+          color: s.color,
+          taxId: s.tax_id,
+          defaultPrice: existing?.defaultPrice || null
+        };
+      });
 
       const formattedPurchases = {};
       finalPurchases.forEach(e => {
@@ -1247,6 +1285,17 @@ export default function App() {
   }, [isSupabaseConfigured, user]);
 
   const toastMessage = (msg, type = "success") => {
+    // Add to Notification Center history
+    const newNotif = {
+      id: Date.now() + Math.random().toString(),
+      title: type === 'success' ? 'عملية ناجحة' : type === 'warning' ? 'تنبيه بالنظام' : type === 'error' ? 'حدث خطأ' : 'معلومات النظام',
+      message: msg,
+      type: type,
+      time: new Date().toLocaleTimeString('ar-TN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      read: false
+    };
+    setNotifications(prev => [newNotif, ...prev].slice(0, 30));
+
     const el = document.getElementById("toast");
     if (!el) return;
     let icon = "✓";
@@ -1340,7 +1389,6 @@ export default function App() {
   }, []);
 
   const handleSyncRow = useCallback((idx) => {
-    if (!isSupabaseConfigured || !user) return;
     // Delay slightly to ensure React state updates are flushed and rendered
     setTimeout(() => {
       const currentState = stateRef.current;
@@ -1348,7 +1396,21 @@ export default function App() {
       const rows = Reflect.get(currentState.ledger, k);
       if (rows && rows.at(idx)) {
         const row = rows.at(idx);
-        syncLedgerEntryToCloud(currentState.selectedClient, currentState.year, currentState.month, idx, row);
+        
+        // Log this edit!
+        const clientName = currentState.clients.find(c => c.id === currentState.selectedClient)?.name || "عميل";
+        const dateStr = `${currentState.year}/${currentState.month}/${row.d}`;
+        let details = [];
+        if (row.nw) details.push(`وزن صافي: ${row.nw} كغ`);
+        if (row.price) details.push(`سعر: ${row.price} د.ت`);
+        if (row.paid) details.push(`دفعة: ${row.paid} د.ت`);
+        if (row.notes) details.push(`ملاحظة: ${row.notes}`);
+        
+        logActivity(user?.id, "تحديث سجل يومي", `العميل: ${clientName} — التاريخ: ${dateStr} — التفاصيل: [${details.join(' ، ') || 'سجل فارغ'}]`);
+        
+        if (isSupabaseConfigured && user) {
+          syncLedgerEntryToCloud(currentState.selectedClient, currentState.year, currentState.month, idx, row);
+        }
       }
     }, 100);
   }, [isSupabaseConfigured, user]);
@@ -1505,16 +1567,19 @@ export default function App() {
       const row = { ...rows.at(idx) };
       row.local_updated_at = new Date().toISOString();
       
+      const activeSup = (prev.suppliers || []).find(s => s.id === prev.selectedSupplier);
+      const supplierDefaultPrice = (activeSup && activeSup.defaultPrice) ? activeSup.defaultPrice : (prev.defaultPurchasePricePerKg || 5.200);
+
       if (field === 'tw') {
         row.tw = val;
         if (val && !row.price) {
-          row.price = prev.defaultPurchasePricePerKg || 5.200;
+          row.price = supplierDefaultPrice;
         }
       }
       else if (field === 'nw') {
         row.nw = val;
         if (val && !row.price) {
-          row.price = prev.defaultPurchasePricePerKg || 5.200;
+          row.price = supplierDefaultPrice;
         }
       }
       else if (field === 'price') row.price = val;
@@ -1529,7 +1594,7 @@ export default function App() {
         if (!nwFloat) {
           row.amt = "";
         } else {
-          const activePrice = parseFloat(row.price) || prev.defaultPurchasePricePerKg || 5.200;
+          const activePrice = parseFloat(row.price) || supplierDefaultPrice;
           row.amt = parseFloat((nwFloat * activePrice).toFixed(3));
         }
       } else if (field === 'price') {
@@ -1538,7 +1603,7 @@ export default function App() {
         if (!nwFloat) {
           row.amt = "";
         } else {
-          const activePrice = customPrice || prev.defaultPurchasePricePerKg || 5.200;
+          const activePrice = customPrice || supplierDefaultPrice;
           row.amt = parseFloat((nwFloat * activePrice).toFixed(3));
         }
       }
@@ -1554,14 +1619,27 @@ export default function App() {
   }, []);
 
   const handleSyncPurchaseRow = useCallback((idx) => {
-    if (!isSupabaseConfigured || !user) return;
     setTimeout(() => {
       const currentState = stateRef.current;
       const k = ledgerKey(currentState.selectedSupplier, currentState.year, currentState.month);
       const rows = Reflect.get(currentState.purchases || {}, k);
       if (rows && rows.at(idx)) {
         const row = rows.at(idx);
-        syncPurchaseEntryToCloud(currentState.selectedSupplier, currentState.year, currentState.month, idx, row);
+        
+        // Log this edit!
+        const supplierName = (currentState.suppliers || []).find(s => s.id === currentState.selectedSupplier)?.name || "مورد";
+        const dateStr = `${currentState.year}/${currentState.month}/${row.d}`;
+        let details = [];
+        if (row.nw) details.push(`وزن صافي: ${row.nw} كغ`);
+        if (row.price) details.push(`سعر الشراء: ${row.price} د.ت`);
+        if (row.paid) details.push(`المدفوع له: ${row.paid} د.ت`);
+        if (row.notes) details.push(`ملاحظة: ${row.notes}`);
+        
+        logActivity(user?.id, "تحديث سجل المشتريات", `المورد: ${supplierName} — التاريخ: ${dateStr} — التفاصيل: [${details.join(' ، ') || 'سجل فارغ'}]`);
+        
+        if (isSupabaseConfigured && user) {
+          syncPurchaseEntryToCloud(currentState.selectedSupplier, currentState.year, currentState.month, idx, row);
+        }
       }
     }, 100);
   }, [isSupabaseConfigured, user]);
@@ -1847,6 +1925,7 @@ export default function App() {
   }, []);
 
   const handleAddClient = useCallback(async (clientData) => {
+    logActivity(user?.id, "إضافة عميل", `تم إضافة العميل الجديد: "${clientData.name}"`);
     const tempId = Date.now();
 
     if (isSupabaseConfigured && user) {
@@ -1901,6 +1980,7 @@ export default function App() {
   }, [isSupabaseConfigured, user]);
 
   const handleEditClient = useCallback(async (updatedClient) => {
+    logActivity(user?.id, "تعديل بيانات عميل", `تعديل بيانات العميل: "${updatedClient.name}"`);
     // Optimistic state update
     setState(prev => ({
       ...prev,
@@ -1929,6 +2009,8 @@ export default function App() {
   }, [isSupabaseConfigured, user]);
 
   const handleDeleteClient = useCallback(async (cid) => {
+    const clientName = stateRef.current.clients.find(c => c.id === cid)?.name || cid;
+    logActivity(user?.id, "حذف عميل", `تم حذف العميل نهائياً: "${clientName}"`);
     setState(prev => {
       const filteredClients = prev.clients.filter(c => c.id !== cid);
       const isSelectedDeleted = prev.selectedClient === cid;
@@ -1965,6 +2047,7 @@ export default function App() {
   }, []);
 
   const handleAddSupplier = useCallback(async (supplierData) => {
+    logActivity(user?.id, "إضافة مورد", `تم إضافة المورد الجديد: "${supplierData.name}"`);
     const tempId = Date.now();
 
     if (isSupabaseConfigured && user) {
@@ -1993,7 +2076,8 @@ export default function App() {
               address: data.address,
               phone: data.phone,
               color: data.color,
-              taxId: data.tax_id
+              taxId: data.tax_id,
+              defaultPrice: supplierData.defaultPrice
             }],
             selectedSupplier: data.id
           }));
@@ -2019,6 +2103,7 @@ export default function App() {
   }, [isSupabaseConfigured, user]);
 
   const handleEditSupplier = useCallback(async (updatedSupplier) => {
+    logActivity(user?.id, "تعديل بيانات مورد", `تعديل بيانات المورد: "${updatedSupplier.name}"`);
     // Optimistic state update
     setState(prev => ({
       ...prev,
@@ -2047,6 +2132,8 @@ export default function App() {
   }, [isSupabaseConfigured, user]);
 
   const handleDeleteSupplier = useCallback(async (sid) => {
+    const supplierName = (stateRef.current.suppliers || []).find(s => s.id === sid)?.name || sid;
+    logActivity(user?.id, "حذف مورد", `تم حذف المورد نهائياً: "${supplierName}"`);
     setState(prev => {
       const filteredSuppliers = (prev.suppliers || []).filter(s => s.id !== sid);
       const isSelectedDeleted = prev.selectedSupplier === sid;
@@ -2353,9 +2440,9 @@ export default function App() {
           contentType: 'application/octet-stream'
         });
 
-      if (error) throw error;
-
-      localStorage.setItem(`dawajin_last_backup_time_${user.id}`, Date.now().toString());
+      const nowStr = Date.now().toString();
+      localStorage.setItem(`dawajin_last_backup_time_${user.id}`, nowStr);
+      setLastBackupTime(parseInt(nowStr, 10));
       toastMessage("⚡ تم رفع النسخة الاحتياطية المشفرة بنجاح إلى السحابة !");
       return true;
     } catch (err) {
@@ -2422,27 +2509,34 @@ export default function App() {
     }
   };
 
-  // Weekly Auto Cloud Backup routine
+  // 6-Hour Active Auto Cloud Backup routine
   useEffect(() => {
     if (!isLoggedIn || !user || !isSupabaseConfigured || !plainPassword) return;
 
     const runAutoBackup = async () => {
       const lastBackup = localStorage.getItem(`dawajin_last_backup_time_${user.id}`);
-      const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+      const sixHoursMs = 6 * 60 * 60 * 1000;
       const now = Date.now();
 
-      if (!lastBackup || (now - parseInt(lastBackup)) > oneWeekMs) {
-        console.log("Starting automatic weekly cloud backup...");
+      if (!lastBackup || (now - parseInt(lastBackup, 10)) > sixHoursMs) {
+        console.log("Starting automatic 6-hour cloud backup...");
         const success = await handleBackupCloudExport();
         if (success) {
-          console.log("Weekly auto cloud backup completed successfully!");
+          console.log("6-hour auto cloud backup completed successfully!");
         }
       }
     };
 
-    // Run 10 seconds after boot to prevent resource competition
-    const timer = setTimeout(runAutoBackup, 10000);
-    return () => clearTimeout(timer);
+    // Run 10 seconds after boot to check if backup is overdue
+    const initialTimer = setTimeout(runAutoBackup, 10000);
+
+    // Set interval to check/run every 30 minutes of active usage
+    const interval = setInterval(runAutoBackup, 30 * 60 * 1000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
   }, [isLoggedIn, user, isSupabaseConfigured, plainPassword]);
 
 
@@ -2585,6 +2679,7 @@ export default function App() {
             onShowInstallGuide={() => setShowInstallModal(true)}
             onBackupCloudExport={handleBackupCloudExport}
             onBackupCloudRestore={handleBackupCloudRestore}
+            userId={user?.id}
           />
         );
       case "ledger":
@@ -2608,6 +2703,7 @@ export default function App() {
             onAddClient={handleAddClient}
             onEditClient={handleEditClient}
             onDeleteClient={handleDeleteClient}
+            onPrintStatement={(cid) => setActiveStatementClientId(cid)}
           />
         );
       case "suppliers":
@@ -2658,6 +2754,44 @@ export default function App() {
         return <div>{"View not found"}</div>;
     }
   };
+
+  const getBackupStatus = () => {
+    if (!user) return null;
+    if (!lastBackupTime) {
+      return { 
+        text: "لم يتم الحفظ السحابي بعد", 
+        style: "bg-red-500/5 border-red-500/20 text-red-400 shadow-md shadow-red-500/5", 
+        pulse: "pulse-dot-red" 
+      };
+    }
+    const diff = Date.now() - lastBackupTime;
+    const hours = Math.floor(diff / (60 * 60 * 1000));
+    const mins = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+    
+    let timeText = "";
+    if (hours === 0) {
+      timeText = `منذ ${mins} د`;
+    } else {
+      timeText = `منذ ${hours} س`;
+    }
+    
+    // Warning if last backup > 24 hours
+    if (diff > 24 * 60 * 60 * 1000) {
+      return { 
+        text: `نسخ قديم (${timeText})`, 
+        style: "bg-amber-500/5 border-amber-500/25 text-amber-400 shadow-md animate-pulse",
+        pulse: "pulse-dot-yellow" 
+      };
+    }
+    
+    return { 
+      text: `تم الحفظ: ${timeText}`, 
+      style: "bg-emerald-500/5 border-emerald-500/20 text-emerald-400 shadow-md",
+      pulse: "pulse-dot-green" 
+    };
+  };
+
+  const backupBadge = getBackupStatus();
 
   return (
     <>
@@ -2735,6 +2869,40 @@ export default function App() {
               </span>
             </div>
           )}
+
+          {/* DYNAMIC AUTO-BACKUP STATUS BADGE */}
+          {isSupabaseConfigured && backupBadge && (
+            <div className={`no-print flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold select-none border transition-all duration-300 md:ml-2 ${backupBadge.style}`}>
+              <span className={backupBadge.pulse}></span>
+              <span>{backupBadge.text}</span>
+            </div>
+          )}
+
+          {/* QUICK COMMAND PALETTE TRIGGER */}
+          <button
+            onClick={() => setCommandPaletteOpen(true)}
+            className="hidden lg:flex items-center justify-center gap-2 px-3 py-1.5 rounded-full border border-slate-800 bg-slate-950/40 hover:border-amber-500/40 hover:text-amber-400 text-[10px] font-bold transition-all duration-200 select-none cursor-pointer md:ml-2"
+            title="فتح لوحة البحث السريع (Ctrl+K)"
+          >
+            <span>🔍 بحث سريع</span>
+            <kbd className="bg-slate-900/80 px-1 py-0.5 rounded border border-slate-750 font-mono text-[9px] text-slate-500">Ctrl+K</kbd>
+          </button>
+
+          {/* NOTIFICATION CENTER TRIGGER BELL */}
+          <div className="relative no-print select-none cursor-pointer md:ml-2 md:mr-2">
+            <button
+              onClick={() => setNotificationsOpen(true)}
+              className="flex items-center justify-center w-8 h-8 rounded-full border border-slate-800 bg-slate-950/60 hover:border-amber-500/40 hover:text-amber-400 active:scale-95 transition-all duration-200 text-sm shadow-md"
+              title="مركز التنبيهات"
+            >
+              🔔
+            </button>
+            {notifications.filter(n => !n.read).length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center animate-bounce">
+                {notifications.filter(n => !n.read).length}
+              </span>
+            )}
+          </div>
 
           {/* MAIN VIEW NAVIGATION TABS */}
           <nav id="nav" className={`no-print flex-col md:flex-row md:flex gap-1.5 ${mobileMenuOpen ? 'open flex w-full' : 'hidden'}`}>
@@ -2886,6 +3054,51 @@ export default function App() {
           ))}
         </div>
       )}
+
+      {/* RENDER DYNAMIC DETAILED STATEMENT OVERLAY IF ACTIVE */}
+      {activeStatementClientId !== null && (
+        <Suspense fallback={null}>
+          <StatementPrint 
+            state={state} 
+            clientId={activeStatementClientId} 
+            onClose={() => setActiveStatementClientId(null)} 
+          />
+        </Suspense>
+      )}
+
+      {/* RENDER SMART COMMAND PALETTE OVERLAY */}
+      <Suspense fallback={null}>
+        <CommandPalette
+          isOpen={commandPaletteOpen}
+          onClose={() => setCommandPaletteOpen(false)}
+          state={state}
+          onSelectClient={handleSelectClient}
+          onSelectSupplier={handleSelectSupplier}
+          setView={(v) => {
+            triggerHaptic(10);
+            setState(prev => ({ ...prev, view: v }));
+          }}
+          onSaveBackup={handleBackupCloudExport}
+          onRestoreBackup={handleBackupCloudRestore}
+        />
+      </Suspense>
+
+      {/* RENDER SYSTEM NOTIFICATION SIDE DRAWER OVERLAY */}
+      <Suspense fallback={null}>
+        <NotificationCenter
+          isOpen={notificationsOpen}
+          onClose={() => setNotificationsOpen(false)}
+          notifications={notifications}
+          onMarkAllAsRead={() => {
+            triggerHaptic(10);
+            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+          }}
+          onClearAll={() => {
+            triggerHaptic(10);
+            setNotifications([]);
+          }}
+        />
+      </Suspense>
     </>
   );
 }

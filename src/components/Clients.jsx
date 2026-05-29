@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { COLORS, getTotals, fmt, getClientColor } from '../js/utils';
+import { COLORS, getTotals, fmt, getClientColor, getCumulativeBalance, getPreviousMonthsBalance } from '../js/utils';
 
 export default function Clients({ 
   state, 
   onSelectClient, 
   onAddClient, 
   onEditClient, 
-  onDeleteClient 
+  onDeleteClient,
+  onPrintStatement
 }) {
   const y = state.year;
   const m = state.month;
@@ -180,24 +181,36 @@ export default function Clients({
           {filtered.map(cl => {
             const t = getTotals(state.ledger, cl.id, y, m);
             const rem = t.amt - t.paid;
+            const prevMonthsBal = getPreviousMonthsBalance(state.ledger, cl.id, y, m);
+            const cumulativeBal = getCumulativeBalance(state.ledger, cl.id, y, m);
             
             let badges = [];
-            if (state.role !== 'driver' && t.amt > 0) {
-              if (rem <= 0) {
+            if (state.role !== 'driver') {
+              if (prevMonthsBal > 0.005) {
                 badges.push(
-                  <span key="paid" className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 text-[9px] font-black px-2 py-0.5 rounded-full select-none">مخلص 💸</span>
-                );
-              } else {
-                badges.push(
-                  <span key="debt" className="bg-red-500/15 text-red-400 border border-red-500/25 text-[9px] font-black px-2 py-0.5 rounded-full select-none">مدين ⚠️</span>
+                  <span key="history-debt" className="bg-rose-500/15 text-rose-400 border border-rose-500/25 text-[9px] font-black px-2 py-0.5 rounded-full select-none animate-pulse" title={`ديون سابقة: ${fmt(prevMonthsBal)} د.ت`}>
+                    ⚠️ دين سابق: {fmt(prevMonthsBal)}
+                  </span>
                 );
               }
               
-              // VIP check
-              if (t.amt >= maxAmt * 0.7 && t.amt > 100) {
-                badges.push(
-                  <span key="vip" className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-black px-2 py-0.5 rounded-full select-none">كبير العملاء ⭐</span>
-                );
+              if (t.amt > 0) {
+                if (rem <= 0) {
+                  badges.push(
+                    <span key="paid" className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 text-[9px] font-black px-2 py-0.5 rounded-full select-none">مخلص 💸</span>
+                  );
+                } else {
+                  badges.push(
+                    <span key="debt" className="bg-red-500/15 text-red-400 border border-red-500/25 text-[9px] font-black px-2 py-0.5 rounded-full select-none">مدين ⚠️</span>
+                  );
+                }
+                
+                // VIP check
+                if (t.amt >= maxAmt * 0.7 && t.amt > 100) {
+                  badges.push(
+                    <span key="vip" className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-black px-2 py-0.5 rounded-full select-none">كبير العملاء ⭐</span>
+                  );
+                }
               }
             }
 
@@ -221,9 +234,20 @@ export default function Clients({
                       {cl.name[0]}
                     </div>
                     
-                    {/* Action buttons (pencil & bin) */}
+                    {/* Action buttons (pencil & bin & statement) */}
                     {state.role !== 'driver' && (
                       <div className="flex gap-1.5 items-center no-print opacity-80 group-hover:opacity-100 transition-opacity">
+                        {onPrintStatement && (
+                          <motion.button 
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="p-2 border border-slate-800 bg-slate-950/60 hover:border-amber-500/40 hover:text-amber-400 rounded-lg text-[10px] transition-colors" 
+                            onClick={(e) => { e.stopPropagation(); onPrintStatement(cl.id); }}
+                            title="كشف حساب مفصل (PDF)"
+                          >
+                            📑
+                          </motion.button>
+                        )}
                         <motion.button 
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
@@ -295,20 +319,30 @@ export default function Clients({
 
                 {/* Footer totals layout */}
                 {state.role !== 'driver' && (
-                  <div className="grid grid-cols-3 gap-2 pt-3 mt-4 border-t border-slate-800/60 text-center select-none">
-                    <div>
-                      <div className="text-[10px] text-slate-500 font-bold">المجموع الجملي</div>
-                      <div className="text-xs font-black text-amber-400/90 font-mono mt-0.5">{fmt(t.amt) || "—"}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-slate-500 font-bold">المدفوع الكلي</div>
-                      <div className="text-xs font-black text-emerald-400/90 font-mono mt-0.5">{fmt(t.paid) || "—"}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-slate-500 font-bold">الباقي بذمته</div>
-                      <div className={`text-xs font-black font-mono mt-0.5 ${rem > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                        {rem > 0 ? fmt(rem) : '✓'}
+                  <div className="mt-4 border-t border-slate-800/60 pt-3 select-none">
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <div className="text-[10px] text-slate-500 font-bold">المبيعات الشهرية</div>
+                        <div className="text-xs font-black text-amber-400/90 font-mono mt-0.5">{fmt(t.amt) || "—"}</div>
                       </div>
+                      <div>
+                        <div className="text-[10px] text-slate-500 font-bold">المدفوع الشهري</div>
+                        <div className="text-xs font-black text-emerald-400/90 font-mono mt-0.5">{fmt(t.paid) || "—"}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-slate-500 font-bold">الباقي لهذا الشهر</div>
+                        <div className={`text-xs font-black font-mono mt-0.5 ${rem > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                          {rem > 0 ? fmt(rem) : '✓'}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Cumulative Balance Bar */}
+                    <div className="mt-2.5 px-3 py-1.5 rounded-xl bg-slate-950/50 border border-slate-850/80 flex justify-between items-center text-[11px]">
+                      <span className="text-[10px] text-slate-400 font-bold">الحساب الجملي المتراكم:</span>
+                      <span className={`font-black font-mono ${cumulativeBal > 0.005 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        {cumulativeBal > 0.005 ? `${fmt(cumulativeBal)} د.ت` : '✓ مخلص'}
+                      </span>
                     </div>
                   </div>
                 )}

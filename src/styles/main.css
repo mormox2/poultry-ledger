@@ -1020,6 +1020,24 @@ tr.holiday td {
   100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
 }
 
+.pulse-dot-yellow {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background-color: var(--gold);
+  border-radius: 50%;
+  margin-left: 8px;
+  box-shadow: 0 0 0 rgba(245, 158, 11, 0.5);
+  animation: pulseYellow 2.2s infinite;
+  vertical-align: middle;
+}
+@keyframes pulseYellow {
+  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.8); }
+  70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+
 /* Frosted HUD Tooltip for Analytics Graph */
 #chart-tooltip {
   background: rgba(10, 15, 29, 0.94) !important;

@@ -108,7 +108,7 @@ export function exportPurchasesToCSV(state) {
       csvContent += `${dateStr},عطلة,عطلة,عطلة,عطلة,عطلة,عطلة,${r.notes || ""}\n`;
     } else {
       const bal = calcBalance(r);
-      csvContent += `${dateStr},${r.tw || 0},${r.nw || 0},${r.price || state.defaultPurchasePricePerKg || 5.200},${r.amt || 0},${r.paid || 0},${r.amt ? bal : 0},${r.notes || ""}\n`;
+      csvContent += `${dateStr},${r.tw || 0},${r.nw || 0},${r.price || sup.defaultPrice || state.defaultPurchasePricePerKg || 5.200},${r.amt || 0},${r.paid || 0},${r.amt ? bal : 0},${r.notes || ""}\n`;
     }
   });
   
@@ -125,4 +125,33 @@ export function exportPurchasesToCSV(state) {
   link.click();
   document.body.removeChild(link);
 }
+
+export function getCumulativeBalance(ledger, cid, upToYear, upToMonth) {
+  if (!ledger) return 0;
+  let cumulative = 0;
+  Object.keys(ledger).forEach(key => {
+    if (key.startsWith(`${cid}-`)) {
+      const parts = key.split('-');
+      if (parts.length >= 3) {
+        const m = parseInt(parts.pop(), 10);
+        const y = parseInt(parts.pop(), 10);
+        const keyCid = parts.join('-');
+        if (keyCid === String(cid)) {
+          if (y < upToYear || (y === upToYear && m <= upToMonth)) {
+            const totals = getTotals(ledger, cid, y, m);
+            cumulative += (totals.amt - totals.paid);
+          }
+        }
+      }
+    }
+  });
+  return cumulative;
+}
+
+export function getPreviousMonthsBalance(ledger, cid, y, m) {
+  const prevMonth = m === 1 ? 12 : m - 1;
+  const prevYear = m === 1 ? y - 1 : y;
+  return getCumulativeBalance(ledger, cid, prevYear, prevMonth);
+}
+
 

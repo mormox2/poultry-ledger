@@ -23,6 +23,7 @@ export default function Suppliers({
   const [formColor, setFormColor] = useState(0);
   const [formTaxId, setFormTaxId] = useState('');
   const [formNotes, setFormNotes] = useState('');
+  const [formDefaultPrice, setFormDefaultPrice] = useState('');
 
   const filtered = useMemo(() => {
     return (state.suppliers || []).filter(x => 
@@ -45,6 +46,7 @@ export default function Suppliers({
     setFormColor(0);
     setFormTaxId('');
     setFormNotes('');
+    setFormDefaultPrice('');
     setModalMode('add');
   };
 
@@ -56,6 +58,7 @@ export default function Suppliers({
     setFormColor(sup.color);
     setFormTaxId(sup.taxId === '—' ? '' : sup.taxId || '');
     setFormNotes(sup.notes === '—' ? '' : sup.notes || '');
+    setFormDefaultPrice(sup.defaultPrice || '');
     setModalMode('edit');
   };
 
@@ -81,7 +84,8 @@ export default function Suppliers({
       phone: formPhone.trim() || "—",
       color: formColor,
       taxId: formTaxId.trim() || "—",
-      notes: formNotes.trim() || "—"
+      notes: formNotes.trim() || "—",
+      defaultPrice: formDefaultPrice ? parseFloat(formDefaultPrice) : null
     });
     closeModal();
   };
@@ -99,7 +103,8 @@ export default function Suppliers({
       phone: formPhone.trim() || "—",
       color: formColor,
       taxId: formTaxId.trim() || "—",
-      notes: formNotes.trim() || "—"
+      notes: formNotes.trim() || "—",
+      defaultPrice: formDefaultPrice ? parseFloat(formDefaultPrice) : null
     });
     closeModal();
   };
@@ -375,6 +380,18 @@ export default function Suppliers({
                 </div>
 
                 <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">سعر الشراء الافتراضي للكيلو من هذا المورد (د.ت)</label>
+                  <input 
+                    type="number"
+                    step="0.001"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono text-left" 
+                    value={formDefaultPrice} 
+                    onChange={(e) => setFormDefaultPrice(e.target.value)}
+                    placeholder="مثال: 5.200 (أو اتركه فارغاً لاستخدام السعر العام)" 
+                  />
+                </div>
+
+                <div>
                   <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">ملاحظات وشروط خاصة بالمورد</label>
                   <textarea 
                     className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 min-h-[50px] resize-y" 
@@ -489,6 +506,18 @@ export default function Suppliers({
                     value={formAddress} 
                     onChange={(e) => setFormAddress(e.target.value)}
                     placeholder="مثال: قابس الجنوبية" 
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">سعر الشراء الافتراضي للكيلو من هذا المورد (د.ت)</label>
+                  <input 
+                    type="number"
+                    step="0.001"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono text-left" 
+                    value={formDefaultPrice} 
+                    onChange={(e) => setFormDefaultPrice(e.target.value)}
+                    placeholder="مثال: 5.200 (أو اتركه فارغاً لاستخدام السعر العام)" 
                   />
                 </div>
 
