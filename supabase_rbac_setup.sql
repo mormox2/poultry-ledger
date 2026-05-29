@@ -34,9 +34,7 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('backups', 'backups', false)
 ON CONFLICT (id) DO NOTHING;
 
--- 4. Enable RLS and setup storage policies for backups
--- Enable RLS on storage.objects if not already enabled
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- 4. Setup storage policies for backups (RLS is enabled by default in Supabase Storage)
 
 -- Policy to allow authenticated users to manage their own backup file 'backup_{user_id}.bin'
 DROP POLICY IF EXISTS "Users can manage their own backups" ON storage.objects;
