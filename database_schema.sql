@@ -122,7 +122,10 @@ CREATE POLICY "Users can delete ledger entries of their own clients."
 
 -- 4. Trigger to automatically create a profile row when a user signs up
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
+RETURNS trigger 
+SECURITY DEFINER
+SET search_path = public, pg_catalog -- Explicitly set search path for safety and system operator compatibility
+AS $$
 BEGIN
     INSERT INTO public.profiles (id, company_name, company_address, company_phone, company_tax_id, price_per_kg)
     VALUES (
@@ -135,7 +138,12 @@ BEGIN
     );
     RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
+
+-- Grant permissions to make sure supabase auth system can run the function successfully
+GRANT USAGE ON SCHEMA public TO supabase_auth_admin;
+GRANT ALL ON public.profiles TO postgres, service_role;
+GRANT EXECUTE ON FUNCTION public.handle_new_user() TO postgres, supabase_auth_admin;
 
 -- Recreate trigger
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
