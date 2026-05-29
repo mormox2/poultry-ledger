@@ -465,7 +465,7 @@ ${state.companyInfo?.invoiceFooter || "🤝 شكراً لتعاملكم معنا
                     return (
                       <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0', background: '#fffbeb' }}>
                         <td style={{ padding: '10px 8px', textAlign: 'center', color: '#64748b', fontWeight: '600' }}>{dateStr}</td>
-                        <td colSpan="5" style={{ padding: '10px 8px', textAlign: 'center', color: '#ea580c', fontWeight: '800', fontSize: '13px' }}>— عطلة إسبوعية / رسمية —</td>
+                        <td colSpan="5" style={{ padding: '10px 8px', textAlign: 'center', color: '#ea580c', fontWeight: '800', fontSize: '13px' }}>— عطلة أسبوعية / رسمية —</td>
                         <td style={{ padding: '10px 8px', textAlign: 'center', color: '#64748b', fontStyle: 'italic' }}>{r.notes || ""}</td>
                       </tr>
                     );
