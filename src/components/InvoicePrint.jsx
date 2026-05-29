@@ -377,7 +377,6 @@ export default function InvoicePrint({ state, clientId, onClose }) {
             <thead>
               <tr style={{ background: '#f1f5f9', borderBottom: '2.5px solid #d4a843' }}>
                 <th style={{ padding: '12px 8px', textAlign: 'center', color: '#b45309', fontWeight: '800' }}>التاريخ</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', color: '#b45309', fontWeight: '800' }}>الوزن الكامل (كغ)</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', color: '#b45309', fontWeight: '800' }}>الوزن الصافي (كغ)</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', color: '#b45309', fontWeight: '800' }}>السعر (د.ت)</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', color: '#b45309', fontWeight: '800' }}>المجموع (HT)</th>
@@ -389,7 +388,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
             <tbody>
               {activeRows.length === 0 ? (
                 <tr>
-                  <td colSpan="8" style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                  <td colSpan="7" style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
                     لا توجد أي معاملات مسجلة في هذه الفترة الحسابية.
                   </td>
                 </tr>
@@ -401,7 +400,7 @@ export default function InvoicePrint({ state, clientId, onClose }) {
                     return (
                       <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0', background: '#fffbeb' }}>
                         <td style={{ padding: '10px 8px', textAlign: 'center', color: '#64748b', fontWeight: '600' }}>{dateStr}</td>
-                        <td colSpan="6" style={{ padding: '10px 8px', textAlign: 'center', color: '#ea580c', fontWeight: '800', fontSize: '13px' }}>— عطلة إسبوعية / رسمية —</td>
+                        <td colSpan="5" style={{ padding: '10px 8px', textAlign: 'center', color: '#ea580c', fontWeight: '800', fontSize: '13px' }}>— عطلة إسبوعية / رسمية —</td>
                         <td style={{ padding: '10px 8px', textAlign: 'center', color: '#64748b', fontStyle: 'italic' }}>{r.notes || ""}</td>
                       </tr>
                     );
@@ -409,7 +408,6 @@ export default function InvoicePrint({ state, clientId, onClose }) {
                   return (
                     <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0', background: idx % 2 === 1 ? '#f8fafc' : '' }}>
                       <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600' }}>{dateStr}</td>
-                      <td style={{ padding: '10px 8px', textAlign: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{r.tw || 0}</td>
                       <td style={{ padding: '10px 8px', textAlign: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{r.nw || 0}</td>
                       <td style={{ padding: '10px 8px', textAlign: 'center', color: '#b45309', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{r.price || state.pricePerKg}</td>
                       <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '700', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{fmt(r.amt) || "0"}</td>
