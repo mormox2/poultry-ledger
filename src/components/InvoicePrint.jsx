@@ -72,6 +72,62 @@ export default function InvoicePrint({ state, clientId, onClose }) {
     }
   };
 
+  const handleSharePDF = async () => {
+    setPdfLoading(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const html2canvas = (await import('html2canvas')).default;
+
+      const selector = printMode === 'a4' ? '.a4-print-sheet' : '.thermal-print-sheet';
+      const element = document.querySelector(selector);
+      if (!element) throw new Error("Target sheet not found");
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      let pdf;
+
+      if (printMode === 'a4') {
+        pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      } else {
+        const imgWidth = 58;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        pdf = new jsPDF('p', 'mm', [imgWidth, imgHeight + 4]);
+        pdf.addImage(imgData, 'JPEG', 0, 2, imgWidth, imgHeight);
+      }
+
+      const pdfBlob = pdf.output('blob');
+      const fileName = `dawajin_pro_${invoiceNumber}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      const monthName = MONTHS.at(m - 1);
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `فاتورة الودرني للدواجن - ${invoiceNumber}`,
+          text: `فاتورة العميل ${cl.name} لشهر ${monthName} ${y}`
+        });
+        showLocalToast("✓ تم مشاركة ملف PDF بنجاح");
+      } else {
+        pdf.save(fileName);
+        showLocalToast("ℹ️ تم تحميل الملف تلقائياً لعدم دعم المشاركة المباشرة للملفات", "info");
+      }
+    } catch (err) {
+      console.error("Failed to share PDF:", err);
+      showLocalToast("❌ فشل في مشاركة ملف PDF", "error");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   const handleShareWhatsApp = () => {
     // Format phone number
     let phoneDigits = cl.phone ? cl.phone.replace(/[^0-9+]/g, '') : '';
@@ -726,7 +782,22 @@ export default function InvoicePrint({ state, clientId, onClose }) {
             background: 'transparent' 
           }}
         >
-          {pdfLoading ? "⏳ جاري التصدير..." : "📥 تصدير PDF"}
+          {pdfLoading ? "⏳ جاري التصدير..." : "📥 تحميل PDF"}
+        </button>
+        <button 
+          className="btn btn-outline" 
+          onClick={handleSharePDF} 
+          disabled={pdfLoading}
+          style={{ 
+            flex: '1 1 130px', 
+            height: '40px', 
+            fontWeight: '700', 
+            color: '#f59e0b', 
+            borderColor: '#f59e0b', 
+            background: 'transparent' 
+          }}
+        >
+          {pdfLoading ? "⏳ جاري التصدير..." : "📤 مشاركة كملف PDF"}
         </button>
         <button 
           className="btn btn-outline" 

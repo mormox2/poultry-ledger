@@ -505,6 +505,111 @@ export default function App() {
     };
   }, [isLoggedIn, user]);
 
+  // --- Supabase Realtime Listeners ---
+  useEffect(() => {
+    if (!isSupabaseConfigured || !user || !isLoggedIn) return;
+
+    let debounceTimeout = null;
+    const triggerRefetch = () => {
+      if (debounceTimeout) clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(() => {
+        if (navigator.onLine) {
+          fetchCloudData(user.id);
+        }
+      }, 1500); // 1.5s debounce to handle batch operations elegantly
+    };
+
+    const channel = supabase
+      .channel('poultry-ledger-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ledger_entries' }, (payload) => {
+        triggerRefetch();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'purchases' }, (payload) => {
+        triggerRefetch();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deadlines' }, (payload) => {
+        triggerRefetch();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, (payload) => {
+        triggerRefetch();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'suppliers' }, (payload) => {
+        triggerRefetch();
+      })
+      .subscribe();
+
+    return () => {
+      if (debounceTimeout) clearTimeout(debounceTimeout);
+      supabase.removeChannel(channel);
+    };
+  }, [isSupabaseConfigured, user, isLoggedIn]);
+
+  // --- PWA Local Push Reminders for Deadlines ---
+  useEffect(() => {
+    if (!isLoggedIn || !state.deadlines || state.deadlines.length === 0) return;
+    
+    // Request permission politely 5s after boot
+    if ('Notification' in window && Notification.permission === 'default') {
+      setTimeout(() => {
+        Notification.requestPermission().catch(err => {
+          console.warn("Notification request permission failed:", err);
+        });
+      }, 5000);
+    }
+
+    // Check for due or overdue deadlines
+    const todayStr = new Date().toISOString().split('T')[0];
+    const dueToday = state.deadlines.filter(d => d.status === 'pending' && d.due_date === todayStr);
+    const overdue = state.deadlines.filter(d => d.status === 'pending' && d.due_date < todayStr);
+
+    if (dueToday.length > 0 || overdue.length > 0) {
+      const showReminders = async () => {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          // Check if we already showed reminders today to avoid spamming
+          const lastShown = localStorage.getItem('dawajin_last_notification_date');
+          if (lastShown === todayStr) return;
+
+          let bodyText = "";
+          if (dueToday.length > 0) {
+            bodyText += `📅 اليوم: لديك ${dueToday.length} أجل مستحق للدفع.\n`;
+          }
+          if (overdue.length > 0) {
+            bodyText += `⚠️ متأخر: لديك ${overdue.length} أقساط تجاوزت تاريخ السداد!`;
+          }
+
+          // Register service worker notification or trigger direct native notification
+          try {
+            navigator.serviceWorker.ready.then((registration) => {
+              registration.showNotification("🐔 Dawajin Pro — تذكير الأقساط", {
+                body: bodyText,
+                icon: "/poultry-ledger/assets/icon.svg",
+                vibrate: [200, 100, 200],
+                badge: "/poultry-ledger/assets/icon.svg",
+                dir: 'rtl',
+                tag: 'deadline-reminder'
+              });
+              localStorage.setItem('dawajin_last_notification_date', todayStr);
+            }).catch(() => {
+              // Fallback to direct window Notification if SW is not ready/registered
+              new Notification("🐔 Dawajin Pro — تذكير الأقساط", {
+                body: bodyText,
+                icon: "/poultry-ledger/assets/icon.svg",
+                dir: 'rtl'
+              });
+              localStorage.setItem('dawajin_last_notification_date', todayStr);
+            });
+          } catch (err) {
+            console.warn("Notification trigger failed:", err);
+          }
+        }
+      };
+
+      // Delay checking slightly to ensure session is settled
+      const timer = setTimeout(showReminders, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoggedIn, state.deadlines]);
+
   // Push a state to prevent immediate exit on Android/PWA back button
   useEffect(() => {
     if (!isLoggedIn) return;
