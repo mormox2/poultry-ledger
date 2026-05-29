@@ -139,15 +139,17 @@ export default function Clients({
           </h2>
           <p className="text-xs text-slate-400 font-medium mt-1">تتبع مستحقات المشترين والموردين وتحديث بيانات الاتصال الخاصة بهم</p>
         </div>
-        <motion.button 
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleOpenAdd}
-          className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2"
-        >
-          <span>+</span>
-          <span>إضافة عميل جديد</span>
-        </motion.button>
+        {state.role !== 'driver' && (
+          <motion.button 
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleOpenAdd}
+            className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2"
+          >
+            <span>+</span>
+            <span>إضافة عميل جديد</span>
+          </motion.button>
+        )}
       </div>
 
       {/* SEARCH AND FILTERS BAR */}
@@ -180,7 +182,7 @@ export default function Clients({
             const rem = t.amt - t.paid;
             
             let badges = [];
-            if (t.amt > 0) {
+            if (state.role !== 'driver' && t.amt > 0) {
               if (rem <= 0) {
                 badges.push(
                   <span key="paid" className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 text-[9px] font-black px-2 py-0.5 rounded-full select-none">مخلص 💸</span>
@@ -220,28 +222,30 @@ export default function Clients({
                     </div>
                     
                     {/* Action buttons (pencil & bin) */}
-                    <div className="flex gap-1.5 items-center no-print opacity-80 group-hover:opacity-100 transition-opacity">
-                      <motion.button 
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="p-2 border border-slate-800 bg-slate-950/60 hover:border-amber-500/40 hover:text-amber-400 rounded-lg text-[10px] transition-colors" 
-                        onClick={(e) => { e.stopPropagation(); handleOpenEdit(cl); }}
-                        title="تعديل بيانات الحريف"
-                      >
-                        ✏️
-                      </motion.button>
-                      {state.clients.length > 1 && (
+                    {state.role !== 'driver' && (
+                      <div className="flex gap-1.5 items-center no-print opacity-80 group-hover:opacity-100 transition-opacity">
                         <motion.button 
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          className="p-2 border border-slate-850 bg-slate-950/60 hover:border-red-500/40 hover:text-red-400 rounded-lg text-[10px] transition-colors" 
-                          onClick={(e) => { e.stopPropagation(); handleOpenDelete(cl); }}
-                          title="حذف الحريف نهائيًا"
+                          className="p-2 border border-slate-800 bg-slate-950/60 hover:border-amber-500/40 hover:text-amber-400 rounded-lg text-[10px] transition-colors" 
+                          onClick={(e) => { e.stopPropagation(); handleOpenEdit(cl); }}
+                          title="تعديل بيانات الحريف"
                         >
-                          🗑️
+                          ✏️
                         </motion.button>
-                      )}
-                    </div>
+                        {state.clients.length > 1 && (
+                          <motion.button 
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="p-2 border border-slate-855 bg-slate-950/60 hover:border-red-500/40 hover:text-red-400 rounded-lg text-[10px] transition-colors" 
+                            onClick={(e) => { e.stopPropagation(); handleOpenDelete(cl); }}
+                            title="حذف الحريف نهائيًا"
+                          >
+                            🗑️
+                          </motion.button>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Name and Badges */}
@@ -290,22 +294,24 @@ export default function Clients({
                 </div>
 
                 {/* Footer totals layout */}
-                <div className="grid grid-cols-3 gap-2 pt-3 mt-4 border-t border-slate-800/60 text-center select-none">
-                  <div>
-                    <div className="text-[10px] text-slate-500 font-bold">المجموع الجملي</div>
-                    <div className="text-xs font-black text-amber-400/90 font-mono mt-0.5">{fmt(t.amt) || "—"}</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-slate-500 font-bold">المدفوع الكلي</div>
-                    <div className="text-xs font-black text-emerald-400/90 font-mono mt-0.5">{fmt(t.paid) || "—"}</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-slate-500 font-bold">الباقي بذمته</div>
-                    <div className={`text-xs font-black font-mono mt-0.5 ${rem > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                      {rem > 0 ? fmt(rem) : '✓'}
+                {state.role !== 'driver' && (
+                  <div className="grid grid-cols-3 gap-2 pt-3 mt-4 border-t border-slate-800/60 text-center select-none">
+                    <div>
+                      <div className="text-[10px] text-slate-500 font-bold">المجموع الجملي</div>
+                      <div className="text-xs font-black text-amber-400/90 font-mono mt-0.5">{fmt(t.amt) || "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-slate-500 font-bold">المدفوع الكلي</div>
+                      <div className="text-xs font-black text-emerald-400/90 font-mono mt-0.5">{fmt(t.paid) || "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-slate-500 font-bold">الباقي بذمته</div>
+                      <div className={`text-xs font-black font-mono mt-0.5 ${rem > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                        {rem > 0 ? fmt(rem) : '✓'}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
               </motion.div>
             );

@@ -151,45 +151,49 @@ export default function Ledger({
           </div>
         </div>
 
-        {/* Payment bar */}
-        <div className="w-full md:w-64 max-w-full">
-          <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 mb-1.5">
-            <span>نسبة تسديد الديون</span>
-            <span className={paidPct >= 100 ? 'text-emerald-400' : 'text-amber-400'}>{paidPct}%</span>
-          </div>
-          <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden p-[1px] border border-slate-800/40">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min(paidPct, 100)}%` }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className={`h-full rounded-full`}
-              style={{ background: paidPct >= 100 ? '#10b981' : '#f59e0b' }}
-            />
-          </div>
-        </div>
+        {state.role !== 'driver' && (
+          <>
+            {/* Payment bar */}
+            <div className="w-full md:w-64 max-w-full">
+              <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 mb-1.5">
+                <span>نسبة تسديد الديون</span>
+                <span className={paidPct >= 100 ? 'text-emerald-400' : 'text-amber-400'}>{paidPct}%</span>
+              </div>
+              <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden p-[1px] border border-slate-800/40">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(paidPct, 100)}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className={`h-full rounded-full`}
+                  style={{ background: paidPct >= 100 ? '#10b981' : '#f59e0b' }}
+                />
+              </div>
+            </div>
 
-        {/* Settlement quick actions */}
-        <div className="flex flex-col items-center sm:items-end justify-center gap-1 w-full md:w-auto">
-          <div className={`text-xl md:text-2xl font-black tracking-tight font-mono ${
-            remaining > 0 ? 'text-red-400' : remaining < 0 ? 'text-orange-400' : 'text-emerald-400'
-          }`}>
-            {fmt(remaining) || "—"}
-          </div>
-          <div className="text-[10px] text-slate-500 font-semibold">
-            {remaining > 0 ? 'متبقي بذمته' : remaining < 0 ? 'رصيد زائد للعميل' : 'خالص بالكامل ✓'}
-          </div>
-          
-          {remaining > 0 && (
-            <motion.button 
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-[10px] rounded-lg shadow-md transition-all duration-200 mt-1.5 no-print"
-              onClick={() => setQuickSettleOpen(true)}
-            >
-              💸 تسديد سريع
-            </motion.button>
-          )}
-        </div>
+            {/* Settlement quick actions */}
+            <div className="flex flex-col items-center sm:items-end justify-center gap-1 w-full md:w-auto">
+              <div className={`text-xl md:text-2xl font-black tracking-tight font-mono ${
+                remaining > 0 ? 'text-red-400' : remaining < 0 ? 'text-orange-400' : 'text-emerald-400'
+              }`}>
+                {fmt(remaining) || "—"}
+              </div>
+              <div className="text-[10px] text-slate-500 font-semibold">
+                {remaining > 0 ? 'متبقي بذمته' : remaining < 0 ? 'رصيد زائد للعميل' : 'خالص بالكامل ✓'}
+              </div>
+              
+              {remaining > 0 && (
+                <motion.button 
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-[10px] rounded-lg shadow-md transition-all duration-200 mt-1.5 no-print"
+                  onClick={() => setQuickSettleOpen(true)}
+                >
+                  💸 تسديد سريع
+                </motion.button>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* QUICK SUB-METRICS BAR */}
@@ -197,9 +201,9 @@ export default function Ledger({
         {[
           { label: "الوزن الكامل الجملي", val: `${Math.round(totals.tw)} كغ`, sub: `${totals.days} يوم تسليم`, border: "border-sky-500/10 text-sky-400" },
           { label: "إجمالي الوزن الصافي", val: `${Math.round(totals.nw)} كغ`, sub: "صافي المبيعات الكلي", border: "border-emerald-500/10 text-emerald-400" },
-          { label: "المبلغ الإجمالي", val: fmt(totals.amt) || "—", sub: "د.ت جملة الفواتير", border: "border-amber-500/10 text-amber-400" },
-          { label: "الباقي المعلق", val: fmt(remaining) || "—", sub: remaining > 0 ? 'دين غير خالص' : 'حساب مستقر ✓', border: remaining > 0 ? "border-red-500/10 text-red-400" : "border-emerald-500/10 text-emerald-400" }
-        ].map((st, i) => (
+          { label: "المبلغ الإجمالي", val: fmt(totals.amt) || "—", sub: "د.ت جمعة الفواتير", border: "border-amber-500/10 text-amber-400" },
+          { label: "الباقي المعلق", val: fmt(remaining) || "—", sub: remaining > 0 ? 'دين غير خالص' : 'حساب مستقر ✓', border: remaining > 0 ? "border-red-500/10 text-red-450" : "border-emerald-500/10 text-emerald-400" }
+        ].filter((_, idx) => state.role !== 'driver' || idx < 2).map((st, i) => (
           <div key={i} className={`bg-slate-900/30 backdrop-blur-sm border rounded-xl p-4 shadow-md text-right ${st.border}`}>
             <div className="text-[10px] text-slate-500 font-bold mb-1.5">{st.label}</div>
             <div className="text-lg md:text-xl font-black tracking-tight font-mono">{st.val}</div>
@@ -211,25 +215,27 @@ export default function Ledger({
       {/* EXPORTS BAR */}
       <div className="flex justify-between items-center gap-4 flex-wrap text-right no-print">
         <div className="text-slate-400 text-xs font-semibold">سجل المعاملات اليومي لهذا الشهر</div>
-        <div className="flex gap-2">
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="px-4 py-2 bg-slate-900 border border-slate-800 hover:border-amber-500/30 text-slate-300 hover:text-amber-400 rounded-xl font-bold text-xs transition-colors" 
-            onClick={onExportCSV}
-          >
-            📥 تصدير Excel (CSV)
-          </motion.button>
-          
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-md"
-            onClick={() => onPrintInvoice(cl.id)}
-          >
-            📄 معاينة وطباعة الفاتورة
-          </motion.button>
-        </div>
+        {state.role !== 'driver' && (
+          <div className="flex gap-2">
+            <motion.button 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="px-4 py-2 bg-slate-900 border border-slate-800 hover:border-amber-500/30 text-slate-300 hover:text-amber-400 rounded-xl font-bold text-xs transition-colors" 
+              onClick={onExportCSV}
+            >
+              📥 تصدير Excel (CSV)
+            </motion.button>
+            
+            <motion.button 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-md"
+              onClick={() => onPrintInvoice(cl.id)}
+            >
+              📄 معاينة وطباعة الفاتورة
+            </motion.button>
+          </div>
+        )}
       </div>
 
       {/* SPREADSHEET TABLE */}
@@ -240,10 +246,14 @@ export default function Ledger({
               <th className="py-4 px-3 text-slate-400 font-bold text-[10px] tracking-wider select-none">التاريخ</th>
               <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none">الوزن الكامل (كغ)</th>
               <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none">الوزن الصافي (كغ)</th>
-              <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none">سعر 1 كغ (د.ت)</th>
-              <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none">المبلغ الجملي</th>
-              <th className="py-4 px-3 text-emerald-400/90 font-black text-[10px] tracking-wider select-none">المدفوع الكلي</th>
-              <th className="py-4 px-3 text-slate-400 font-bold text-[10px] tracking-wider select-none">الباقي الفردي</th>
+              {state.role !== 'driver' && (
+                <>
+                  <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none">سعر 1 كغ (د.ت)</th>
+                  <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none">المبلغ الجملي</th>
+                  <th className="py-4 px-3 text-emerald-400/90 font-black text-[10px] tracking-wider select-none">المدفوع الكلي</th>
+                  <th className="py-4 px-3 text-slate-400 font-bold text-[10px] tracking-wider select-none">الباقي الفردي</th>
+                </>
+              )}
               <th className="py-4 px-3 text-slate-400 font-bold text-[10px] tracking-wider select-none">ملاحظات اليوم</th>
               <th className="py-4 px-3 text-slate-400 font-bold text-[10px] tracking-wider select-none no-print">عطلة</th>
             </tr>
@@ -267,7 +277,7 @@ export default function Ledger({
                   <td className="py-2.5 px-3 text-slate-500 font-bold font-mono tracking-tight text-[10px] select-none">{dateStr}</td>
                   
                   {r.holiday ? (
-                    <td colSpan="6" className="py-2.5 px-3 text-amber-500/80 font-black text-center select-none text-[11px] tracking-widest italic">— عطلة رسمية —</td>
+                    <td colSpan={state.role === 'driver' ? "2" : "6"} className="py-2.5 px-3 text-amber-500/80 font-black text-center select-none text-[11px] tracking-widest italic">— عطلة رسمية —</td>
                   ) : (
                     <>
                       {/* Total Weight */}
@@ -303,62 +313,66 @@ export default function Ledger({
                         />
                       </td>
 
-                      {/* Custom Price */}
-                      <td className="py-1 px-1.5">
-                        <input 
-                          type="number" 
-                          inputMode="decimal"
-                          id={`price-${idx}`} 
-                          className="w-16 bg-slate-950/60 border border-transparent focus:border-amber-500/50 hover:bg-slate-950 focus:bg-slate-950 rounded-lg py-1.5 px-2 text-center text-amber-400 outline-none transition-all font-mono font-bold" 
-                          value={r.price || ''} 
-                          placeholder={state.pricePerKg}
-                          onChange={(e) => onUpdateRow(idx, 'price', e.target.value)} 
-                          onKeyDown={(e) => handleKeyDown(e, idx, 2)}
-                          onBlur={() => onSyncRow && onSyncRow(idx)}
-                          data-row={idx}
-                          data-col={2}
-                        />
-                      </td>
+                      {state.role !== 'driver' && (
+                        <>
+                          {/* Custom Price */}
+                          <td className="py-1 px-1.5">
+                            <input 
+                              type="number" 
+                              inputMode="decimal"
+                              id={`price-${idx}`} 
+                              className="w-16 bg-slate-950/60 border border-transparent focus:border-amber-500/50 hover:bg-slate-950 focus:bg-slate-950 rounded-lg py-1.5 px-2 text-center text-amber-400 outline-none transition-all font-mono font-bold" 
+                              value={r.price || ''} 
+                              placeholder={state.pricePerKg}
+                              onChange={(e) => onUpdateRow(idx, 'price', e.target.value)} 
+                              onKeyDown={(e) => handleKeyDown(e, idx, 2)}
+                              onBlur={() => onSyncRow && onSyncRow(idx)}
+                              data-row={idx}
+                              data-col={2}
+                            />
+                          </td>
 
-                      {/* Automatic amount */}
-                      <td className="py-1 px-1.5">
-                        <input 
-                          type="number" 
-                          inputMode="decimal"
-                          id={`amt-${idx}`} 
-                          className="w-20 bg-slate-950/60 border border-transparent focus:border-amber-500/50 hover:bg-slate-950 focus:bg-slate-950 rounded-lg py-1.5 px-2 text-center text-slate-200 outline-none transition-all font-mono font-bold" 
-                          value={r.amt} 
-                          placeholder="—"
-                          onChange={(e) => onUpdateRow(idx, 'amt', e.target.value)} 
-                          onKeyDown={(e) => handleKeyDown(e, idx, 3)}
-                          onBlur={() => onSyncRow && onSyncRow(idx)}
-                          data-row={idx}
-                          data-col={3}
-                        />
-                      </td>
+                          {/* Automatic amount */}
+                          <td className="py-1 px-1.5">
+                            <input 
+                              type="number" 
+                              inputMode="decimal"
+                              id={`amt-${idx}`} 
+                              className="w-20 bg-slate-950/60 border border-transparent focus:border-amber-500/50 hover:bg-slate-950 focus:bg-slate-950 rounded-lg py-1.5 px-2 text-center text-slate-200 outline-none transition-all font-mono font-bold" 
+                              value={r.amt} 
+                              placeholder="—"
+                              onChange={(e) => onUpdateRow(idx, 'amt', e.target.value)} 
+                              onKeyDown={(e) => handleKeyDown(e, idx, 3)}
+                              onBlur={() => onSyncRow && onSyncRow(idx)}
+                              data-row={idx}
+                              data-col={3}
+                            />
+                          </td>
 
-                      {/* Payment */}
-                      <td className="py-1 px-1.5">
-                        <input 
-                          type="number" 
-                          inputMode="decimal"
-                          className="w-20 bg-slate-950/60 border border-transparent focus:border-amber-500/50 hover:bg-slate-950 focus:bg-slate-950 rounded-lg py-1.5 px-2 text-center text-emerald-400 outline-none transition-all font-mono font-bold" 
-                          value={r.paid} 
-                          placeholder="—"
-                          onChange={(e) => onUpdateRow(idx, 'paid', e.target.value)} 
-                          onKeyDown={(e) => handleKeyDown(e, idx, 4)}
-                          onBlur={() => onSyncRow && onSyncRow(idx)}
-                          data-row={idx}
-                          data-col={4}
-                        />
-                      </td>
+                          {/* Payment */}
+                          <td className="py-1 px-1.5">
+                            <input 
+                              type="number" 
+                              inputMode="decimal"
+                              className="w-20 bg-slate-950/60 border border-transparent focus:border-amber-500/50 hover:bg-slate-950 focus:bg-slate-950 rounded-lg py-1.5 px-2 text-center text-emerald-400 outline-none transition-all font-mono font-bold" 
+                              value={r.paid} 
+                              placeholder="—"
+                              onChange={(e) => onUpdateRow(idx, 'paid', e.target.value)} 
+                              onKeyDown={(e) => handleKeyDown(e, idx, 4)}
+                              onBlur={() => onSyncRow && onSyncRow(idx)}
+                              data-row={idx}
+                              data-col={4}
+                            />
+                          </td>
 
-                      {/* Balance cell */}
-                      <td className={`py-2.5 px-3 font-bold font-mono tracking-tight ${
-                        bal > 0 ? 'text-red-400' : bal < 0 ? 'text-orange-400' : 'text-slate-500'
-                      }`} id={`bal-${idx}`}>
-                        {r.amt ? fmt(bal) : ""}
-                      </td>
+                          {/* Balance cell */}
+                          <td className={`py-2.5 px-3 font-bold font-mono tracking-tight ${
+                            bal > 0 ? 'text-red-400' : bal < 0 ? 'text-orange-400' : 'text-slate-500'
+                          }`} id={`bal-${idx}`}>
+                            {r.amt ? fmt(bal) : ""}
+                          </td>
+                        </>
+                      )}
                     </>
                   )}
 
@@ -401,10 +415,14 @@ export default function Ledger({
               <td className="py-4 px-3 text-amber-400 text-xs">إجمالي الشهر</td>
               <td className="py-4 px-3 font-mono text-sm" id="tot-tw">{Math.round(totals.tw)}</td>
               <td className="py-4 px-3 font-mono text-sm" id="tot-nw">{Math.round(totals.nw)}</td>
-              <td className="py-4 px-3"></td>
-              <td className="py-4 px-3 font-mono text-sm text-amber-400" id="tot-amt">{fmt(totals.amt) || "—"}</td>
-              <td className="py-4 px-3 font-mono text-sm text-emerald-400" id="tot-paid">{fmt(totals.paid) || "—"}</td>
-              <td className={`py-4 px-3 font-mono text-sm ${remaining > 0 ? 'text-red-400' : 'text-emerald-400'}`} id="tot-rem">{fmt(remaining) || "—"}</td>
+              {state.role !== 'driver' && (
+                <>
+                  <td className="py-4 px-3"></td>
+                  <td className="py-4 px-3 font-mono text-sm text-amber-400" id="tot-amt">{fmt(totals.amt) || "—"}</td>
+                  <td className="py-4 px-3 font-mono text-sm text-emerald-400" id="tot-paid">{fmt(totals.paid) || "—"}</td>
+                  <td className={`py-4 px-3 font-mono text-sm ${remaining > 0 ? 'text-red-400' : 'text-emerald-400'}`} id="tot-rem">{fmt(remaining) || "—"}</td>
+                </>
+              )}
               <td colSpan="2" className="no-print"></td>
             </tr>
           </tfoot>

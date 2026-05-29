@@ -56,6 +56,7 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return localStorage.getItem("dawajin_logged_in") === "true";
   });
+  const [plainPassword, setPlainPassword] = useState(() => sessionStorage.getItem("dawajin_plain_password") || "");
 
   // Initialize state from localStorage (standalone fallback)
   const getInitialState = () => {
@@ -76,6 +77,7 @@ export default function App() {
       theme: "dark",
       month: currentMonth,
       year: currentYear,
+      role: "admin",
       companyInfo: {
         name: "الودرني للدواجن",
         address: "وادي النور الحامة,قابس",
@@ -98,7 +100,8 @@ export default function App() {
           purchases: parsed.purchases || defaultState.purchases,
           selectedSupplier: parsed.selectedSupplier || defaultState.selectedSupplier,
           deadlines: parsed.deadlines || defaultState.deadlines,
-          defaultPurchasePricePerKg: parsed.defaultPurchasePricePerKg || defaultState.defaultPurchasePricePerKg
+          defaultPurchasePricePerKg: parsed.defaultPurchasePricePerKg || defaultState.defaultPurchasePricePerKg,
+          role: parsed.role || "admin"
         };
       }
     } catch (e) {
@@ -453,6 +456,7 @@ export default function App() {
         theme: state.theme,
         month: state.month,
         year: state.year,
+        role: state.role,
         companyInfo: state.companyInfo
       }));
     } catch (e) {
@@ -1069,23 +1073,32 @@ export default function App() {
         notes: d.notes || ""
       }));
 
-      setState(prev => ({
-        ...prev,
-        clients: formattedClients,
-        ledger: formattedLedger,
-        selectedClient: formattedClients.length ? (formattedClients.some(c => c.id === prev.selectedClient) ? prev.selectedClient : formattedClients.at(0).id) : null,
-        suppliers: formattedSuppliers,
-        purchases: formattedPurchases,
-        selectedSupplier: formattedSuppliers.length ? (formattedSuppliers.some(s => s.id === prev.selectedSupplier) ? prev.selectedSupplier : formattedSuppliers.at(0).id) : null,
-        deadlines: formattedDeadlines,
-        pricePerKg: profile ? parseFloat(profile.price_per_kg) : prev.pricePerKg,
-        companyInfo: profile ? {
-          name: profile.company_name,
-          address: profile.company_address,
-          phone: profile.company_phone,
-          taxId: profile.company_tax_id
-        } : prev.companyInfo
-      }));
+      setState(prev => {
+        const userRole = profile ? profile.role || 'admin' : prev.role || 'admin';
+        const currentView = prev.view;
+        const isViewAllowed = userRole !== 'driver' || currentView === 'ledger' || currentView === 'clients';
+        const newView = isViewAllowed ? currentView : 'ledger';
+
+        return {
+          ...prev,
+          clients: formattedClients,
+          ledger: formattedLedger,
+          selectedClient: formattedClients.length ? (formattedClients.some(c => c.id === prev.selectedClient) ? prev.selectedClient : formattedClients.at(0).id) : null,
+          suppliers: formattedSuppliers,
+          purchases: formattedPurchases,
+          selectedSupplier: formattedSuppliers.length ? (formattedSuppliers.some(s => s.id === prev.selectedSupplier) ? prev.selectedSupplier : formattedSuppliers.at(0).id) : null,
+          deadlines: formattedDeadlines,
+          pricePerKg: profile ? parseFloat(profile.price_per_kg) : prev.pricePerKg,
+          role: userRole,
+          view: newView,
+          companyInfo: profile ? {
+            name: profile.company_name,
+            address: profile.company_address,
+            phone: profile.company_phone,
+            taxId: profile.company_tax_id
+          } : prev.companyInfo
+        };
+      });
 
       toastMessage("⚡ تم مزامنة كامل البيانات مع السحابة بنجاح !");
     } catch (err) {
@@ -1109,7 +1122,10 @@ export default function App() {
   // --- Global Handlers ---
   const handleViewChange = useCallback((viewName) => {
     triggerHaptic(12);
-    setState(prev => ({ ...prev, view: viewName }));
+    setState(prev => {
+      const allowed = prev.role !== 'driver' || viewName === 'ledger' || viewName === 'clients';
+      return { ...prev, view: allowed ? viewName : 'ledger' };
+    });
     setMobileMenuOpen(false);
   }, []);
 
@@ -2262,6 +2278,166 @@ export default function App() {
       toastMessage("✓ تم تسجيل الدفعة للمورد تلقائياً في سجل المدفوعات !");
     }
   }, [isSupabaseConfigured, user, syncLedgerEntryToCloud, syncPurchaseEntryToCloud]);
+  // --- Standard Web Crypto AES-GCM Encrypted Backups ---
+  const getEncryptionKey = async (pass) => {
+    const enc = new TextEncoder();
+    const bytes = enc.encode(pass + "dawajin_pro_backup_salt_92837492");
+    const hash = await window.crypto.subtle.digest("SHA-256", bytes);
+    return await window.crypto.subtle.importKey(
+      "raw",
+      hash,
+      { name: "AES-GCM" },
+      false,
+      ["encrypt", "decrypt"]
+    );
+  };
+
+  const encryptBackup = async (dataStr, pass) => {
+    const key = await getEncryptionKey(pass);
+    const enc = new TextEncoder();
+    const encoded = enc.encode(dataStr);
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await window.crypto.subtle.encrypt(
+      { name: "AES-GCM", iv },
+      key,
+      encoded
+    );
+    const combined = new Uint8Array(iv.length + encrypted.byteLength);
+    combined.set(iv, 0);
+    combined.set(new Uint8Array(encrypted), iv.length);
+    return combined;
+  };
+
+  const decryptBackup = async (combinedBytes, pass) => {
+    const key = await getEncryptionKey(pass);
+    const iv = combinedBytes.slice(0, 12);
+    const ciphertext = combinedBytes.slice(12);
+    const decrypted = await window.crypto.subtle.decrypt(
+      { name: "AES-GCM", iv },
+      key,
+      ciphertext
+    );
+    const dec = new TextDecoder();
+    return dec.decode(decrypted);
+  };
+
+  // Upload encrypted backup to Supabase Storage
+  const handleBackupCloudExport = async (customPass = null) => {
+    const keyPass = customPass || plainPassword;
+    if (!keyPass) {
+      toastMessage("⚠️ الرجاء تسجيل الدخول أو توفير كلمة مرور لتشفير النسخة الاحتياطية", "warning");
+      return false;
+    }
+    if (!isSupabaseConfigured || !user) {
+      toastMessage("⚠️ لم يتم تهيئة المزامنة السحابية للنسخ الاحتياطي", "warning");
+      return false;
+    }
+    setIsCloudLoading(true);
+    try {
+      const currentState = stateRef.current;
+      const dataStr = JSON.stringify(currentState);
+      const encryptedBytes = await encryptBackup(dataStr, keyPass);
+      const blob = new Blob([encryptedBytes], { type: "application/octet-stream" });
+      const fileName = `backup_${user.id}.bin`;
+
+      const { error } = await supabase.storage
+        .from('backups')
+        .upload(fileName, blob, {
+          upsert: true,
+          contentType: 'application/octet-stream'
+        });
+
+      if (error) throw error;
+
+      localStorage.setItem(`dawajin_last_backup_time_${user.id}`, Date.now().toString());
+      toastMessage("⚡ تم رفع النسخة الاحتياطية المشفرة بنجاح إلى السحابة !");
+      return true;
+    } catch (err) {
+      console.error("Cloud backup failed:", err);
+      toastMessage("❌ فشل رفع النسخة الاحتياطية. يرجى التحقق من وجود الحاوية (backups)", "error");
+      return false;
+    } finally {
+      setIsCloudLoading(false);
+    }
+  };
+
+  // Restore encrypted backup from Supabase Storage
+  const handleBackupCloudRestore = async (customPass = null) => {
+    const keyPass = customPass || plainPassword;
+    if (!keyPass) {
+      const promptPass = prompt("الرجاء إدخال كلمة مرور فك التشفير للنسخة الاحتياطية:");
+      if (!promptPass) return;
+      return handleBackupCloudRestore(promptPass);
+    }
+    if (!isSupabaseConfigured || !user) {
+      toastMessage("⚠️ لم يتم تهيئة المزامنة السحابية للاسترجاع", "warning");
+      return false;
+    }
+    setIsCloudLoading(true);
+    try {
+      const fileName = `backup_${user.id}.bin`;
+      const { data, error } = await supabase.storage
+        .from('backups')
+        .download(fileName);
+
+      if (error) {
+        if (error.message?.includes("Object not found")) {
+          alert("لم يتم العثور على أي نسخة احتياطية سحابية لهذا الحساب.");
+          return false;
+        }
+        throw error;
+      }
+
+      const buffer = await data.arrayBuffer();
+      const combinedBytes = new Uint8Array(buffer);
+      const decryptedStr = await decryptBackup(combinedBytes, keyPass);
+      const importedState = JSON.parse(decryptedStr);
+
+      if (importedState.clients && importedState.ledger) {
+        setState(prev => ({
+          ...prev,
+          ...importedState,
+          month: importedState.month || prev.month,
+          year: importedState.year || prev.year,
+          view: "dashboard"
+        }));
+        toastMessage("⚡ تم استعادة البيانات المشفرة السحابية بنجاح !");
+        return true;
+      } else {
+        alert("ملف النسخة الاحتياطية غير صالح.");
+        return false;
+      }
+    } catch (err) {
+      console.error("Cloud restore failed:", err);
+      alert("فشل فك تشفير النسخة الاحتياطية السحابية. يرجى التحقق من كلمة المرور.");
+      return false;
+    } finally {
+      setIsCloudLoading(false);
+    }
+  };
+
+  // Weekly Auto Cloud Backup routine
+  useEffect(() => {
+    if (!isLoggedIn || !user || !isSupabaseConfigured || !plainPassword) return;
+
+    const runAutoBackup = async () => {
+      const lastBackup = localStorage.getItem(`dawajin_last_backup_time_${user.id}`);
+      const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+
+      if (!lastBackup || (now - parseInt(lastBackup)) > oneWeekMs) {
+        console.log("Starting automatic weekly cloud backup...");
+        const success = await handleBackupCloudExport();
+        if (success) {
+          console.log("Weekly auto cloud backup completed successfully!");
+        }
+      }
+    };
+
+    // Run 10 seconds after boot to prevent resource competition
+    const timer = setTimeout(runAutoBackup, 10000);
+    return () => clearTimeout(timer);
+  }, [isLoggedIn, user, isSupabaseConfigured, plainPassword]);
 
 
   // --- Backup & Import ---
@@ -2302,9 +2478,13 @@ export default function App() {
     exportToCSV(state);
   };
 
-  const handleCloudLogin = (newSession, newUser) => {
+  const handleCloudLogin = (newSession, newUser, enteredPass) => {
     setSession(newSession);
     setUser(newUser);
+    if (enteredPass) {
+      setPlainPassword(enteredPass);
+      sessionStorage.setItem("dawajin_plain_password", enteredPass);
+    }
     localStorage.setItem("dawajin_logged_in", "true");
     setIsLoggedIn(true);
     fetchCloudData(newUser.id);
@@ -2360,12 +2540,18 @@ export default function App() {
     return (
       <LoginScreen 
         savedPassword={password}
-        onLogin={() => {
+        onLogin={(enteredPass) => {
+          if (enteredPass) {
+            setPlainPassword(enteredPass);
+            sessionStorage.setItem("dawajin_plain_password", enteredPass);
+          }
           localStorage.setItem("dawajin_logged_in", "true");
           setIsLoggedIn(true);
         }}
         onSetPassword={async (newPass) => {
           await handleChangePassword(newPass);
+          setPlainPassword(newPass);
+          sessionStorage.setItem("dawajin_plain_password", newPass);
           localStorage.setItem("dawajin_logged_in", "true");
           setIsLoggedIn(true);
         }}
@@ -2391,6 +2577,8 @@ export default function App() {
             onInstallApp={handleInstallClick}
             isStandalone={isStandalone}
             onShowInstallGuide={() => setShowInstallModal(true)}
+            onBackupCloudExport={handleBackupCloudExport}
+            onBackupCloudRestore={handleBackupCloudRestore}
           />
         );
       case "ledger":
@@ -2553,7 +2741,7 @@ export default function App() {
               { id: 'deadlines', label: 'الآجال والأقساط', icon: '📅' },
               { id: 'analytics', label: 'التحليلات', icon: '📊' },
               { id: 'summary', label: 'الملخص المالي', icon: '📈' }
-            ].map(tab => (
+            ].filter(tab => state.role !== 'driver' || tab.id === 'ledger' || tab.id === 'clients').map(tab => (
               <button 
                 key={tab.id}
                 className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition-all duration-200 flex items-center gap-2 w-full md:w-auto ${
@@ -2670,7 +2858,7 @@ export default function App() {
             { id: 'clients', label: 'العملاء', icon: '👥' },
             { id: 'purchases_ledger', label: 'المشتريات', icon: '📦' },
             { id: 'summary', label: 'الملخص', icon: '📈' }
-          ].map(tab => (
+          ].filter(tab => state.role !== 'driver' || tab.id === 'ledger' || tab.id === 'clients').map(tab => (
             <button 
               key={tab.id} 
               className={`bottom-nav-item ${state.view === tab.id ? 'active' : ''}`}

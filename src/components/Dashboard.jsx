@@ -15,7 +15,9 @@ export default function Dashboard({
   installPrompt,
   onInstallApp,
   isStandalone,
-  onShowInstallGuide
+  onShowInstallGuide,
+  onBackupCloudExport,
+  onBackupCloudRestore
 }) {
   const [showSettings, setShowSettings] = useState(false);
   const [chartType, setChartType] = useState('line'); // 'line' or 'bar'
@@ -712,6 +714,32 @@ export default function Dashboard({
                   <span>استيراد نسخة احتياطية (JSON)</span>
                   <input type="file" accept=".json" onChange={handleFileImport} className="hidden" />
                 </label>
+
+                {import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-project') && (
+                  <>
+                    <div className="border-t border-slate-800/40 my-1"></div>
+                    
+                    <motion.button 
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full py-2.5 px-4 bg-amber-500/5 hover:bg-amber-500/10 border border-amber-550/20 hover:border-amber-500/55 text-amber-300 rounded-xl font-bold text-xs transition-all duration-200 flex items-center justify-center gap-2"
+                      onClick={() => onBackupCloudExport()}
+                    >
+                      <span>☁️ 📤</span>
+                      <span>نسخ احتياطي سحابي مشفر</span>
+                    </motion.button>
+
+                    <motion.button 
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full py-2.5 px-4 bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-550/20 hover:border-emerald-500/55 text-emerald-300 rounded-xl font-bold text-xs transition-all duration-200 flex items-center justify-center gap-2"
+                      onClick={() => onBackupCloudRestore()}
+                    >
+                      <span>☁️ 📥</span>
+                      <span>استرجاع نسخة مشفرة من السحابة</span>
+                    </motion.button>
+                  </>
+                )}
               </div>
             </div>
 

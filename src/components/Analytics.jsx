@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { MONTHS, getRows, getTotals, fmt, getClientColor } from '../js/utils';
 
@@ -20,6 +20,64 @@ export default function Analytics({ state }) {
   const [chartMetric, setChartMetric] = useState('sales'); // 'sales' or 'weight'
   const [hoveredSliceIdx, setHoveredSliceIdx] = useState(null); // for donut chart interactivity
   const [hoveredLinePoint, setHoveredLinePoint] = useState(null); // for snapping vertical indicator line
+  const [hoveredMomIdx, setHoveredMomIdx] = useState(null); // for dual curve mom chart
+
+  // Generate 6 months of historical data for Sales vs Purchases
+  const marginChartData = useMemo(() => {
+    const data = [];
+    for (let i = 5; i >= 0; i--) {
+      let targetM = m - i;
+      let targetY = y;
+      if (targetM <= 0) {
+        targetM += 12;
+        targetY -= 1;
+      }
+      
+      // Calculate sales total for this target month
+      const mSales = state.clients.reduce((sum, cl) => {
+        const totals = getTotals(state.ledger, cl.id, targetY, targetM);
+        return sum + totals.amt;
+      }, 0);
+      
+      // Calculate purchases total for this target month
+      const mPurchases = (state.suppliers || []).reduce((sum, sup) => {
+        const totals = getTotals(state.purchases || {}, sup.id, targetY, targetM);
+        return sum + totals.amt;
+      }, 0);
+      
+      const mMargin = mSales - mPurchases;
+      const mMarginPct = mSales > 0 ? Math.round((mMargin / mSales) * 100) : 0;
+      
+      data.push({
+        monthLabel: `${MONTHS.at(targetM - 1)} ${targetY}`,
+        sales: mSales,
+        purchases: mPurchases,
+        margin: mMargin,
+        marginPct: mMarginPct
+      });
+    }
+  }, [state.clients, state.suppliers, state.ledger, state.purchases, m, y]);
+
+  const maxValMargin = useMemo(() => {
+    const maxSalesVal = Math.max(...marginChartData.map(d => d.sales), 0);
+    const maxPurchasesVal = Math.max(...marginChartData.map(d => d.purchases), 0);
+    return Math.max(maxSalesVal, maxPurchasesVal, 1000); // minimum scale
+  }, [marginChartData]);
+
+  const marginPoints = useMemo(() => {
+    return marginChartData.map((d, idx) => {
+      const cx = 60 + idx * 136; // span nicely across 800px width
+      const ySales = 220 - ((d.sales / maxValMargin) * 160);
+      const yPurchases = 220 - ((d.purchases / maxValMargin) * 160);
+      return { cx, ySales, yPurchases };
+    });
+  }, [marginChartData, maxValMargin]);
+
+  const mSalesLinePath = useMemo(() => "M " + marginPoints.map(p => `${p.cx} ${p.ySales}`).join(" L "), [marginPoints]);
+  const mSalesAreaPath = useMemo(() => `M ${marginPoints[0]?.cx || 60} 220 L ` + marginPoints.map(p => `${p.cx} ${p.ySales}`).join(" L ") + ` L ${marginPoints[5]?.cx || 740} 220 Z`, [marginPoints]);
+
+  const mPurchasesLinePath = useMemo(() => "M " + marginPoints.map(p => `${p.cx} ${p.yPurchases}`).join(" L "), [marginPoints]);
+  const mPurchasesAreaPath = useMemo(() => `M ${marginPoints[0]?.cx || 60} 220 L ` + marginPoints.map(p => `${p.cx} ${p.yPurchases}`).join(" L ") + ` L ${marginPoints[5]?.cx || 740} 220 Z`, [marginPoints]);
 
   const allTotals = state.clients.map(cl => ({ 
     ...cl, 
@@ -461,6 +519,216 @@ export default function Analytics({ state }) {
           </div>
           <div className="text-[10px] text-slate-500 font-medium mt-4 text-center select-none">
             المحور الأفقي: أيام الشهر | المحور العمودي: {chartMetric === 'sales' ? 'المبيعات الإجمالية بالدينار (د.ت)' : 'إجمالي الأوزان المسلمة (كغ)'}
+          </div>
+        </div>
+
+        {/* PREMIUM DUAL-CURVE MOM MARGIN & BENCHMARK CHART */}
+        <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-lg lg:col-span-3 text-right">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 justify-start">
+              <span>📈</span>
+              <span>مؤشرات المبيعات مقابل تكاليف الشراء والهامش MoM</span>
+            </h3>
+            <div className="text-[10px] text-slate-500 font-bold">المبيعات الجملية مقارنة بتكاليف الشراء ومجمل الأرباح للـ 6 أشهر الأخيرة</div>
+          </div>
+
+          {/* Interactive Inspector display */}
+          {(() => {
+            const inspectIndex = hoveredMomIdx !== null ? hoveredMomIdx : 5;
+            const inspectItem = marginChartData[inspectIndex];
+            if (!inspectItem) return null;
+            return (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 mb-6 bg-slate-950/50 border border-slate-850/60 rounded-xl text-right transition-all duration-300">
+                <div>
+                  <span className="text-[10px] text-slate-500 block font-semibold">الشهر المحدد</span>
+                  <span className="text-xs font-black text-amber-300 mt-1 block">{inspectItem.monthLabel}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 block font-semibold">إجمالي المبيعات (Revenues)</span>
+                  <span className="text-xs font-black text-amber-400 mt-1 block font-mono">{fmt(inspectItem.sales)} د.ت</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 block font-semibold">إجمالي المشتريات (Costs)</span>
+                  <span className="text-xs font-black text-sky-400 mt-1 block font-mono">{fmt(inspectItem.purchases)} د.ت</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 block font-semibold">الأرباح الصافية (Gross Margin)</span>
+                  <span className={`text-xs font-black mt-1 block font-mono ${
+                    inspectItem.margin >= 0 ? 'text-emerald-400' : 'text-red-400'
+                  }`}>
+                    {fmt(inspectItem.margin)} د.ت ({inspectItem.marginPct}%)
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* SVG Viewport */}
+          <div className="w-full overflow-x-auto pr-1 scrollbar-none">
+            <div className="min-w-[700px]">
+              <svg viewBox="0 0 800 250" className="w-full h-auto text-slate-300" style={{ direction: 'ltr' }}>
+                <defs>
+                  <linearGradient id="sales-area-grad-mom" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#d4a843" stopOpacity="0.2"/>
+                    <stop offset="100%" stopColor="#d4a843" stopOpacity="0"/>
+                  </linearGradient>
+                  <linearGradient id="purchases-area-grad-mom" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.2"/>
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity="0"/>
+                  </linearGradient>
+                </defs>
+
+                {/* Grid Lines */}
+                {[40, 85, 130, 175, 220].map((yVal, idx) => (
+                  <line 
+                    key={idx}
+                    x1="60" 
+                    y1={yVal} 
+                    x2="760" 
+                    y2={yVal} 
+                    stroke="var(--border)" 
+                    strokeWidth="1" 
+                    strokeDasharray={yVal === 220 ? "0" : "4,4"} 
+                    opacity={yVal === 220 ? "0.6" : "0.3"} 
+                  />
+                ))}
+
+                {/* Y Axis labels */}
+                {[
+                  { y: 40, val: maxValMargin },
+                  { y: 130, val: maxValMargin / 2 },
+                  { y: 220, val: 0 }
+                ].map((lbl, idx) => (
+                  <text 
+                    key={idx}
+                    x="50" 
+                    y={lbl.y} 
+                    textAnchor="end" 
+                    dominantBaseline="middle" 
+                    className="text-[9px] fill-slate-500 font-mono font-bold"
+                  >
+                    {lbl.val >= 1000 ? `${Math.round(lbl.val / 1000)}k` : Math.round(lbl.val)}
+                  </text>
+                ))}
+
+                {/* X Axis Month Labels */}
+                {marginChartData.map((d, idx) => (
+                  <text 
+                    key={idx} 
+                    x={60 + idx * 136} 
+                    y="240" 
+                    textAnchor="middle" 
+                    className="text-[9px] fill-slate-400 font-bold"
+                  >
+                    {d.monthLabel}
+                  </text>
+                ))}
+
+                {/* Filled Gradient Areas */}
+                <motion.path 
+                  d={mSalesAreaPath} 
+                  fill="url(#sales-area-grad-mom)" 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6 }}
+                />
+                <motion.path 
+                  d={mPurchasesAreaPath} 
+                  fill="url(#purchases-area-grad-mom)" 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6 }}
+                />
+
+                {/* Glow curves */}
+                <motion.path 
+                  d={mSalesLinePath} 
+                  fill="none" 
+                  stroke="#d4a843" 
+                  strokeWidth="3" 
+                  strokeLinecap="round"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 1.0, ease: "easeOut" }}
+                />
+                <motion.path 
+                  d={mPurchasesLinePath} 
+                  fill="none" 
+                  stroke="#3b82f6" 
+                  strokeWidth="3" 
+                  strokeLinecap="round"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 1.0, ease: "easeOut" }}
+                />
+
+                {/* Snapping vertical cursor pillar */}
+                {hoveredMomIdx !== null && (
+                  <line 
+                    x1={60 + hoveredMomIdx * 136} 
+                    y1="40" 
+                    x2={60 + hoveredMomIdx * 136} 
+                    y2="220" 
+                    stroke="rgba(245, 158, 11, 0.4)" 
+                    strokeWidth="1.5" 
+                    strokeDasharray="3,3" 
+                  />
+                )}
+
+                {/* Nodes on points */}
+                {marginPoints.map((p, idx) => (
+                  <g key={idx}>
+                    <circle 
+                      cx={p.cx} 
+                      cy={p.ySales} 
+                      r={hoveredMomIdx === idx ? "5.5" : "3.5"} 
+                      fill="#d4a843" 
+                      stroke="#0f172a" 
+                      strokeWidth="2" 
+                      style={{ transition: 'all 0.15s ease' }}
+                    />
+                    <circle 
+                      cx={p.cx} 
+                      cy={p.yPurchases} 
+                      r={hoveredMomIdx === idx ? "5.5" : "3.5"} 
+                      fill="#3b82f6" 
+                      stroke="#0f172a" 
+                      strokeWidth="2" 
+                      style={{ transition: 'all 0.15s ease' }}
+                    />
+                  </g>
+                ))}
+
+                {/* Interaction pillars */}
+                {marginPoints.map((p, idx) => (
+                  <rect
+                    key={idx}
+                    x={p.cx - 68}
+                    y="30"
+                    width="136"
+                    height="200"
+                    fill="transparent"
+                    style={{ cursor: 'pointer', webkitTapHighlightColor: 'transparent' }}
+                    onMouseEnter={() => setHoveredMomIdx(idx)}
+                    onMouseLeave={() => setHoveredMomIdx(null)}
+                    onTouchStart={() => setHoveredMomIdx(idx)}
+                    onTouchEnd={() => setHoveredMomIdx(null)}
+                  />
+                ))}
+              </svg>
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="flex justify-center gap-6 mt-4 text-[10px] font-bold">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#d4a843] block"></span>
+              <span className="text-slate-300">📈 المبيعات الإجمالية (Revenues)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#3b82f6] block"></span>
+              <span className="text-slate-300">📉 تكاليف الشراء (Costs)</span>
+            </div>
           </div>
         </div>
 

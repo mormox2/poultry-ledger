@@ -47,6 +47,7 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
         return;
       }
       onSetPassword(password.trim());
+      onLogin(password.trim());
     } else {
       // 1. Verify using the new salted hashing format
       const PASSWORD_SALT = 'dawajin_pro_secure_salt_983756291';
@@ -57,7 +58,7 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
       const saltedHashed = saltedHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
       if (saltedHashed === savedPassword) {
-        onLogin();
+        onLogin(password.trim());
         return;
       }
 
@@ -70,7 +71,7 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
       if (unsaltedHashed === savedPassword) {
         // Upgrade password locally to the new salted hash
         onSetPassword(password.trim());
-        onLogin();
+        onLogin(password.trim());
       } else {
         triggerError("كلمة المرور غير صحيحة !");
       }
@@ -98,7 +99,7 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
       if (error) throw error;
 
       if (data?.session && data?.user) {
-        onCloudLogin(data.session, data.user);
+        onCloudLogin(data.session, data.user, password.trim());
       }
     } catch (err) {
       console.error("Auth error:", err);
