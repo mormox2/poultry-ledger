@@ -789,16 +789,41 @@ export default function Dashboard({
         </motion.div>
       )}
 
-      {/* SETTINGS AREA */}
+      {/* SETTINGS AREA (PREMIUM MODAL OVERLAY) */}
       <AnimatePresence>
         {showSettings && (
           <motion.div 
-            initial={{ opacity: 0, height: 0, y: 15 }}
-            animate={{ opacity: 1, height: 'auto', y: 0 }}
-            exit={{ opacity: 0, height: 0, y: 15 }}
-            transition={{ duration: 0.4, cubicBezier: [0.16, 1, 0.3, 1] }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-hidden pt-4 border-t border-slate-800/40"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 md:p-6"
+            onClick={() => setShowSettings(false)}
           >
+            <motion.div 
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              transition={{ duration: 0.3, cubicBezier: [0.16, 1, 0.3, 1] }}
+              className="bg-slate-900 border border-slate-800/80 rounded-3xl w-full max-w-5xl p-6 md:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto text-right flex flex-col gap-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* MODAL HEADER */}
+              <div className="flex justify-between items-center border-b border-slate-850 pb-4">
+                <h2 className="text-base md:text-lg font-black bg-gradient-to-r from-amber-200 via-amber-300 to-amber-500 bg-clip-text text-transparent flex items-center gap-2">
+                  <span>⚙️</span>
+                  <span>إعدادات النظام والتحكم</span>
+                </h2>
+                <button 
+                  onClick={() => setShowSettings(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-950 hover:bg-slate-900 border border-slate-850 hover:border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-bold transition-all"
+                  title="إغلاق الإعدادات"
+                >
+                  ❌
+                </button>
+              </div>
+
+              {/* MODAL CONTENT GRID */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* DEFAULT PRICE CARD */}
             <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
               <div>
@@ -1138,6 +1163,9 @@ export default function Dashboard({
                 </table>
               </div>
             </div>
+            </div>
+            
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
