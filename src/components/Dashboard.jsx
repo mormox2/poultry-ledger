@@ -1191,6 +1191,62 @@ function DriversManagement({ userId }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
 
+  // Edit states
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editDriver, setEditDriver] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editError, setEditError] = useState('');
+  const [updating, setUpdating] = useState(false);
+
+  const handleOpenEdit = (drv) => {
+    setEditDriver(drv);
+    setEditName(drv.company_name || '');
+    setEditEmail(drv.email || '');
+    setEditPhone(drv.company_phone || '');
+    setEditPassword('');
+    setEditError('');
+    setEditModalOpen(true);
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    setUpdating(true);
+    setEditError('');
+    try {
+      const { data, error } = await supabase.rpc('update_driver_account', {
+        p_driver_id: editDriver.id,
+        p_name: editName.trim(),
+        p_phone: editPhone.trim(),
+        p_email: editEmail.trim(),
+        p_password: editPassword.trim() || null
+      });
+
+      if (error) throw error;
+
+      if (data && data.success) {
+        logActivity(
+          userId,
+          "تعديل عون",
+          `تم تعديل حساب السائق: "${editName.trim()}" (${editEmail.trim()})`
+        );
+        alert("✓ تم تعديل حساب السائق بنجاح !");
+        setEditModalOpen(false);
+        setEditDriver(null);
+        fetchDrivers();
+      } else {
+        setEditError(data?.error || "فشل تعديل الحساب");
+      }
+    } catch (err) {
+      console.error("Error updating driver:", err);
+      setEditError(err.message || "حدث خطأ غير متوقع");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const fetchDrivers = useCallback(async () => {
     try {
       setLoading(true);
@@ -1379,13 +1435,22 @@ function DriversManagement({ userId }) {
             <div className="space-y-2.5 overflow-y-auto max-h-[220px] pr-1 scrollbar-thin">
               {drivers.map(drv => (
                 <div key={drv.id} className="flex justify-between items-center p-3 bg-slate-900/50 hover:bg-slate-900 border border-slate-800 hover:border-slate-750 rounded-xl transition-all duration-200">
-                  <button
-                    onClick={() => handleDelete(drv.id, drv.company_name)}
-                    className="p-2 hover:bg-red-500/10 border border-transparent hover:border-red-500/25 text-red-500/70 hover:text-red-400 rounded-lg text-xs transition-all"
-                    title="حذف حساب العون نهائياً"
-                  >
-                    🗑️
-                  </button>
+                  <div className="flex gap-1.5 items-center">
+                    <button
+                      onClick={() => handleOpenEdit(drv)}
+                      className="p-2 hover:bg-amber-500/10 border border-transparent hover:border-amber-500/25 text-amber-500/70 hover:text-amber-400 rounded-lg text-xs transition-all"
+                      title="تعديل حساب العون"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => handleDelete(drv.id, drv.company_name)}
+                      className="p-2 hover:bg-red-500/10 border border-transparent hover:border-red-500/25 text-red-500/70 hover:text-red-400 rounded-lg text-xs transition-all"
+                      title="حذف حساب العون نهائياً"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                   
                   <div className="text-right">
                     <div className="text-xs font-bold text-slate-200">{drv.company_name}</div>
@@ -1397,6 +1462,107 @@ function DriversManagement({ userId }) {
           )}
         </div>
       </div>
+
+      {/* EDIT DRIVER MODAL */}
+      <AnimatePresence>
+        {editModalOpen && editDriver && (
+          <div 
+            className="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => setEditModalOpen(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl relative overflow-hidden text-right"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-sm md:text-base font-black text-amber-300 border-b border-slate-800/80 pb-3 mb-5">
+                ✏️ تعديل حساب السائق / العون
+              </h3>
+              
+              {editError && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] py-2 px-3 rounded-lg mb-3 font-bold">
+                  ⚠️ {editError}
+                </div>
+              )}
+
+              <form onSubmit={handleUpdate} className="space-y-4">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">الاسم الكامل *</label>
+                  <input 
+                    type="text"
+                    required
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200"
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">رقم الهاتف *</label>
+                    <input 
+                      type="text"
+                      required
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono"
+                      value={editPhone}
+                      onChange={e => setEditPhone(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">البريد الإلكتروني *</label>
+                    <input 
+                      type="email"
+                      required
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono text-left direction-ltr"
+                      value={editEmail}
+                      onChange={e => setEditEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">كلمة المرور الجديدة (اختياري)</label>
+                  <input 
+                    type="password"
+                    minLength={6}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono text-left direction-ltr"
+                    placeholder="اتركه فارغاً للاحتفاظ بكلمة المرور الحالية"
+                    value={editPassword}
+                    onChange={e => setEditPassword(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex gap-2.5 pt-4 mt-6">
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="submit" 
+                    disabled={updating}
+                    className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs py-3 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    {updating ? (
+                      <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      "💾 حفظ التعديلات"
+                    )}
+                  </motion.button>
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="button" 
+                    className="flex-1 py-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl font-bold text-xs transition-all duration-200"
+                    onClick={() => setEditModalOpen(false)}
+                  >
+                    إلغاء
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -337,3 +337,57 @@ EXCEPTION WHEN OTHERS THEN
     RETURN jsonb_build_object('success', false, 'error', SQLERRM);
 END;
 $$ LANGUAGE plpgsql;
+
+
+-- 7. Fonction RPC pour modifier un compte livreur/chauffeur
+CREATE OR REPLACE FUNCTION public.update_driver_account(
+    p_driver_id UUID,
+    p_name TEXT,
+    p_phone TEXT,
+    p_email TEXT,
+    p_password TEXT DEFAULT NULL
+)
+RETURNS JSONB
+SECURITY DEFINER
+SET search_path = public, auth, pg_catalog
+AS $$
+DECLARE
+    v_encrypted_password TEXT;
+BEGIN
+    -- Vérifier que l'appelant est bien l'admin parent de ce livreur
+    IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = p_driver_id AND parent_id = auth.uid()) THEN
+        RAISE EXCEPTION 'Unauthorized to modify this account.';
+    END IF;
+
+    -- Mettre à jour email et metadata dans auth.users
+    UPDATE auth.users
+    SET email = p_email,
+        raw_user_meta_data = jsonb_build_object('name', p_name),
+        updated_at = now()
+    WHERE id = p_driver_id;
+
+    -- Si un nouveau mot de passe est fourni, le hacher et le mettre à jour
+    IF p_password IS NOT NULL AND trim(p_password) != '' THEN
+        v_encrypted_password := extensions.crypt(p_password, extensions.gen_salt('bf'));
+        UPDATE auth.users
+        SET encrypted_password = v_encrypted_password
+        WHERE id = p_driver_id;
+    END IF;
+
+    -- Mettre à jour profiles avec le role 'driver', le parent_id et l'email
+    UPDATE public.profiles
+    SET company_name = p_name,
+        company_phone = p_phone,
+        email = p_email,
+        updated_at = timezone('utc'::text, now())
+    WHERE id = p_driver_id;
+
+    RETURN jsonb_build_object('success', true);
+EXCEPTION
+    WHEN unique_violation THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Email already exists.');
+    WHEN OTHERS THEN
+        RETURN jsonb_build_object('success', false, 'error', SQLERRM);
+END;
+$$ LANGUAGE plpgsql;
+
