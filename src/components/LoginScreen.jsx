@@ -5,6 +5,7 @@ import 'atropos/css';
 import { supabase } from '../js/supabaseClient';
 
 export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onCloudLogin }) {
+  const heroImageUrl = `${import.meta.env.BASE_URL || '/'}assets/hero.webp`;
   // Input fields state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -116,7 +117,10 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
   };
 
   return (
-    <div className="login-container min-h-screen w-full flex flex-col lg:flex-row bg-[#070b13] font-sans text-slate-100 overflow-hidden relative">
+    <div
+      className="login-container min-h-screen w-full flex flex-col lg:flex-row bg-[#070b13] font-sans text-slate-100 overflow-hidden relative"
+      style={{ backgroundImage: `url(${heroImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+    >
       
       {/* Background Ambient Decorative Lights */}
       <div className="absolute top-[-20%] right-[-10%] w-[50vw] h-[50vw] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none z-0" />
@@ -342,10 +346,13 @@ export default function LoginScreen({ savedPassword, onLogin, onSetPassword, onC
       </div>
 
       {/* LEFT SIDE: SPLIT CORPORATE HERO PANEL */}
-      <div className="login-hero-panel flex-1 min-h-[30vh] lg:min-h-screen relative lg:flex flex-col justify-end p-8 md:p-16 overflow-hidden bg-slate-950 z-0 lg:order-1">
+      <div
+        className="login-hero-panel flex-1 min-h-[30vh] lg:min-h-screen relative lg:flex flex-col justify-end p-8 md:p-16 overflow-hidden bg-slate-950 z-0 lg:order-1"
+        style={{ backgroundImage: `url(${heroImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+      >
         
         {/* Visual Hero Image & Shadow Overlay */}
-        <div className="absolute inset-0 bg-[url('/poultry-ledger/assets/hero.webp')] bg-cover bg-center opacity-40 mix-blend-luminosity" />
+        <div className="absolute inset-0 bg-cover bg-center opacity-40 mix-blend-luminosity" style={{ backgroundImage: `url(${heroImageUrl})` }} />
         <div className="login-hero-overlay absolute inset-0 bg-gradient-to-t from-[#070b13] via-[#070b13]/60 to-transparent lg:bg-gradient-to-l lg:from-slate-950 lg:via-slate-950/70 lg:to-transparent" />
         
         <div className="login-hero-text relative z-10 max-w-lg mt-auto text-right mr-auto lg:mr-0">
