@@ -52,6 +52,7 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
   const [isCloudLoading, setIsCloudLoading] = useState(false);
+  const [isHydratingApp, setIsHydratingApp] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // --- Network & Offline Sync States ---
@@ -727,27 +728,30 @@ export default function App() {
     // Get active session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
+        setIsHydratingApp(true);
         setSession(session);
         setUser(session.user);
         localStorage.setItem("dawajin_logged_in", "true");
         setIsLoggedIn(true);
-        fetchCloudData(session.user.id);
+        fetchCloudData(session.user.id).finally(() => setIsHydratingApp(false));
       }
     });
 
     // Listen for auth events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (newSession) {
+        setIsHydratingApp(true);
         setSession(newSession);
         setUser(newSession.user);
         localStorage.setItem("dawajin_logged_in", "true");
         setIsLoggedIn(true);
-        fetchCloudData(newSession.user.id);
+        fetchCloudData(newSession.user.id).finally(() => setIsHydratingApp(false));
       } else {
         setSession(null);
         setUser(null);
         localStorage.removeItem("dawajin_logged_in");
         setIsLoggedIn(false);
+        setIsHydratingApp(false);
       }
     });
 
@@ -1892,6 +1896,7 @@ export default function App() {
   };
 
   const handleCloudLogin = async (newSession, newUser, enteredPass) => {
+    setIsHydratingApp(true);
     setSession(newSession);
     setUser(newUser);
     if (enteredPass) {
@@ -1899,7 +1904,11 @@ export default function App() {
     }
     localStorage.setItem("dawajin_logged_in", "true");
     setIsLoggedIn(true);
-    await fetchCloudData(newUser.id);
+    try {
+      await fetchCloudData(newUser.id);
+    } finally {
+      setIsHydratingApp(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -1968,6 +1977,18 @@ export default function App() {
         }}
         onCloudLogin={handleCloudLogin}
       />
+    );
+  }
+
+  if (isHydratingApp) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] text-[var(--text)]">
+        <div className="w-full max-w-md px-6 py-8 text-center">
+          <div className="mx-auto mb-4 h-12 w-12 rounded-2xl border-2 border-amber-400 border-t-transparent animate-spin" />
+          <div className="text-lg font-black text-amber-300">جاري تحميل البيانات...</div>
+          <div className="mt-2 text-sm text-slate-400">يرجى الانتظار قليلاً حتى تكتمل مزامنة الحساب.</div>
+        </div>
+      </div>
     );
   }
 
