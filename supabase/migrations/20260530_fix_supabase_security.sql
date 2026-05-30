@@ -14,22 +14,25 @@ SET search_path = public, pg_catalog;
 -- (Par défaut, PUBLIC (qui inclut anon) a le droit d'exécuter toutes les fonctions)
 
 -- Fonctions de gestion des comptes chauffeurs
-REVOKE EXECUTE ON FUNCTION public.create_driver_account(TEXT, TEXT, TEXT, TEXT) FROM PUBLIC;
+-- Note : L'accès par les utilisateurs 'authenticated' est intentionnel car l'application client 
+-- effectue des appels RPC. La sécurité est assurée de manière interne par des vérifications du rôle 'admin' et de parent_id.
+REVOKE EXECUTE ON FUNCTION public.create_driver_account(TEXT, TEXT, TEXT, TEXT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.create_driver_account(TEXT, TEXT, TEXT, TEXT) TO authenticated;
 
-REVOKE EXECUTE ON FUNCTION public.delete_driver_account(UUID) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.delete_driver_account(UUID) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.delete_driver_account(UUID) TO authenticated;
 
-REVOKE EXECUTE ON FUNCTION public.update_driver_account(UUID, TEXT, TEXT, TEXT, TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_driver_account(UUID, TEXT, TEXT, TEXT, TEXT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.update_driver_account(UUID, TEXT, TEXT, TEXT, TEXT) TO authenticated;
 
 -- Fonction de résolution de l'ID de profil actif
-REVOKE EXECUTE ON FUNCTION public.get_active_profile_id() FROM PUBLIC;
+-- Note : L'accès par les utilisateurs 'authenticated' est intentionnel car elle est appelée lors de l'application des politiques RLS.
+REVOKE EXECUTE ON FUNCTION public.get_active_profile_id() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.get_active_profile_id() TO authenticated;
 
 -- 3. Sécuriser les fonctions déclencheurs (triggers) de manière stricte
--- (Les fonctions de triggers ne doivent pas être appelables directement via RPC par quiconque)
+-- (Les fonctions de triggers ne doivent jamais être appelables directement par quiconque, y compris les utilisateurs connectés)
 
-REVOKE EXECUTE ON FUNCTION public.force_active_profile_id() FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.update_modified_column() FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.force_active_profile_id() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.update_modified_column() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
