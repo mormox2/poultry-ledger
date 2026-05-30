@@ -648,6 +648,7 @@ export default function App() {
   };
 
   const stateRef = useRef(state);
+  const isFetchingRef = useRef(false);
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
@@ -980,6 +981,12 @@ export default function App() {
 
   // --- Cloud Database Fetch Loader ---
   const fetchCloudData = async (userUuid) => {
+    if (!userUuid) return;
+    if (isFetchingRef.current) {
+      console.log("fetchCloudData is already in progress. Skipping parallel call.");
+      return;
+    }
+    isFetchingRef.current = true;
     setIsCloudLoading(true);
     try {
       const currentState = stateRef.current;
@@ -1410,7 +1417,7 @@ export default function App() {
           purchases: formattedPurchases,
           selectedSupplier: formattedSuppliers.length ? (formattedSuppliers.some(s => s.id === prev.selectedSupplier) ? prev.selectedSupplier : formattedSuppliers.at(0).id) : null,
           deadlines: formattedDeadlines,
-          pricePerKg: profile ? parseFloat(profile.price_per_kg) : prev.pricePerKg,
+          pricePerKg: profile && profile.price_per_kg !== null && !isNaN(parseFloat(profile.price_per_kg)) ? parseFloat(profile.price_per_kg) : prev.pricePerKg,
           role: userRole,
           view: newView,
           companyInfo: profile ? {
@@ -1428,6 +1435,7 @@ export default function App() {
       toastMessage("❌ فشل سحب البيانات السحابية، يرجى التثبت من الاتصال", "error");
     } finally {
       setIsCloudLoading(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -1867,7 +1875,7 @@ export default function App() {
     }
     localStorage.setItem("dawajin_logged_in", "true");
     setIsLoggedIn(true);
-    fetchCloudData(newUser.id);
+    // Note: fetchCloudData is fully handled by onAuthStateChange global listener to avoid race conditions!
   };
 
   const handleLogout = async () => {
