@@ -1891,7 +1891,7 @@ export default function App() {
     exportToCSV(state);
   };
 
-  const handleCloudLogin = (newSession, newUser, enteredPass) => {
+  const handleCloudLogin = async (newSession, newUser, enteredPass) => {
     setSession(newSession);
     setUser(newUser);
     if (enteredPass) {
@@ -1899,7 +1899,7 @@ export default function App() {
     }
     localStorage.setItem("dawajin_logged_in", "true");
     setIsLoggedIn(true);
-    // Note: fetchCloudData is fully handled by onAuthStateChange global listener to avoid race conditions!
+    await fetchCloudData(newUser.id);
   };
 
   const handleLogout = async () => {
