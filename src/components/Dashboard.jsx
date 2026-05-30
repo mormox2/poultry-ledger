@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Atropos from 'atropos/react';
 import 'atropos/css';
 import { MONTHS, getTotals, fmt, getClientColor } from '../js/utils';
-import { getActivityLog, clearActivityLog } from '../js/activityLog';
+import { getActivityLog, clearActivityLog, logActivity } from '../js/activityLog';
+import { supabase } from '../js/supabaseClient';
 
 export default function Dashboard({ 
   state, 
@@ -951,6 +952,11 @@ export default function Dashboard({
               </div>
             </div>
 
+            {/* DRIVERS MANAGEMENT CARD (FULL WIDTH IN DRAWER) */}
+            {state.role === 'admin' && (
+              <DriversManagement userId={userId} />
+            )}
+
             {/* COMPANY SETTINGS CARD (FULL WIDTH IN DRAWER) */}
             <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-lg col-span-1 md:col-span-2 lg:col-span-3">
               <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 mb-5 justify-start">
@@ -1170,5 +1176,227 @@ export default function Dashboard({
         )}
       </AnimatePresence>
     </motion.div>
+  );
+}
+
+function DriversManagement({ userId }) {
+  const [drivers, setDrivers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+  
+  // Form states
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+
+  const fetchDrivers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('parent_id', userId);
+      
+      if (error) throw error;
+      setDrivers(data || []);
+    } catch (err) {
+      console.error("Error fetching drivers:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId) {
+      fetchDrivers();
+    }
+  }, [userId, fetchDrivers]);
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setCreating(true);
+    setCreateError('');
+    try {
+      const { data, error } = await supabase.rpc('create_driver_account', {
+        p_email: email.trim(),
+        p_password: password.trim(),
+        p_name: name.trim(),
+        p_phone: phone.trim()
+      });
+
+      if (error) throw error;
+      
+      if (data && data.success) {
+        logActivity(
+          userId,
+          "إضافة عون",
+          `تم إنشاء حساب سائق/livreur جديد: "${name.trim()}" (${email.trim()})`
+        );
+        setName('');
+        setEmail('');
+        setPhone('');
+        setPassword('');
+        alert("✓ تم إنشاء حساب السائق بنجاح !");
+        fetchDrivers();
+      } else {
+        setCreateError(data?.error || "فشل إنشاء الحساب");
+      }
+    } catch (err) {
+      console.error("Error creating driver:", err);
+      setCreateError(err.message || "حدث خطأ غير متوقع");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDelete = async (driverId, driverName) => {
+    if (!confirm(`هل أنت متأكد من حذف حساب السائق "${driverName}" نهائيًا؟`)) {
+      return;
+    }
+    try {
+      const { data, error } = await supabase.rpc('delete_driver_account', {
+        p_driver_id: driverId
+      });
+
+      if (error) throw error;
+
+      if (data && data.success) {
+        logActivity(
+          userId,
+          "حذف عون",
+          `تم حذف حساب السائق: "${driverName}"`
+        );
+        alert("✓ تم حذف السائق بنجاح");
+        fetchDrivers();
+      } else {
+        alert("❌ فشل حذف السائق: " + (data?.error || "خطأ مجهول"));
+      }
+    } catch (err) {
+      console.error("Error deleting driver:", err);
+      alert("❌ حدث خطأ أثناء حذف السائق");
+    }
+  };
+
+  return (
+    <div className="bg-slate-900/30 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 md:p-6 shadow-lg col-span-1 md:col-span-2 lg:col-span-3">
+      <h3 className="text-sm font-black text-amber-300 flex items-center gap-2 mb-5 justify-start">
+        <span>👥</span>
+        <span>إدارة حسابات الأعوان والسائقين (Livreurs)</span>
+      </h3>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Form to create a driver */}
+        <div className="bg-slate-950/40 border border-slate-850 p-4 rounded-xl text-right">
+          <h4 className="text-xs font-black text-amber-400 mb-4">➕ إضافة سائق / عون جديد</h4>
+          {createError && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] py-2 px-3 rounded-lg mb-3 font-bold">
+              ⚠️ {createError}
+            </div>
+          )}
+          
+          <form onSubmit={handleCreate} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[9px] font-bold text-slate-400 mb-1">الاسم الكامل *</label>
+                <input 
+                  type="text"
+                  required
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2 px-3 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200"
+                  placeholder="سليم بن أحمد"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] font-bold text-slate-400 mb-1">رقم الهاتف *</label>
+                <input 
+                  type="text"
+                  required
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2 px-3 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono"
+                  placeholder="96 xxx xxx"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[9px] font-bold text-slate-400 mb-1">البريد الإلكتروني *</label>
+              <input 
+                type="email"
+                required
+                className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2 px-3 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono text-left direction-ltr"
+                placeholder="driver@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-[9px] font-bold text-slate-400 mb-1">كلمة المرور *</label>
+              <input 
+                type="password"
+                required
+                minLength={6}
+                className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/20 rounded-xl py-2 px-3 text-xs text-slate-100 placeholder-slate-650 outline-none transition-all duration-200 font-mono text-left direction-ltr"
+                placeholder="كلمة مرور صalha (6 رموز على الأقل)"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+              />
+            </div>
+
+            <motion.button 
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              type="submit"
+              disabled={creating}
+              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs py-2.5 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-4"
+            >
+              {creating ? (
+                <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                "➕ إنشاء حساب السائق"
+              )}
+            </motion.button>
+          </form>
+        </div>
+
+        {/* List of existing drivers */}
+        <div className="bg-slate-950/40 border border-slate-850 p-4 rounded-xl text-right flex flex-col">
+          <h4 className="text-xs font-black text-amber-400 mb-4">📋 قائمة الأعوان الحاليين</h4>
+          
+          {loading ? (
+            <div className="flex-1 flex items-center justify-center py-10">
+              <div className="w-6 h-6 border-2 border-amber-550 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : drivers.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center text-slate-500 text-xs italic py-10 text-center">
+              📭 لا يوجد أي أعوان أو سائقين مسجلين تحت حسابك حالياً.
+            </div>
+          ) : (
+            <div className="space-y-2.5 overflow-y-auto max-h-[220px] pr-1 scrollbar-thin">
+              {drivers.map(drv => (
+                <div key={drv.id} className="flex justify-between items-center p-3 bg-slate-900/50 hover:bg-slate-900 border border-slate-800 hover:border-slate-750 rounded-xl transition-all duration-200">
+                  <button
+                    onClick={() => handleDelete(drv.id, drv.company_name)}
+                    className="p-2 hover:bg-red-500/10 border border-transparent hover:border-red-500/25 text-red-500/70 hover:text-red-400 rounded-lg text-xs transition-all"
+                    title="حذف حساب العون نهائياً"
+                  >
+                    🗑️
+                  </button>
+                  
+                  <div className="text-right">
+                    <div className="text-xs font-bold text-slate-200">{drv.company_name}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5 font-mono">{drv.email} | هاتف: {drv.company_phone}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
