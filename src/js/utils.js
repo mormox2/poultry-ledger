@@ -100,20 +100,20 @@ export function exportPurchasesToCSV(state) {
   csvContent += `المورد: ${sup.name}, العنوان: ${sup.address}, الهاتف: ${sup.phone}\n`;
   csvContent += `الشهر: ${MONTHS.at(m - 1)} ${y}\n\n`;
   
-  csvContent += "التاريخ,الوزن الكامل (كغ),الوزن الصافي (كغ),السعر (د.ت),المبلغ الجملي,المدفوع له,الباقي,ملاحظات\n";
+  csvContent += "التاريخ,الوزن الصافي (كغ),السعر (د.ت),المبلغ الجملي,المدفوع له,الباقي,ملاحظات\n";
   
   rows.forEach(r => {
     const dateStr = `${y}/${String(m).padStart(2,"0")}/${String(r.d).padStart(2,"0")}`;
     if (r.holiday) {
-      csvContent += `${dateStr},عطلة,عطلة,عطلة,عطلة,عطلة,عطلة,${r.notes || ""}\n`;
+      csvContent += `${dateStr},عطلة,عطلة,عطلة,عطلة,عطلة,${r.notes || ""}\n`;
     } else {
       const bal = calcBalance(r);
-      csvContent += `${dateStr},${r.tw || 0},${r.nw || 0},${r.price || sup.defaultPrice || state.defaultPurchasePricePerKg || 5.200},${r.amt || 0},${r.paid || 0},${r.amt ? bal : 0},${r.notes || ""}\n`;
+      csvContent += `${dateStr},${r.nw || 0},${r.price || sup.defaultPrice || state.defaultPurchasePricePerKg || 5.200},${r.amt || 0},${r.paid || 0},${r.amt ? bal : 0},${r.notes || ""}\n`;
     }
   });
   
   const remaining = totals.amt - totals.paid;
-  csvContent += `الإجمالي,${Math.round(totals.tw)},${Math.round(totals.nw)},-,${totals.amt},${totals.paid},${remaining},-\n`;
+  csvContent += `الإجمالي,${Math.round(totals.nw)},-,${totals.amt},${totals.paid},${remaining},-\n`;
   
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement("a");

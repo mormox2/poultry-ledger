@@ -380,7 +380,6 @@ export default function SupplierStatementPrint({ state, supplierId, onClose }) {
           <thead>
             <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #d4a843' }}>
               <th style={{ padding: '8px', textAlign: 'right', fontWeight: '800' }}>الشهر</th>
-              <th style={{ padding: '8px', textAlign: 'center', fontWeight: '800' }}>الوزن الكامل (كغ)</th>
               <th style={{ padding: '8px', textAlign: 'center', fontWeight: '800' }}>الوزن الصافي (كغ)</th>
               <th style={{ padding: '8px', textAlign: 'center', fontWeight: '850', color: '#b45309' }}>المبلغ المشتريات</th>
               <th style={{ padding: '8px', textAlign: 'center', fontWeight: '850', color: '#10b981' }}>المدفوع الجاري</th>
@@ -390,7 +389,7 @@ export default function SupplierStatementPrint({ state, supplierId, onClose }) {
           <tbody>
             {aggregatedData.monthlySummaries.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ padding: '16px', color: '#64748b', textAlign: 'center', italic: 'true' }}>لا توجد معاملات شراء مسجلة في هذه الفترة</td>
+                <td colSpan="5" style={{ padding: '16px', color: '#64748b', textAlign: 'center', italic: 'true' }}>لا توجد معاملات شراء مسجلة في هذه الفترة</td>
               </tr>
             ) : (
               aggregatedData.monthlySummaries.map((mSum, i) => {
@@ -398,7 +397,6 @@ export default function SupplierStatementPrint({ state, supplierId, onClose }) {
                 return (
                   <tr key={i} style={{ borderBottom: '1px solid #e2e8f0', background: i % 2 === 0 ? '#f8fafc' : '#ffffff' }}>
                     <td style={{ padding: '8px', textAlign: 'right', fontWeight: '700' }}>{mSum.name}</td>
-                    <td style={{ padding: '8px', textAlign: 'center', fontFamily: 'monospace' }}>{Math.round(mSum.tw)}</td>
                     <td style={{ padding: '8px', textAlign: 'center', fontFamily: 'monospace' }}>{Math.round(mSum.nw)}</td>
                     <td style={{ padding: '8px', textAlign: 'center', fontFamily: 'monospace', fontWeight: '700', color: '#b45309' }}>{fmt(mSum.amt)}</td>
                     <td style={{ padding: '8px', textAlign: 'center', fontFamily: 'monospace', fontWeight: '700', color: '#10b981' }}>{fmt(mSum.paid)}</td>
@@ -420,7 +418,6 @@ export default function SupplierStatementPrint({ state, supplierId, onClose }) {
           <thead>
             <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #d4a843' }}>
               <th style={{ padding: '6px', textAlign: 'center', fontWeight: '800' }}>التاريخ</th>
-              <th style={{ padding: '6px', textAlign: 'center', fontWeight: '800' }}>الوزن الكامل</th>
               <th style={{ padding: '6px', textAlign: 'center', fontWeight: '800' }}>الوزن الصافي</th>
               <th style={{ padding: '6px', textAlign: 'center', fontWeight: '800' }}>سعر الكيلو</th>
               <th style={{ padding: '6px', textAlign: 'center', fontWeight: '850', color: '#b45309' }}>المبلغ HT</th>
@@ -431,17 +428,16 @@ export default function SupplierStatementPrint({ state, supplierId, onClose }) {
           <tbody>
             {aggregatedData.allDetailedRows.length === 0 ? (
               <tr>
-                <td colSpan="7" style={{ padding: '12px', color: '#64748b', textAlign: 'center' }}>لا توجد تفاصيل شراء نشطة مسجلة</td>
+                <td colSpan="6" style={{ padding: '12px', color: '#64748b', textAlign: 'center' }}>لا توجد تفاصيل شراء نشطة مسجلة</td>
               </tr>
             ) : (
               aggregatedData.allDetailedRows.map((r, i) => (
                 <tr key={i} style={{ borderBottom: '1px solid #e2e8f0', background: r.holiday ? 'rgba(245,158,11,0.04)' : '#ffffff' }}>
                   <td style={{ padding: '6px', textAlign: 'center', fontFamily: 'monospace', fontWeight: '750' }}>{r.dateStr}</td>
                   {r.holiday ? (
-                    <td colSpan="5" style={{ padding: '6px', textAlign: 'center', color: '#f59e0b', fontWeight: '700', italic: 'true' }}>— عطلة رسمية —</td>
+                    <td colSpan="4" style={{ padding: '6px', textAlign: 'center', color: '#f59e0b', fontWeight: '700', italic: 'true' }}>— عطلة رسمية —</td>
                   ) : (
                     <>
-                      <td style={{ padding: '6px', textAlign: 'center', fontFamily: 'monospace' }}>{r.tw || '—'}</td>
                       <td style={{ padding: '6px', textAlign: 'center', fontFamily: 'monospace' }}>{r.nw || '—'}</td>
                       <td style={{ padding: '6px', textAlign: 'center', fontFamily: 'monospace' }}>{r.price ? `${fmt(r.price)}` : '—'}</td>
                       <td style={{ padding: '6px', textAlign: 'center', fontFamily: 'monospace', fontWeight: '700', color: '#b45309' }}>{r.amt ? fmt(r.amt) : '—'}</td>

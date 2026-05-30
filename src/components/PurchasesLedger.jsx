@@ -33,7 +33,7 @@ export default function PurchasesLedger({
 
   const handleKeyDown = (e, rowIdx, colIdx) => {
     const maxRows = rows.length;
-    const maxCols = 6;
+    const maxCols = 5;
 
     if (e.key === 'ArrowUp') {
       e.preventDefault();
@@ -177,7 +177,6 @@ export default function PurchasesLedger({
           <div className="text-[10px] text-slate-500 font-semibold">
             {remaining > 0 ? 'متبقي له بذمتنا' : remaining < 0 ? 'رصيد زائد لنا عند المورد' : 'خالص بالكامل ✓'}
           </div>
-          
           {remaining > 0 && (
             <motion.button 
               whileHover={{ scale: 1.03 }}
@@ -192,9 +191,8 @@ export default function PurchasesLedger({
       </div>
 
       {/* QUICK SUB-METRICS BAR */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
-          { label: "الوزن الكامل الجملي المشتري", val: `${Math.round(totals.tw)} كغ`, sub: `${totals.days} يوم توريد`, border: "border-sky-500/10 text-sky-400" },
           { label: "إجمالي الوزن الصافي المشتري", val: `${Math.round(totals.nw)} كغ`, sub: "صافي المشتريات الكلي", border: "border-emerald-500/10 text-emerald-400" },
           { label: "المبلغ الإجمالي للمشتريات", val: fmt(totals.amt) || "—", sub: "د.ت جملة الفواتير", border: "border-amber-500/10 text-amber-400" },
           { label: "الباقي للمورد", val: fmt(remaining) || "—", sub: remaining > 0 ? 'دين غير خالص' : 'حساب مستقر ✓', border: remaining > 0 ? "border-red-500/10 text-red-400" : "border-emerald-500/10 text-emerald-400" }
@@ -228,7 +226,6 @@ export default function PurchasesLedger({
           <thead>
             <tr className="bg-slate-950/70 border-b border-slate-800 text-slate-200">
               <th className="py-4 px-3 text-slate-400 font-bold text-[10px] tracking-wider select-none">التاريخ</th>
-              <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none">الوزن الكامل (كغ)</th>
               <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none">الوزن الصافي (كغ)</th>
               <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none">سعر الشراء (د.ت / كغ)</th>
               <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none">المبلغ الجملي للشراء</th>
@@ -257,25 +254,9 @@ export default function PurchasesLedger({
                   <td className="py-2.5 px-3 text-slate-500 font-bold font-mono tracking-tight text-[10px] select-none">{dateStr}</td>
                   
                   {r.holiday ? (
-                    <td colSpan="6" className="py-2.5 px-3 text-amber-500/80 font-black text-center select-none text-[11px] tracking-widest italic">— عطلة / لا توجد مشتريات —</td>
+                    <td colSpan="5" className="py-2.5 px-3 text-amber-500/80 font-black text-center select-none text-[11px] tracking-widest italic">— عطلة / لا توجد مشتريات —</td>
                   ) : (
                     <>
-                      {/* Total Weight */}
-                      <td className="py-1 px-1.5">
-                        <input 
-                          type="number" 
-                          inputMode="decimal"
-                          className="w-16 bg-slate-950/60 border border-transparent focus:border-amber-500/50 hover:bg-slate-950 focus:bg-slate-950 rounded-lg py-1.5 px-2 text-center text-slate-200 outline-none transition-all font-mono font-bold" 
-                          value={r.tw} 
-                          placeholder="0"
-                          onChange={(e) => onUpdatePurchaseRow(idx, 'tw', e.target.value)} 
-                          onKeyDown={(e) => handleKeyDown(e, idx, 0)}
-                          onBlur={() => onSyncPurchaseRow && onSyncPurchaseRow(idx)}
-                          data-prow={idx}
-                          data-pcol={0}
-                        />
-                      </td>
-
                       {/* Net Weight */}
                       <td className="py-1 px-1.5">
                         <input 
@@ -285,10 +266,10 @@ export default function PurchasesLedger({
                           value={r.nw} 
                           placeholder="0"
                           onChange={(e) => onUpdatePurchaseRow(idx, 'nw', e.target.value)} 
-                          onKeyDown={(e) => handleKeyDown(e, idx, 1)}
+                          onKeyDown={(e) => handleKeyDown(e, idx, 0)}
                           onBlur={() => onSyncPurchaseRow && onSyncPurchaseRow(idx)}
                           data-prow={idx}
-                          data-pcol={1}
+                          data-pcol={0}
                         />
                       </td>
 
@@ -302,10 +283,10 @@ export default function PurchasesLedger({
                           value={r.price || ''} 
                           placeholder={sup.defaultPrice || state.defaultPurchasePricePerKg || "5.200"}
                           onChange={(e) => onUpdatePurchaseRow(idx, 'price', e.target.value)} 
-                          onKeyDown={(e) => handleKeyDown(e, idx, 2)}
+                          onKeyDown={(e) => handleKeyDown(e, idx, 1)}
                           onBlur={() => onSyncPurchaseRow && onSyncPurchaseRow(idx)}
                           data-prow={idx}
-                          data-pcol={2}
+                          data-pcol={1}
                         />
                       </td>
 
@@ -318,10 +299,10 @@ export default function PurchasesLedger({
                           value={r.amt} 
                           placeholder="—"
                           onChange={(e) => onUpdatePurchaseRow(idx, 'amt', e.target.value)} 
-                          onKeyDown={(e) => handleKeyDown(e, idx, 3)}
+                          onKeyDown={(e) => handleKeyDown(e, idx, 2)}
                           onBlur={() => onSyncPurchaseRow && onSyncPurchaseRow(idx)}
                           data-prow={idx}
-                          data-pcol={3}
+                          data-pcol={2}
                         />
                       </td>
 
@@ -334,10 +315,10 @@ export default function PurchasesLedger({
                           value={r.paid} 
                           placeholder="—"
                           onChange={(e) => onUpdatePurchaseRow(idx, 'paid', e.target.value)} 
-                          onKeyDown={(e) => handleKeyDown(e, idx, 4)}
+                          onKeyDown={(e) => handleKeyDown(e, idx, 3)}
                           onBlur={() => onSyncPurchaseRow && onSyncPurchaseRow(idx)}
                           data-prow={idx}
-                          data-pcol={4}
+                          data-pcol={3}
                         />
                       </td>
 
@@ -358,10 +339,10 @@ export default function PurchasesLedger({
                       value={r.notes || ''} 
                       placeholder="..."
                       onChange={(e) => onUpdatePurchaseRow(idx, 'notes', e.target.value)} 
-                      onKeyDown={(e) => handleKeyDown(e, idx, 5)}
+                      onKeyDown={(e) => handleKeyDown(e, idx, 4)}
                       onBlur={() => onSyncPurchaseRow && onSyncPurchaseRow(idx)}
                       data-prow={idx}
-                      data-pcol={5}
+                      data-pcol={4}
                     />
                   </td>
 
@@ -387,7 +368,6 @@ export default function PurchasesLedger({
           <tfoot>
             <tr className="bg-slate-950/90 font-black text-slate-100 border-t-2 border-amber-500 select-none">
               <td className="py-4 px-3 text-amber-400 text-xs">إجمالي الشهر</td>
-              <td className="py-4 px-3 font-mono text-sm">{Math.round(totals.tw)}</td>
               <td className="py-4 px-3 font-mono text-sm">{Math.round(totals.nw)}</td>
               <td className="py-4 px-3"></td>
               <td className="py-4 px-3 font-mono text-sm text-amber-400">{fmt(totals.amt) || "—"}</td>
