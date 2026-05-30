@@ -2273,8 +2273,8 @@ export default function App() {
           </div>
 
           {/* Row 2: Navigation menu (centered/full-width on desktop) */}
-          <div className="w-full flex md:border-t md:border-slate-800/40 md:pt-3.5 flex-col md:flex-row items-center justify-center">
-            <nav id="nav" className={`no-print flex-col md:flex-row md:flex gap-1.5 ${mobileMenuOpen ? 'open flex w-full' : 'hidden'}`}>
+          <div className="w-full flex md:border-t md:border-slate-800/40 md:pt-4 flex-col md:flex-row items-center justify-center">
+            <nav id="nav" className={`no-print flex-col md:flex-row md:flex gap-1.5 md:gap-3.5 ${mobileMenuOpen ? 'open flex w-full' : 'hidden'}`}>
               {[
                 { id: 'dashboard', label: 'الرئيسية', icon: '🏠' },
                 { id: 'ledger', label: 'السجل اليومي', icon: '📋' },
@@ -2288,7 +2288,7 @@ export default function App() {
               ].filter(tab => state.role !== 'driver' || tab.id === 'ledger' || tab.id === 'clients').map(tab => (
                 <button 
                   key={tab.id}
-                  className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition-all duration-200 flex items-center gap-2 w-full md:w-auto ${
+                  className={`px-4 py-2.5 rounded-xl font-extrabold text-xs md:text-sm md:px-5.5 md:py-3 md:rounded-2xl transition-all duration-200 flex items-center gap-2 md:gap-2.5 w-full md:w-auto ${
                     state.view === tab.id 
                       ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/10' 
                       : 'bg-transparent text-slate-400 hover:text-amber-400 hover:bg-slate-900/60 border border-transparent hover:border-slate-850'
@@ -2298,13 +2298,12 @@ export default function App() {
                     if (mobileMenuOpen) setMobileMenuOpen(false);
                   }}
                 >
-                  <span>{tab.icon}</span>
+                  <span className="text-sm md:text-base">{tab.icon}</span>
                   <span>{tab.label}</span>
                 </button>
               ))}
             </nav>
           </div>
-
         </div>
       </header>
 
