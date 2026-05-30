@@ -2115,187 +2115,196 @@ export default function App() {
       <div id="toast" className="no-print"></div>
 
       <header className="sticky top-0 z-40 w-full shadow-md no-print transition-all duration-300">
-        <div className="header-inner max-w-[1600px] mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center justify-between py-4 md:h-24 gap-4">
+        <div className="header-inner max-w-[1600px] mx-auto px-4 md:px-8 flex flex-col py-4 md:py-5 h-auto gap-4">
           
-          {/* Logo & Company details */}
-          <div className="logo flex items-center gap-3.5 flex-shrink-0 w-full md:w-auto justify-between md:justify-start">
-            <div className="flex items-center gap-3.5">
-              <img 
-                src="/poultry-ledger/assets/icon.svg" 
-                alt={state.companyInfo.name} 
-                className="w-14 h-14 rounded-2xl object-contain border border-amber-500/35 p-1 bg-white shadow-md shadow-amber-500/5"
-                onError={(e) => {
-                  e.target.outerHTML = '<div class="w-14 h-14 bg-gradient-to-tr from-amber-500 to-amber-300 text-2xl flex items-center justify-center rounded-2xl shadow-md border border-amber-400/30">🐔</div>';
-                }}
-              />
-              <div className="text-right">
-                <div className="font-black text-base md:text-lg bg-gradient-to-r from-amber-200 via-amber-300 to-amber-500 bg-clip-text text-transparent leading-snug">
-                  {state.companyInfo.name}
+          {/* Row 1: Logo & Actions */}
+          <div className="flex flex-col md:flex-row items-center justify-between w-full gap-4">
+            
+            {/* Logo & Company details */}
+            <div className="logo flex items-center gap-3.5 flex-shrink-0 w-full md:w-auto justify-between md:justify-start">
+              <div className="flex items-center gap-3.5">
+                <img 
+                  src="/poultry-ledger/assets/icon.svg" 
+                  alt={state.companyInfo.name} 
+                  className="w-14 h-14 rounded-2xl object-contain border border-amber-500/35 p-1 bg-white shadow-md shadow-amber-500/5"
+                  onError={(e) => {
+                    e.target.outerHTML = '<div class="w-14 h-14 bg-gradient-to-tr from-amber-500 to-amber-300 text-2xl flex items-center justify-center rounded-2xl shadow-md border border-amber-400/30">🐔</div>';
+                  }}
+                />
+                <div className="text-right">
+                  <div className="font-black text-base md:text-lg bg-gradient-to-r from-amber-200 via-amber-300 to-amber-500 bg-clip-text text-transparent leading-snug">
+                    {state.companyInfo.name}
+                  </div>
+                  <div className="text-[10px] md:text-xs text-slate-400 font-medium">{state.companyInfo.address}</div>
                 </div>
-                <div className="text-[10px] md:text-xs text-slate-400 font-medium">{state.companyInfo.address}</div>
+              </div>
+
+              {/* MOBILE QUICK NAVIGATION BUTTONS */}
+              <div className="md:hidden flex items-center gap-2.5 no-print">
+                {/* Quick Home/Dashboard Button */}
+                <button 
+                  className="flex items-center justify-center w-11 h-11 rounded-xl border-2 border-[var(--gold)] bg-[var(--bg2)] text-[var(--gold)] active:scale-90 transition-all duration-200 text-lg shadow-md shadow-black/20"
+                  onClick={() => handleViewChange('dashboard')}
+                  title="الرئيسية"
+                >
+                  🏠
+                </button>
+
+                {/* Hamburger Menu Toggle Button */}
+                <button 
+                  className={`menu-toggle flex items-center justify-center font-bold transition-all duration-200 ${
+                    mobileMenuOpen ? 'open' : ''
+                  }`}
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  title="القائمة"
+                >
+                  {mobileMenuOpen ? '✕' : '☰'}
+                </button>
               </div>
             </div>
-
-            {/* MOBILE QUICK NAVIGATION BUTTONS */}
-            <div className="md:hidden flex items-center gap-2.5 no-print">
-              {/* Quick Home/Dashboard Button */}
-              <button 
-                className="flex items-center justify-center w-11 h-11 rounded-xl border-2 border-[var(--gold)] bg-[var(--bg2)] text-[var(--gold)] active:scale-90 transition-all duration-200 text-lg shadow-md shadow-black/20"
-                onClick={() => handleViewChange('dashboard')}
-                title="الرئيسية"
-              >
-                🏠
-              </button>
-
-              {/* Hamburger Menu Toggle Button */}
-              <button 
-                className={`menu-toggle flex items-center justify-center font-bold transition-all duration-200 ${
-                  mobileMenuOpen ? 'open' : ''
-                }`}
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                title="القائمة"
-              >
-                {mobileMenuOpen ? '✕' : '☰'}
-              </button>
-            </div>
-          </div>
-          
-          {/* DYNAMIC NETWORK & CLOUD SYNC STATUS BADGE */}
-          {isSupabaseConfigured && (
-            <div className={`no-print flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold md:ml-auto select-none border transition-all duration-300 ${
-              !isOnline 
-                ? 'bg-red-500/5 border-red-500/20 text-red-400 shadow-md shadow-red-500/5'
-                : pendingSyncCount > 0 || isCloudLoading
-                  ? 'bg-amber-500/5 border-amber-500/20 text-amber-400 shadow-md shadow-amber-500/5'
-                  : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400 shadow-md'
-            }`}>
-              <span className={
-                !isOnline 
-                  ? 'pulse-dot-red'
-                  : pendingSyncCount > 0 || isCloudLoading
-                    ? 'pulse-dot-blue'
-                    : 'pulse-dot-green'
-              }></span>
-              <span>
-                {!isOnline 
-                  ? `غير متصل — ${pendingSyncCount > 0 ? `${pendingSyncCount} معلقة` : "العمل محلياً"}`
-                  : pendingSyncCount > 0 || isCloudLoading
-                    ? `جاري المزامنة (${pendingSyncCount} معلقة)...`
-                    : "متصل بالسحابة (مزامنة كاملة)"
-                }
-              </span>
-            </div>
-          )}
-
-          {/* DYNAMIC AUTO-BACKUP STATUS BADGE */}
-          {isSupabaseConfigured && backupBadge && (
-            <div className={`no-print flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold select-none border transition-all duration-300 md:ml-2 ${backupBadge.style}`}>
-              <span className={backupBadge.pulse}></span>
-              <span>{backupBadge.text}</span>
-            </div>
-          )}
-
-          {/* QUICK COMMAND PALETTE TRIGGER */}
-          <button
-            onClick={() => setCommandPaletteOpen(true)}
-            className="hidden lg:flex items-center justify-center gap-2 px-3 py-1.5 rounded-full border border-slate-800 bg-slate-950/40 hover:border-amber-500/40 hover:text-amber-400 text-[10px] font-bold transition-all duration-200 select-none cursor-pointer md:ml-2"
-            title="فتح لوحة البحث السريع (Ctrl+K)"
-          >
-            <span>🔍 بحث سريع</span>
-            <kbd className="bg-slate-900/80 px-1 py-0.5 rounded border border-slate-750 font-mono text-[9px] text-slate-500">Ctrl+K</kbd>
-          </button>
-
-          {/* NOTIFICATION CENTER TRIGGER BELL */}
-          <div className="relative no-print select-none cursor-pointer md:ml-2 md:mr-2">
-            <button
-              onClick={() => setNotificationsOpen(true)}
-              className="flex items-center justify-center w-8 h-8 rounded-full border border-slate-800 bg-slate-950/60 hover:border-amber-500/40 hover:text-amber-400 active:scale-95 transition-all duration-200 text-sm shadow-md"
-              title="مركز التنبيهات"
-            >
-              🔔
-            </button>
-            {notifications.filter(n => !n.read).length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center animate-bounce">
-                {notifications.filter(n => !n.read).length}
-              </span>
-            )}
-          </div>
-
-          {/* MAIN VIEW NAVIGATION TABS */}
-          <nav id="nav" className={`no-print flex-col md:flex-row md:flex gap-1.5 ${mobileMenuOpen ? 'open flex w-full' : 'hidden'}`}>
-            {[
-              { id: 'dashboard', label: 'الرئيسية', icon: '🏠' },
-              { id: 'ledger', label: 'السجل اليومي', icon: '📋' },
-              { id: 'clients', label: 'العملاء', icon: '👥' },
-              { id: 'purchases_ledger', label: 'سجل المشتريات', icon: '📦' },
-              { id: 'suppliers', label: 'الموردين', icon: '🤝' },
-              { id: 'deadlines', label: 'الآجال والأقساط', icon: '📅' },
-              { id: 'analytics', label: 'التحليلات', icon: '📊' },
-              { id: 'summary', label: 'الملخص المالي', icon: '📈' },
-              { id: 'cashbook', label: 'دفتر الصندوق', icon: '💵' }
-            ].filter(tab => state.role !== 'driver' || tab.id === 'ledger' || tab.id === 'clients').map(tab => (
-              <button 
-                key={tab.id}
-                className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition-all duration-200 flex items-center gap-2 w-full md:w-auto ${
-                  state.view === tab.id 
-                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/10' 
-                    : 'bg-transparent text-slate-400 hover:text-amber-400 hover:bg-slate-900/60 border border-transparent hover:border-slate-850'
-                }`}
-                onClick={() => handleViewChange(tab.id)}
-              >
-                <span>{tab.icon}</span>
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </nav>
-
-          {/* ACTIONS & SELECTORS ROW */}
-          <div className="no-print flex items-center gap-2 flex-shrink-0 w-full md:w-auto justify-end">
             
+            {/* Actions: Badges, Search, Notification, selectors, theme toggle, logout */}
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+              {/* DYNAMIC NETWORK & CLOUD SYNC STATUS BADGE */}
+              {isSupabaseConfigured && (
+                <div className={`no-print flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold select-none border transition-all duration-300 ${
+                  !isOnline 
+                    ? 'bg-red-500/5 border-red-500/20 text-red-400 shadow-md shadow-red-500/5'
+                    : pendingSyncCount > 0 || isCloudLoading
+                      ? 'bg-amber-500/5 border-amber-500/20 text-amber-400 shadow-md shadow-amber-500/5'
+                      : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400 shadow-md'
+                }`}>
+                  <span className={
+                    !isOnline 
+                      ? 'pulse-dot-red'
+                      : pendingSyncCount > 0 || isCloudLoading
+                        ? 'pulse-dot-blue'
+                        : 'pulse-dot-green'
+                  }></span>
+                  <span>
+                    {!isOnline 
+                      ? `غير متصل — ${pendingSyncCount > 0 ? `${pendingSyncCount} معلقة` : "العمل محلياً"}`
+                      : pendingSyncCount > 0 || isCloudLoading
+                        ? `جاري المزامنة (${pendingSyncCount} معلقة)...`
+                        : "متصل بالسحابة (مزامنة كاملة)"
+                    }
+                  </span>
+                </div>
+              )}
 
-            {/* THEME TOGGLE BUTTON */}
-            <button 
-              className="no-print flex items-center justify-center w-10 h-10 rounded-xl border border-slate-800 bg-slate-900/50 text-amber-500 hover:bg-slate-900 hover:border-amber-500/40 hover:scale-105 transition-all duration-200 text-base" 
-              onClick={handleThemeToggle} 
-              title="تغيير المظهر"
-            >
-              {state.theme === 'light' ? '☀️' : '🌙'}
-            </button>
+              {/* DYNAMIC AUTO-BACKUP STATUS BADGE */}
+              {isSupabaseConfigured && backupBadge && (
+                <div className={`no-print flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold select-none border transition-all duration-300 ${backupBadge.style}`}>
+                  <span className={backupBadge.pulse}></span>
+                  <span>{backupBadge.text}</span>
+                </div>
+              )}
 
-            {/* CLOUD LOGOUT BUTTON */}
-            <button 
-              className="no-print flex items-center justify-center h-10 px-3.5 rounded-xl border border-red-500/20 bg-red-500/5 text-red-400 hover:bg-red-500/10 hover:border-red-500/40 font-bold text-xs transition-all duration-200" 
-              onClick={handleLogout} 
-              title="تسجيل الخروج"
-            >
-              <span>🔒 خروج</span>
-            </button>
-
-            {/* DATE CONTROLS SELECTORS */}
-            <div className="flex items-center gap-1 bg-slate-900/40 border border-slate-800/80 rounded-xl p-1 h-10">
-              <select 
-                id="month-sel" 
-                className="bg-transparent text-slate-200 font-bold text-xs outline-none cursor-pointer py-1 px-2 border-none" 
-                value={state.month} 
-                onChange={handleMonthChange}
+              {/* QUICK COMMAND PALETTE TRIGGER */}
+              <button
+                onClick={() => setCommandPaletteOpen(true)}
+                className="hidden lg:flex items-center justify-center gap-2 px-3 py-1.5 rounded-full border border-slate-800 bg-slate-950/40 hover:border-amber-500/40 hover:text-amber-400 text-[10px] font-bold transition-all duration-200 select-none cursor-pointer"
+                title="فتح لوحة البحث السريع (Ctrl+K)"
               >
-                {MONTHS.map((name, i) => (
-                  <option key={i} value={i + 1} className="bg-slate-950 text-slate-100">{name}</option>
-                ))}
-              </select>
-              <span className="text-slate-600">|</span>
-              <input 
-                type="number" 
-                id="year-sel" 
-                className="bg-transparent text-slate-200 font-bold text-xs outline-none py-1 px-1 border-none w-14 text-center font-mono" 
-                value={state.year} 
-                min="2020" 
-                max="2035" 
-                onChange={handleYearChange}
-              />
+                <span>🔍 بحث سريع</span>
+                <kbd className="bg-slate-900/80 px-1 py-0.5 rounded border border-slate-750 font-mono text-[9px] text-slate-500">Ctrl+K</kbd>
+              </button>
+
+              {/* NOTIFICATION CENTER TRIGGER BELL */}
+              <div className="relative no-print select-none cursor-pointer">
+                <button
+                  onClick={() => setNotificationsOpen(true)}
+                  className="flex items-center justify-center w-8 h-8 rounded-full border border-slate-800 bg-slate-950/60 hover:border-amber-500/40 hover:text-amber-400 active:scale-95 transition-all duration-200 text-sm shadow-md"
+                  title="مركز التنبيهات"
+                >
+                  🔔
+                </button>
+                {notifications.filter(n => !n.read).length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center animate-bounce">
+                    {notifications.filter(n => !n.read).length}
+                  </span>
+                )}
+              </div>
+
+              {/* THEME TOGGLE BUTTON */}
+              <button 
+                className="no-print flex items-center justify-center w-10 h-10 rounded-xl border border-slate-800 bg-slate-900/50 text-amber-500 hover:bg-slate-900 hover:border-amber-500/40 hover:scale-105 transition-all duration-200 text-base" 
+                onClick={handleThemeToggle} 
+                title="تغيير Mظهر"
+              >
+                {state.theme === 'light' ? '☀️' : '🌙'}
+              </button>
+
+              {/* CLOUD LOGOUT BUTTON */}
+              <button 
+                className="no-print flex items-center justify-center h-10 px-3.5 rounded-xl border border-red-500/20 bg-red-500/5 text-red-400 hover:bg-red-500/10 hover:border-red-500/40 font-bold text-xs transition-all duration-200" 
+                onClick={handleLogout} 
+                title="تسجيل الخروج"
+              >
+                <span>🔒 خروج</span>
+              </button>
+
+              {/* DATE CONTROLS SELECTORS */}
+              <div className="flex items-center gap-1 bg-slate-900/40 border border-slate-800/80 rounded-xl p-1 h-10">
+                <select 
+                  id="month-sel" 
+                  className="bg-transparent text-slate-200 font-bold text-xs outline-none cursor-pointer py-1 px-2 border-none" 
+                  value={state.month} 
+                  onChange={handleMonthChange}
+                >
+                  {MONTHS.map((name, i) => (
+                    <option key={i} value={i + 1} className="bg-slate-950 text-slate-100">{name}</option>
+                  ))}
+                </select>
+                <span className="text-slate-600">|</span>
+                <input 
+                  type="number" 
+                  id="year-sel" 
+                  className="bg-transparent text-slate-200 font-bold text-xs outline-none py-1 px-1 border-none w-14 text-center font-mono" 
+                  value={state.year} 
+                  min="2020" 
+                  max="2035" 
+                  onChange={handleYearChange}
+                />
+              </div>
+
             </div>
 
           </div>
+
+          {/* Row 2: Navigation menu (centered/full-width on desktop) */}
+          <div className="w-full flex md:border-t md:border-slate-800/40 md:pt-3.5 flex-col md:flex-row items-center justify-center">
+            <nav id="nav" className={`no-print flex-col md:flex-row md:flex gap-1.5 ${mobileMenuOpen ? 'open flex w-full' : 'hidden'}`}>
+              {[
+                { id: 'dashboard', label: 'الرئيسية', icon: '🏠' },
+                { id: 'ledger', label: 'السجل اليومي', icon: '📋' },
+                { id: 'clients', label: 'العملاء', icon: '👥' },
+                { id: 'purchases_ledger', label: 'سجل المشتريات', icon: '📦' },
+                { id: 'suppliers', label: 'الموردين', icon: '🤝' },
+                { id: 'deadlines', label: 'الآجال والأقساط', icon: '📅' },
+                { id: 'analytics', label: 'التحليلات', icon: '📊' },
+                { id: 'summary', label: 'الملخص المالي', icon: '📈' },
+                { id: 'cashbook', label: 'دفتر الصندوق', icon: '💵' }
+              ].filter(tab => state.role !== 'driver' || tab.id === 'ledger' || tab.id === 'clients').map(tab => (
+                <button 
+                  key={tab.id}
+                  className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition-all duration-200 flex items-center gap-2 w-full md:w-auto ${
+                    state.view === tab.id 
+                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/10' 
+                      : 'bg-transparent text-slate-400 hover:text-amber-400 hover:bg-slate-900/60 border border-transparent hover:border-slate-850'
+                  }`}
+                  onClick={() => {
+                    handleViewChange(tab.id);
+                    if (mobileMenuOpen) setMobileMenuOpen(false);
+                  }}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+
         </div>
       </header>
 

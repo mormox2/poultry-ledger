@@ -179,7 +179,7 @@ header {
   z-index: 100; 
   box-shadow: 0 4px 20px rgba(0,0,0,0.05);
 }
-.header-inner { max-width: 100%; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 100px; gap: 16px; }
+.header-inner { max-width: 100%; padding: 16px 40px; display: flex; flex-direction: column; height: auto; gap: 14px; }
 .logo { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
 .logo-icon { 
   width: 64px; 
@@ -593,6 +593,7 @@ body.printing-invoice #print-invoice-area {
   .header-inner {
     position: relative;
     height: auto;
+    flex-direction: row;
     flex-wrap: wrap;
     padding: 12px 16px;
     gap: 12px;
