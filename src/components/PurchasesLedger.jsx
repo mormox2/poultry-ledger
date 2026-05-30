@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { COLORS, getRows, getTotals, calcBalance, fmt, getClientColor } from '../js/utils';
@@ -24,7 +24,18 @@ export default function PurchasesLedger({
 
   const handleFileChange = (e, rowIdx) => {
     const file = e.target.files[0];
+    e.target.value = ''; // M3: Reset input to allow re-uploading same file
     if (!file) return;
+
+    // C3: Strict MIME type validation (block SVG to prevent XSS)
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+      'application/pdf'
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      alert("نوع الملف غير مدعوم. يُرجى اختيار صورة (JPG/PNG/WebP) أو ملف PDF.");
+      return;
+    }
 
     if (file.size > 5 * 1024 * 1024) {
       alert("حجم الملف كبير جداً. الحد الأقصى هو 5 ميغابايت.");
@@ -38,8 +49,49 @@ export default function PurchasesLedger({
         onSyncPurchaseRow(rowIdx);
       }
     };
+    // M2: Handle FileReader errors
+    reader.onerror = () => {
+      alert("فشل في قراءة الملف. يُرجى المحاولة مجدداً.");
+    };
     reader.readAsDataURL(file);
   };
+
+  // B3+C2+M4: Helper to safely convert Data URL to Blob
+  const dataUrlToBlob = useCallback((dataUrl) => {
+    try {
+      const arr = dataUrl.split(',');
+      const mimeMatch = arr[0].match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) { u8arr[n] = bstr.charCodeAt(n); }
+      return new Blob([u8arr], { type: mime });
+    } catch (err) {
+      console.error('dataUrlToBlob error:', err);
+      return null;
+    }
+  }, []);
+
+  // B1: Helper to get file extension from MIME
+  const getExtFromMime = useCallback((dataUrl) => {
+    if (dataUrl.startsWith('data:application/pdf')) return 'pdf';
+    if (dataUrl.startsWith('data:image/jpeg')) return 'jpg';
+    if (dataUrl.startsWith('data:image/png')) return 'png';
+    if (dataUrl.startsWith('data:image/webp')) return 'webp';
+    if (dataUrl.startsWith('data:image/gif')) return 'gif';
+    return 'bin';
+  }, []);
+
+  // B2: Close preview modal on Escape key
+  useEffect(() => {
+    if (!previewUrl) return;
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') setPreviewUrl(null);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [previewUrl]);
 
   // Excel-like spreadsheet keyboard navigation helper
   const focusTarget = (r, c) => {
@@ -553,20 +605,13 @@ export default function PurchasesLedger({
                       whileTap={{ scale: 0.97 }}
                       className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-2 mx-auto"
                       onClick={() => {
-                        try {
-                          const arr = previewUrl.split(',');
-                          const mime = arr[0].match(/:(.*?);/)[1];
-                          const bstr = atob(arr[1]);
-                          let n = bstr.length;
-                          const u8arr = new Uint8Array(n);
-                          while (n--) {
-                            u8arr[n] = bstr.charCodeAt(n);
-                          }
-                          const fileBlob = new Blob([u8arr], { type: mime });
-                          const blobUrl = URL.createObjectURL(fileBlob);
+                        const blob = dataUrlToBlob(previewUrl);
+                        if (blob) {
+                          const blobUrl = URL.createObjectURL(blob);
                           window.open(blobUrl, '_blank');
-                        } catch (err) {
-                          console.error("Error opening PDF blob:", err);
+                          // C2: Revoke Blob URL after delay to prevent memory leak
+                          setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+                        } else {
                           window.open(previewUrl, '_blank');
                         }
                       }}
@@ -589,10 +634,16 @@ export default function PurchasesLedger({
                   whileTap={{ scale: 0.98 }}
                   className="px-4 py-2 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-350 hover:text-white rounded-xl text-xs font-bold transition-all duration-200"
                   onClick={() => {
-                    const a = document.createElement("a");
-                    a.href = previewUrl;
-                    a.download = `facture-${previewTitle.replace(/\s+/g, '-')}.${previewUrl.startsWith('data:application/pdf') ? 'pdf' : 'png'}`;
-                    a.click();
+                    // M4: Use Blob for download (Chrome blocks large Data URL downloads)
+                    const blob = dataUrlToBlob(previewUrl);
+                    if (blob) {
+                      const blobUrl = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = blobUrl;
+                      a.download = `facture-${previewTitle.replace(/\s+/g, '-')}.${getExtFromMime(previewUrl)}`;
+                      a.click();
+                      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+                    }
                   }}
                 >
                   📥 تحميل الملف

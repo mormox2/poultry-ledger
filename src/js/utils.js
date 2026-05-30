@@ -20,7 +20,7 @@ export function getRows(ledger, cid, y, m) {
     const days = daysInMonth(y, m);
     return Array.from({length: days}, (_, i) => ({
       d: i + 1,
-      tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
+      tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: "", invoice_url: ""
     }));
   }
   return ledger[k];

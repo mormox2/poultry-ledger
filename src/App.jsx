@@ -752,12 +752,27 @@ export default function App() {
   // Sync state to localStorage whenever it changes (Offline Cache)
   useEffect(() => {
     try {
+      // Strip heavy Base64 invoice_url from purchases before localStorage save
+      // to prevent QuotaExceededError (localStorage limit ~5-10 Mo)
+      const purchasesForStorage = {};
+      if (state.purchases) {
+        for (const key of Object.keys(state.purchases)) {
+          purchasesForStorage[key] = state.purchases[key].map(row => {
+            if (row.invoice_url) {
+              const { invoice_url, ...rest } = row;
+              return { ...rest, has_invoice: true };
+            }
+            return row;
+          });
+        }
+      }
+
       localStorage.setItem("dawajin_state", JSON.stringify({
         clients: state.clients,
         ledger: state.ledger,
         selectedClient: state.selectedClient,
         suppliers: state.suppliers,
-        purchases: state.purchases,
+        purchases: purchasesForStorage,
         selectedSupplier: state.selectedSupplier,
         deadlines: state.deadlines,
         cashBook: state.cashBook,
@@ -1751,7 +1766,7 @@ export default function App() {
           const totalDays = daysInMonth(year, month);
           updatedPurchases[k] = Array.from({ length: totalDays }, (_, i) => ({
             d: i + 1,
-            tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
+            tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: "", invoice_url: ""
           }));
         }
         
