@@ -520,7 +520,7 @@ export default function App() {
       // 1. Fetch remote row for LWW conflict comparison
       const { data: remoteRow, error: fetchErr } = await supabase
         .from('purchases')
-        .select('updated_at, total_weight, net_weight, price, amount, paid, holiday, notes')
+        .select('updated_at, total_weight, net_weight, price, amount, paid, holiday, notes, invoice_url')
         .eq('supplier_id', supplierUuid)
         .eq('year', year)
         .eq('month', month)
@@ -548,6 +548,7 @@ export default function App() {
                   paid: remoteRow.paid !== null ? String(remoteRow.paid) : "",
                   holiday: remoteRow.holiday,
                   notes: remoteRow.notes || "",
+                  invoice_url: remoteRow.invoice_url || "",
                   local_updated_at: remoteRow.updated_at
                 };
                 updatedPurchases[k] = rows;
@@ -574,6 +575,7 @@ export default function App() {
           paid: row.paid !== "" ? parseFloat(row.paid) : null,
           holiday: row.holiday,
           notes: row.notes || null,
+          invoice_url: row.invoice_url || null,
           updated_at: new Date()
         }, {
           onConflict: 'supplier_id,year,month,day'
@@ -1373,7 +1375,7 @@ export default function App() {
           const days = daysInMonth(e.year, e.month);
           Reflect.set(formattedPurchases, k, Array.from({ length: days }, (_, i) => ({
             d: i + 1,
-            tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
+            tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: "", invoice_url: ""
           })));
         }
         
@@ -1388,7 +1390,8 @@ export default function App() {
             amt: e.amount !== null ? parseFloat(e.amount) : "",
             paid: e.paid !== null ? String(e.paid) : "",
             holiday: e.holiday,
-            notes: e.notes || ""
+            notes: e.notes || "",
+            invoice_url: e.invoice_url || ""
           });
         }
       });

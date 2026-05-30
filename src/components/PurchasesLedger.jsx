@@ -19,6 +19,27 @@ export default function PurchasesLedger({
   
   const [quickSettleOpen, setQuickSettleOpen] = useState(false);
   const [settleAmount, setSettleAmount] = useState('');
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [previewTitle, setPreviewTitle] = useState('');
+
+  const handleFileChange = (e, rowIdx) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("حجم الملف كبير جداً. الحد الأقصى هو 5 ميغابايت.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      onUpdatePurchaseRow(rowIdx, 'invoice_url', evt.target.result);
+      if (onSyncPurchaseRow) {
+        onSyncPurchaseRow(rowIdx);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Excel-like spreadsheet keyboard navigation helper
   const focusTarget = (r, c) => {
@@ -232,6 +253,7 @@ export default function PurchasesLedger({
               <th className="py-4 px-3 text-emerald-400/90 font-black text-[10px] tracking-wider select-none">المدفوع له</th>
               <th className="py-4 px-3 text-slate-400 font-bold text-[10px] tracking-wider select-none">الباقي له</th>
               <th className="py-4 px-3 text-slate-400 font-bold text-[10px] tracking-wider select-none">ملاحظات اليوم</th>
+              <th className="py-4 px-3 text-amber-500/90 font-black text-[10px] tracking-wider select-none no-print">الفاتورة</th>
               <th className="py-4 px-3 text-slate-400 font-bold text-[10px] tracking-wider select-none no-print">عطلة</th>
             </tr>
           </thead>
@@ -254,7 +276,7 @@ export default function PurchasesLedger({
                   <td className="py-2.5 px-3 text-slate-500 font-bold font-mono tracking-tight text-[10px] select-none">{dateStr}</td>
                   
                   {r.holiday ? (
-                    <td colSpan="5" className="py-2.5 px-3 text-amber-500/80 font-black text-center select-none text-[11px] tracking-widest italic">— عطلة / لا توجد مشتريات —</td>
+                    <td colSpan="6" className="py-2.5 px-3 text-amber-500/80 font-black text-center select-none text-[11px] tracking-widest italic">— عطلة / لا توجد مشتريات —</td>
                   ) : (
                     <>
                       {/* Net Weight */}
@@ -346,6 +368,52 @@ export default function PurchasesLedger({
                     />
                   </td>
 
+                  {/* Invoice file attachment */}
+                  <td className="py-1 px-1.5 no-print">
+                    <div className="flex items-center justify-center">
+                      {!r.invoice_url ? (
+                        <label className="cursor-pointer p-1.5 hover:bg-slate-800/60 rounded-xl transition-all duration-200 text-slate-500 hover:text-amber-400 flex items-center justify-center" title="إرفاق فاتورة">
+                          <span className="text-sm">📎</span>
+                          <input 
+                            type="file" 
+                            accept="image/*,application/pdf" 
+                            className="hidden" 
+                            onChange={(e) => handleFileChange(e, idx)} 
+                          />
+                        </label>
+                      ) : (
+                        <div className="flex items-center justify-center gap-1.5">
+                          <motion.button
+                            whileHover={{ scale: 1.15 }}
+                            whileTap={{ scale: 0.9 }}
+                            className="p-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg transition-all duration-150 flex items-center justify-center"
+                            onClick={() => {
+                              setPreviewUrl(r.invoice_url);
+                              setPreviewTitle(`فاتورة يوم ${dateStr}`);
+                            }}
+                            title="عرض الفاتورة"
+                          >
+                            <span className="text-xs">👁️</span>
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.15 }}
+                            whileTap={{ scale: 0.9 }}
+                            className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-all duration-150 flex items-center justify-center"
+                            onClick={() => {
+                              if (confirm("هل أنت متأكد من حذف هذا المرفق؟")) {
+                                onUpdatePurchaseRow(idx, 'invoice_url', '');
+                                if (onSyncPurchaseRow) onSyncPurchaseRow(idx);
+                              }
+                            }}
+                            title="حذف الفاتورة"
+                          >
+                            <span className="text-xs">✕</span>
+                          </motion.button>
+                        </div>
+                      )}
+                    </div>
+                  </td>
+
                   {/* Holiday toggle switch */}
                   <td className="py-2.5 px-3 no-print">
                     <motion.button 
@@ -373,7 +441,7 @@ export default function PurchasesLedger({
               <td className="py-4 px-3 font-mono text-sm text-amber-400">{fmt(totals.amt) || "—"}</td>
               <td className="py-4 px-3 font-mono text-sm text-emerald-400">{fmt(totals.paid) || "—"}</td>
               <td className={`py-4 px-3 font-mono text-sm ${remaining > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{fmt(remaining) || "—"}</td>
-              <td colSpan="2" className="no-print"></td>
+              <td colSpan="3" className="no-print"></td>
             </tr>
           </tfoot>
         </table>
@@ -430,7 +498,7 @@ export default function PurchasesLedger({
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     type="button" 
-                    className="flex-1 py-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white rounded-xl font-bold text-xs transition-all duration-200"
+                    className="flex-1 py-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-350 hover:text-white rounded-xl font-bold text-xs transition-all duration-200"
                     onClick={() => setQuickSettleOpen(false)}
                   >
                     إلغاء
@@ -440,6 +508,98 @@ export default function PurchasesLedger({
             </motion.div>
           </motion.div>,
           document.body
+        )}
+      </AnimatePresence>
+
+      {/* PREMIUM INVOICE PREVIEW MODAL */}
+      <AnimatePresence>
+        {previewUrl && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 no-print"
+            onClick={() => setPreviewUrl(null)}
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-3xl max-h-[85vh] p-5 shadow-2xl relative overflow-hidden flex flex-col text-right"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-3 mb-4">
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-3 py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl font-bold text-xs"
+                  onClick={() => setPreviewUrl(null)}
+                >
+                  إغلاق
+                </motion.button>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-sm md:text-base font-black text-amber-300">{previewTitle}</h3>
+                  <span className="text-xl">📄</span>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-auto flex items-center justify-center bg-slate-950/50 rounded-2xl p-4 min-h-[300px]">
+                {previewUrl.startsWith('data:application/pdf') ? (
+                  <div className="text-center space-y-4 py-8">
+                    <div className="text-5xl">📕</div>
+                    <div className="text-xs text-slate-400 font-bold">مستند PDF جاهز للمعاينة أو التحميل</div>
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-2 mx-auto"
+                      onClick={() => {
+                        try {
+                          const arr = previewUrl.split(',');
+                          const mime = arr[0].match(/:(.*?);/)[1];
+                          const bstr = atob(arr[1]);
+                          let n = bstr.length;
+                          const u8arr = new Uint8Array(n);
+                          while (n--) {
+                            u8arr[n] = bstr.charCodeAt(n);
+                          }
+                          const fileBlob = new Blob([u8arr], { type: mime });
+                          const blobUrl = URL.createObjectURL(fileBlob);
+                          window.open(blobUrl, '_blank');
+                        } catch (err) {
+                          console.error("Error opening PDF blob:", err);
+                          window.open(previewUrl, '_blank');
+                        }
+                      }}
+                    >
+                      <span>فتح المستند في علامة تبويب جديدة ↗</span>
+                    </motion.button>
+                  </div>
+                ) : (
+                  <img 
+                    src={previewUrl} 
+                    alt="Aperçu facture" 
+                    className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-md"
+                  />
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-800/80">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-4 py-2 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-350 hover:text-white rounded-xl text-xs font-bold transition-all duration-200"
+                  onClick={() => {
+                    const a = document.createElement("a");
+                    a.href = previewUrl;
+                    a.download = `facture-${previewTitle.replace(/\s+/g, '-')}.${previewUrl.startsWith('data:application/pdf') ? 'pdf' : 'png'}`;
+                    a.click();
+                  }}
+                >
+                  📥 تحميل الملف
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </motion.div>

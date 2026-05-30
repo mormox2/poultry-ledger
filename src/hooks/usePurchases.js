@@ -32,7 +32,7 @@ export default function usePurchases({
         const days = daysInMonth(prev.year, prev.month);
         updatedPurchases[k] = Array.from({ length: days }, (_, i) => ({
           d: i + 1,
-          tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
+          tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: "", invoice_url: ""
         }));
       }
 
@@ -60,6 +60,7 @@ export default function usePurchases({
       else if (field === 'paid') row.paid = val;
       else if (field === 'holiday') row.holiday = val;
       else if (field === 'notes') row.notes = val;
+      else if (field === 'invoice_url') row.invoice_url = val;
 
       // Autocalculate values
       if (field === 'nw') {
@@ -135,7 +136,7 @@ export default function usePurchases({
         const days = daysInMonth(targetYear, targetMonth);
         updatedPurchases[k] = Array.from({ length: days }, (_, i) => ({
           d: i + 1,
-          tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
+          tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: "", invoice_url: ""
         }));
       }
 
@@ -152,6 +153,7 @@ export default function usePurchases({
         amt: !currentHoliday ? "" : targetRow.amt,
         paid: !currentHoliday ? "" : targetRow.paid,
         notes: !currentHoliday ? "— عطلة رسمية للمورد —" : "",
+        invoice_url: !currentHoliday ? "" : (targetRow.invoice_url || ""),
         local_updated_at: new Date().toISOString()
       };
 
@@ -303,7 +305,7 @@ export default function usePurchases({
         const days = daysInMonth(targetYear, targetMonth);
         updatedPurchases[k] = Array.from({ length: days }, (_, i) => ({
           d: i + 1,
-          tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: ""
+          tw: "", nw: "", price: "", amt: "", paid: "", holiday: false, notes: "", invoice_url: ""
         }));
       }
 
