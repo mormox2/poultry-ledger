@@ -15,7 +15,40 @@ export default function useBackup({
 }) {
 
   // --- Cryptographic Helpers ---
-  const getEncryptionKey = async (pass) => {
+  const BACKUP_MAGIC = "DJBK1";
+
+  const isPlainObject = (value) => {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  };
+
+  const normalizeImportedState = (importedState, previousState) => {
+    if (!isPlainObject(importedState) || !Array.isArray(importedState.clients) || !isPlainObject(importedState.ledger)) {
+      return null;
+    }
+
+    return {
+      clients: importedState.clients,
+      ledger: importedState.ledger,
+      selectedClient: importedState.selectedClient ?? null,
+      suppliers: Array.isArray(importedState.suppliers) ? importedState.suppliers : previousState.suppliers,
+      purchases: isPlainObject(importedState.purchases) ? importedState.purchases : previousState.purchases,
+      selectedSupplier: importedState.selectedSupplier ?? null,
+      deadlines: Array.isArray(importedState.deadlines) ? importedState.deadlines : previousState.deadlines,
+      cashBook: Array.isArray(importedState.cashBook) ? importedState.cashBook : previousState.cashBook,
+      pricePerKg: Number.isFinite(Number(importedState.pricePerKg)) ? Number(importedState.pricePerKg) : previousState.pricePerKg,
+      defaultPurchasePricePerKg: Number.isFinite(Number(importedState.defaultPurchasePricePerKg))
+        ? Number(importedState.defaultPurchasePricePerKg)
+        : previousState.defaultPurchasePricePerKg,
+      companyInfo: isPlainObject(importedState.companyInfo)
+        ? { ...previousState.companyInfo, ...importedState.companyInfo }
+        : previousState.companyInfo,
+      month: Number.isInteger(Number(importedState.month)) ? Number(importedState.month) : previousState.month,
+      year: Number.isInteger(Number(importedState.year)) ? Number(importedState.year) : previousState.year,
+      view: "dashboard"
+    };
+  };
+
+  const getLegacyEncryptionKey = async (pass) => {
     const enc = new TextEncoder();
     const bytes = enc.encode(pass + "dawajin_pro_backup_salt_92837492");
     const hash = await window.crypto.subtle.digest("SHA-256", bytes);
@@ -28,8 +61,33 @@ export default function useBackup({
     );
   };
 
+  const getEncryptionKey = async (pass, salt) => {
+    const enc = new TextEncoder();
+    const baseKey = await window.crypto.subtle.importKey(
+      "raw",
+      enc.encode(pass),
+      { name: "PBKDF2" },
+      false,
+      ["deriveKey"]
+    );
+
+    return window.crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        salt,
+        iterations: 250000,
+        hash: "SHA-256"
+      },
+      baseKey,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"]
+    );
+  };
+
   const encryptBackup = async (dataStr, pass) => {
-    const key = await getEncryptionKey(pass);
+    const salt = window.crypto.getRandomValues(new Uint8Array(16));
+    const key = await getEncryptionKey(pass, salt);
     const enc = new TextEncoder();
     const encoded = enc.encode(dataStr);
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
@@ -38,22 +96,42 @@ export default function useBackup({
       key,
       encoded
     );
-    const combined = new Uint8Array(iv.length + encrypted.byteLength);
-    combined.set(iv, 0);
-    combined.set(new Uint8Array(encrypted), iv.length);
+    const magic = enc.encode(BACKUP_MAGIC);
+    const combined = new Uint8Array(magic.length + salt.length + iv.length + encrypted.byteLength);
+    combined.set(magic, 0);
+    combined.set(salt, magic.length);
+    combined.set(iv, magic.length + salt.length);
+    combined.set(new Uint8Array(encrypted), magic.length + salt.length + iv.length);
     return combined;
   };
 
   const decryptBackup = async (combinedBytes, pass) => {
-    const key = await getEncryptionKey(pass);
-    const iv = combinedBytes.slice(0, 12);
-    const ciphertext = combinedBytes.slice(12);
+    const dec = new TextDecoder();
+    const magic = dec.decode(combinedBytes.slice(0, BACKUP_MAGIC.length));
+    if (magic !== BACKUP_MAGIC) {
+      const key = await getLegacyEncryptionKey(pass);
+      const iv = combinedBytes.slice(0, 12);
+      const ciphertext = combinedBytes.slice(12);
+      const decrypted = await window.crypto.subtle.decrypt(
+        { name: "AES-GCM", iv },
+        key,
+        ciphertext
+      );
+      return dec.decode(decrypted);
+    }
+
+    const saltStart = BACKUP_MAGIC.length;
+    const ivStart = saltStart + 16;
+    const ciphertextStart = ivStart + 12;
+    const salt = combinedBytes.slice(saltStart, ivStart);
+    const iv = combinedBytes.slice(ivStart, ciphertextStart);
+    const ciphertext = combinedBytes.slice(ciphertextStart);
+    const key = await getEncryptionKey(pass, salt);
     const decrypted = await window.crypto.subtle.decrypt(
       { name: "AES-GCM", iv },
       key,
       ciphertext
     );
-    const dec = new TextDecoder();
     return dec.decode(decrypted);
   };
 
@@ -130,14 +208,13 @@ export default function useBackup({
       const combinedBytes = new Uint8Array(buffer);
       const decryptedStr = await decryptBackup(combinedBytes, keyPass);
       const importedState = JSON.parse(decryptedStr);
+      const normalizedState = normalizeImportedState(importedState, stateRef.current);
 
-      if (importedState.clients && importedState.ledger) {
+      if (normalizedState) {
         setState(prev => ({
           ...prev,
-          ...importedState,
-          month: importedState.month || prev.month,
-          year: importedState.year || prev.year,
-          view: "dashboard"
+          ...normalizedState,
+          role: prev.role
         }));
         toastMessage("⚡ تم استعادة البيانات المشفرة السحابية بنجاح !");
         logActivity(user?.id, "استعادة نسخ سحابي", "تم استيراد نسخة احتياطية سحابية بنجاح");
@@ -153,7 +230,7 @@ export default function useBackup({
     } finally {
       setIsCloudLoading(false);
     }
-  }, [plainPassword, isSupabaseConfigured, user, setState, setIsCloudLoading, toastMessage]);
+  }, [plainPassword, isSupabaseConfigured, user, stateRef, setState, setIsCloudLoading, toastMessage]);
 
   const handleBackupExport = useCallback(() => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
@@ -170,13 +247,12 @@ export default function useBackup({
     reader.onload = function(e) {
       try {
         const importedState = JSON.parse(e.target.result);
-        if (importedState.clients && importedState.ledger) {
+        const normalizedState = normalizeImportedState(importedState, stateRef.current);
+        if (normalizedState) {
           setState(prev => ({
             ...prev,
-            ...importedState,
-            month: importedState.month || prev.month,
-            year: importedState.year || prev.year,
-            view: "dashboard"
+            ...normalizedState,
+            role: prev.role
           }));
           toastMessage("✓ تم استيراد البيانات بنجاح !");
           logActivity(user?.id, "استيراد نسخ محلي", "تم استيراد ملف نسخ احتياطي بصيغة JSON");
@@ -188,7 +264,7 @@ export default function useBackup({
       }
     };
     reader.readAsText(file);
-  }, [setState, user, toastMessage]);
+  }, [setState, stateRef, user, toastMessage]);
 
   return {
     handleBackupCloudExport,

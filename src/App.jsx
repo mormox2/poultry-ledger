@@ -66,9 +66,10 @@ export default function App() {
   // --- Authentication States ---
   const [password, setPassword] = useState(() => localStorage.getItem("dawajin_password") || "");
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    if (isSupabaseConfigured) return false;
     return localStorage.getItem("dawajin_logged_in") === "true";
   });
-  const [plainPassword, setPlainPassword] = useState(() => sessionStorage.getItem("dawajin_plain_password") || "");
+  const [plainPassword, setPlainPassword] = useState("");
 
   // Initialize state from localStorage (standalone fallback)
   const getInitialState = () => {
@@ -102,6 +103,10 @@ export default function App() {
       }
     };
     try {
+      if (isSupabaseConfigured) {
+        return defaultState;
+      }
+
       const saved = localStorage.getItem("dawajin_state");
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -1891,7 +1896,6 @@ export default function App() {
     setUser(newUser);
     if (enteredPass) {
       setPlainPassword(enteredPass);
-      sessionStorage.setItem("dawajin_plain_password", enteredPass);
     }
     localStorage.setItem("dawajin_logged_in", "true");
     setIsLoggedIn(true);
@@ -1905,6 +1909,7 @@ export default function App() {
     // Clear localStorage offline cache completely to prevent data leak
     localStorage.removeItem("dawajin_state");
     localStorage.removeItem("dawajin_logged_in");
+    setPlainPassword("");
 
     // Clear IndexedDB offline sync queue to prevent data leak across users
     const db = syncDBRef.current;
@@ -1951,7 +1956,6 @@ export default function App() {
         onLogin={(enteredPass) => {
           if (enteredPass) {
             setPlainPassword(enteredPass);
-            sessionStorage.setItem("dawajin_plain_password", enteredPass);
           }
           localStorage.setItem("dawajin_logged_in", "true");
           setIsLoggedIn(true);
@@ -1959,7 +1963,6 @@ export default function App() {
         onSetPassword={async (newPass) => {
           await handleChangePassword(newPass);
           setPlainPassword(newPass);
-          sessionStorage.setItem("dawajin_plain_password", newPass);
           localStorage.setItem("dawajin_logged_in", "true");
           setIsLoggedIn(true);
         }}

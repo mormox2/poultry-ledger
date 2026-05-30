@@ -294,7 +294,9 @@ export default function Ledger({
                 </>
               )}
               <th className="py-4 px-3 text-slate-400 font-bold text-[10px] tracking-wider select-none">ملاحظات اليوم</th>
-              <th className="py-4 px-3 text-slate-400 font-bold text-[10px] tracking-wider select-none no-print">عطلة</th>
+              {state.role !== 'driver' && (
+                <th className="py-4 px-3 text-slate-400 font-bold text-[10px] tracking-wider select-none no-print">عطلة</th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-900">
@@ -431,20 +433,22 @@ export default function Ledger({
                   </td>
 
                   {/* Holiday toggle switch */}
-                  <td className="py-2.5 px-3 no-print">
-                    <motion.button 
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className={`px-3 py-1 rounded-lg font-bold text-[10px] border transition-colors ${
-                        r.holiday 
-                          ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-md' 
-                          : 'bg-transparent border-slate-800 text-slate-400 hover:border-amber-500/40 hover:text-amber-400'
-                      }`}
-                      onClick={() => onToggleHoliday(idx)}
-                    >
-                      {r.holiday ? 'عطلة ✓' : 'عطلة'}
-                    </motion.button>
-                  </td>
+                  {state.role !== 'driver' && (
+                    <td className="py-2.5 px-3 no-print">
+                      <motion.button 
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className={`px-3 py-1 rounded-lg font-bold text-[10px] border transition-colors ${
+                          r.holiday 
+                            ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-md' 
+                            : 'bg-transparent border-slate-800 text-slate-400 hover:border-amber-500/40 hover:text-amber-400'
+                        }`}
+                        onClick={() => onToggleHoliday(idx)}
+                      >
+                        {r.holiday ? 'عطلة ✓' : 'عطلة'}
+                      </motion.button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -462,7 +466,7 @@ export default function Ledger({
                   <td className={`py-4 px-3 font-mono text-sm ${remaining > 0 ? 'text-red-400' : 'text-emerald-400'}`} id="tot-rem">{fmt(remaining) || "—"}</td>
                 </>
               )}
-              <td colSpan="2" className="no-print"></td>
+              <td colSpan={state.role === 'driver' ? "1" : "2"} className="no-print"></td>
             </tr>
           </tfoot>
         </table>
