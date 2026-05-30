@@ -252,7 +252,7 @@ BEGIN
     END IF;
 
     -- Crypter le mot de passe en utilisant l'algorithme blowfish (bcrypt standard Supabase Auth)
-    v_encrypted_password := crypt(p_password, gen_salt('bf'));
+    v_encrypted_password := extensions.crypt(p_password, extensions.gen_salt('bf'));
 
     -- Insérer l'utilisateur dans auth.users
     INSERT INTO auth.users (
