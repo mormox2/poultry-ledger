@@ -18,6 +18,7 @@ const InvoicePrint = lazy(() => import('./components/InvoicePrint'));
 const InstallModal = lazy(() => import('./components/InstallModal'));
 const Deadlines = lazy(() => import('./components/Deadlines'));
 const StatementPrint = lazy(() => import('./components/StatementPrint'));
+const SupplierStatementPrint = lazy(() => import('./components/SupplierStatementPrint'));
 const CommandPalette = lazy(() => import('./components/CommandPalette'));
 const NotificationCenter = lazy(() => import('./components/NotificationCenter'));
 const CashBook = lazy(() => import('./components/CashBook'));
@@ -145,6 +146,7 @@ export default function App() {
 
   const [activeInvoiceClientId, setActiveInvoiceClientId] = useState(null);
   const [activeStatementClientId, setActiveStatementClientId] = useState(null);
+  const [activeStatementSupplierId, setActiveStatementSupplierId] = useState(null);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -2002,6 +2004,7 @@ export default function App() {
             onAddSupplier={handleAddSupplier}
             onEditSupplier={handleEditSupplier}
             onDeleteSupplier={handleDeleteSupplier}
+            onPrintSupplierStatement={(sid) => setActiveStatementSupplierId(sid)}
           />
         );
       case "purchases_ledger":
@@ -2360,6 +2363,17 @@ export default function App() {
             state={state} 
             clientId={activeStatementClientId} 
             onClose={() => setActiveStatementClientId(null)} 
+          />
+        </Suspense>
+      )}
+
+      {/* RENDER DYNAMIC DETAILED SUPPLIER STATEMENT OVERLAY IF ACTIVE */}
+      {activeStatementSupplierId !== null && (
+        <Suspense fallback={null}>
+          <SupplierStatementPrint 
+            state={state} 
+            supplierId={activeStatementSupplierId} 
+            onClose={() => setActiveStatementSupplierId(null)} 
           />
         </Suspense>
       )}

@@ -7,7 +7,8 @@ export default function Suppliers({
   onSelectSupplier, 
   onAddSupplier, 
   onEditSupplier, 
-  onDeleteSupplier 
+  onDeleteSupplier,
+  onPrintSupplierStatement
 }) {
   const y = state.year;
   const m = state.month;
@@ -225,6 +226,17 @@ export default function Suppliers({
                     
                     {/* Action buttons (pencil & bin) */}
                     <div className="flex gap-1.5 items-center no-print opacity-80 group-hover:opacity-100 transition-opacity">
+                      {onPrintSupplierStatement && (
+                        <motion.button 
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="p-2 border border-slate-800 bg-slate-950/60 hover:border-amber-500/40 hover:text-amber-400 rounded-lg text-[10px] transition-colors" 
+                          onClick={(e) => { e.stopPropagation(); onPrintSupplierStatement(sup.id); }}
+                          title="طباعة كشف حساب المورد"
+                        >
+                          📑
+                        </motion.button>
+                      )}
                       <motion.button 
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
